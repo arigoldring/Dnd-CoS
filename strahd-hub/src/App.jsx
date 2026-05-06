@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import { signInWithGoogle } from './auth'
 import { supabase } from './supabase'
+import { HashRouter, Route, Routes } from "react-router-dom";
+import { Home } from "./home";
 
 function App() {
   //sets user to null, no one signed in yet
@@ -23,6 +25,12 @@ function App() {
   return (
     <div>
       You are signed in as {user.email}
+    
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<Home />}/>
+      </Routes>
+    </HashRouter>
     </div>
   )
 }
