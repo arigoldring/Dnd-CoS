@@ -4,6 +4,7 @@ import { signInWithGoogle } from './auth'
 import { supabase } from './supabase'
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { Home } from "./home";
+import { Shop } from "./shop";
 
 function App() {
   //sets user to null, no one signed in yet
@@ -19,19 +20,19 @@ function App() {
 }, [])
 
   if (!user) {
-    return <button onClick={signInWithGoogle}>Sign in</button>
+   return <button onClick={signInWithGoogle}>Sign in</button>
   }
 
   return (
-    <div>
-      You are signed in as {user.email}
-    
     <HashRouter>
-      <Routes>
-        <Route path="/" element={<Home />}/>
-      </Routes>
+      <div>
+        <p>You are signed in as {user.email}</p>
+        <Routes>
+          <Route path="/" element={<Home />}/>
+          <Route path="/Shop" element={<Shop/>}/>
+        </Routes>
+      </div>
     </HashRouter>
-    </div>
   )
 }
 
