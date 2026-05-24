@@ -14,7 +14,7 @@ function App() {
     // Listen for changes to the user's authentication state
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
     });
     //Need to unsubscribe when component unmount to prevent memory leaks

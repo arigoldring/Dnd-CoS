@@ -1,18 +1,20 @@
 import { useState } from "react";
+import { ITEMS, Item } from "./utilities/items";
+
 export function Shop() {
-  const [panel, setPanel] = useState<string | null>(null);
-  const ITEMS = [
-    { name: "Sword", price: 10 },
-    { name: "Shield", price: 15 },
-    { name: "Potion", price: 5 },
-  ];
+  const [panel, setPanel] = useState<Item | null>(null);
+  function displayPanel(item: Item) {
+    setPanel(item);
+  }
   function createTable() {
     return (
       <table>
         <tbody>
-          {ITEMS.map((item: { name: string; price: number }) => (
+          {ITEMS.map((item: Item) => (
             <tr key={item.name}>
-              <td>{item.name}</td>
+              <td>
+                <button onClick={() => displayPanel(item)}>{item.name}</button>
+              </td>
               <td>{item.price} gold</td>
             </tr>
           ))}
@@ -20,5 +22,20 @@ export function Shop() {
       </table>
     );
   }
-  return <div>{createTable()}</div>;
+  return (
+    <>
+      <div>
+        <p>Converstion Ratio</p>
+      </div>
+      <div>
+        {createTable()}
+        {panel && (
+          <div>
+            Item selected: {panel.name}
+            <p>{panel.description}</p>
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
