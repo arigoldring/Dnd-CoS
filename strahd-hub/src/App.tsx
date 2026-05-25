@@ -27,13 +27,10 @@ function App() {
 
   return (
     <HashRouter>
-      <div>
-        <p>You are signed in as {user.email}</p>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/Shop" element={<Shop />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/Shop" element={<Shop />} />
+      </Routes>
     </HashRouter>
   );
 }

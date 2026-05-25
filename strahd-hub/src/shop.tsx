@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ITEMS, Item } from "./utilities/items";
+import "./shop.css";
 
 export function Shop() {
   const [panel, setPanel] = useState<Item | null>(null);
@@ -34,10 +35,15 @@ export function Shop() {
     );
   }
   return (
-    <>
+    <div className="shop">
       <div>
         <p>Filters</p>
-        <button onClick={() => setFilter("")}>All</button>
+        <button
+          className={filter === "" ? "active" : ""}
+          onClick={() => setFilter("")}
+        >
+          All
+        </button>
         <button onClick={() => setFilter("armor")}>Armor</button>
         <button onClick={() => setFilter("weapon")}>Weapons</button>
       </div>
@@ -54,6 +60,6 @@ export function Shop() {
         )}
       </div>
       <div>{createTable(ITEMS)}</div>
-    </>
+    </div>
   );
 }
