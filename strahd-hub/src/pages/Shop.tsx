@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ITEMS, Item } from "./utilities/items";
+import { ITEMS, Item } from "../services/items";
 import "./shop.css";
+import { Link } from "react-router-dom";
 
 export function Shop() {
   const [panel, setPanel] = useState<Item | null>(null);
@@ -36,6 +37,9 @@ export function Shop() {
   }
   return (
     <div className="shop">
+      <Link to="/">
+        <button>Home</button>
+      </Link>
       <div>
         <p>Filters</p>
         <button

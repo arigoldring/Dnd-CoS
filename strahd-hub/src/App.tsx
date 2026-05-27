@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import "./App.css";
-import { signInWithGoogle } from "./auth";
-import { supabase } from "./supabase";
+import { signInWithGoogle } from "./services/auth";
+import { supabase } from "./lib/supabase";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { Home } from "./home";
-import { Shop } from "./shop";
+import { Home } from "./pages/Home";
+import { Shop } from "./pages/Shop";
 import { User } from "@supabase/supabase-js";
 
 function App() {
