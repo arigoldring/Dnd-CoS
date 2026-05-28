@@ -6,6 +6,7 @@ import { HashRouter, Route, Routes } from "react-router-dom";
 import { Home } from "./pages/Home";
 import { Shop } from "./pages/Shop";
 import { User } from "@supabase/supabase-js";
+import { Maps } from "./pages/Maps";
 
 function App() {
   //sets user to null, no one signed in yet
@@ -30,6 +31,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/Shop" element={<Shop />} />
+        <Route path="/Maps" element={<Maps />} />
       </Routes>
     </HashRouter>
   );
