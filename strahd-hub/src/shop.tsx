@@ -2,24 +2,16 @@ import { useState } from "react";
 import { ITEMS, Item } from "./services/items";
 import "./shop.css";
 import { Link } from "react-router-dom";
+import { useSearchBar } from "./Hooks/Searchbar";
 
 export function Shop() {
   const [panel, setPanel] = useState<Item | null>(null);
-  const [filter, setFilter] = useState<string>("");
-  const [search, setSearch] = useState<string>("");
+  const { filter, setFilter, setSearch, filtered } = useSearchBar(ITEMS);
   function displayPanel(item: Item) {
     setPanel(item);
   }
-  function handleSearch(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setSearch(e.target.value);
-  }
-  function createTable(items: Item[]) {
-    const filtered = items
-      .filter((item: Item) => filter === "" || item.tags.includes(filter))
-      .filter((item: Item) =>
-        item.name.toLowerCase().includes(search.toLowerCase()),
-      );
 
+  function createTable() {
     return (
       <table>
         <tbody>
@@ -52,7 +44,7 @@ export function Shop() {
         <button onClick={() => setFilter("weapon")}>Weapons</button>
       </div>
       <textarea
-        onChange={handleSearch}
+        onChange={(e) => setSearch(e.target.value)}
         placeholder="Search for an item"
       ></textarea>
       <div>
@@ -63,7 +55,7 @@ export function Shop() {
           </div>
         )}
       </div>
-      <div>{createTable(ITEMS)}</div>
+      <div>{createTable()}</div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Home } from "./pages/Home";
 import { Shop } from "./pages/Shop";
 import { User } from "@supabase/supabase-js";
 import { Maps } from "./pages/Maps";
+import { Spells } from "./pages/Spells";
 
 function App() {
   //sets user to null, no one signed in yet
@@ -32,6 +33,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/Shop" element={<Shop />} />
         <Route path="/Maps" element={<Maps />} />
+        <Route path="/Spells" element={<Spells />} />
       </Routes>
     </HashRouter>
   );

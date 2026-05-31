@@ -6,9 +6,12 @@ export function Home() {
       <h1>Welcome to Curse of Strahd</h1>
       <Link to="/Shop">
         <button>Shop</button>
-        <Link to="/Maps">
-          <button>Maps</button>
-        </Link>
+      </Link>
+      <Link to="/Maps">
+        <button>Maps</button>
+      </Link>
+      <Link to="/Spells">
+        <button>Spells</button>
       </Link>
     </div>
   );
