@@ -1,111 +1,240 @@
+/* =========================================================
+   strahd-hub — global gothic theme
+   Drop-in replacement for src/index.css.
+   No .tsx changes needed. Works alongside shop.css (which is
+   more specific and scoped under .shop).
+
+   Fonts already loaded in your index.html:
+   Cinzel · Cormorant Garamond · JetBrains Mono
+   ========================================================= */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* palette — shared with shop.css */
+  --void:        #07060a;
+  --night:       #0f0c10;
+  --stone:       #1a1518;
+  --stone-2:     #241d20;
+  --bone:        #d6cab2;
+  --bone-soft:   #a89c83;
+  --bone-dim:    #6f6555;
+  --blood:       #6a0a0a;
+  --blood-bright:#8a0d0d;
+  --blood-deep:  #3a0606;
+  --tarnish:     #9a7a3a;
+  --rule:        rgba(160, 140, 110, .22);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --sans:    "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --heading: "Cinzel", serif;
+  --mono:    "JetBrains Mono", ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  font: 18px/1.5 var(--sans);
+  color: var(--bone);
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(160,150,130,.08), transparent 60%),
+    radial-gradient(700px 380px at 90% 110%, rgba(106,10,10,.18), transparent 60%),
+    radial-gradient(600px 380px at 10% 100%, rgba(60,50,40,.18), transparent 60%),
+    var(--void);
+  background-attachment: fixed;   /* no flicker when content height changes */
+  color: var(--bone);
 }
+html { overflow-y: scroll; }       /* keep scrollbar -> no horizontal jump */
 
+/* Root frame — dark, full-width, no light borders */
 #root {
-  width: 1126px;
+  width: 1100px;
   max-width: 100%;
   margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+  text-align: left;
   box-sizing: border-box;
+  padding: 0 28px 64px;
 }
 
-h1,
+/* =========================================================
+   Headings & text
+   ========================================================= */
+h1 {
+  font-family: var(--heading);
+  font-weight: 600;
+  font-size: 44px;
+  letter-spacing: .06em;
+  color: var(--bone);
+  margin: 36px 0 20px;
+  text-shadow: 0 0 28px rgba(138,13,13,.3);
+}
 h2 {
   font-family: var(--heading);
   font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
   font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+  letter-spacing: .04em;
+  color: var(--bone);
+  margin: 0 0 10px;
 }
-p {
-  margin: 0;
+p { margin: 0 0 12px; }
+@media (max-width: 1024px) {
+  h1 { font-size: 32px; }
+  :root { font-size: 16px; }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+/* =========================================================
+   Navigation (Layout.tsx)
+   <div><Link/>×4<Outlet/></div>  →  the 4 direct <a> children
+   ========================================================= */
+#root > div > a {
+  display: inline-block;
+  font-family: var(--heading);
+  font-size: 13px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--bone-soft);
+  padding: 18px 18px 16px;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
 }
+#root > div > a:first-child { padding-left: 0; }
+#root > div > a:hover {
+  color: var(--bone);
+  border-bottom-color: var(--blood-bright);
+}
+/* simple divider under the nav row */
+#root > div { position: relative; }
+#root > div::after {
+  content: "";
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, var(--rule), transparent 70%);
+  margin-bottom: 8px;
+}
+
+/* =========================================================
+   Buttons (Home page, sign-in, generic)
+   ========================================================= */
+button {
+  font-family: var(--heading);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #ead9b6;
+  background: linear-gradient(180deg, rgba(48,38,40,.85), rgba(28,22,24,.9));
+  border: 1px solid rgba(190,165,120,.45);
+  border-radius: 0;
+  padding: 11px 20px;
+  margin: 0 8px 8px 0;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,210,.06),
+    inset 0 -2px 0 rgba(0,0,0,.35);
+  transition: background .2s, color .2s, border-color .2s, box-shadow .2s, transform .05s;
+}
+button:hover {
+  color: #fbeec9;
+  border-color: var(--blood-bright);
+  background: linear-gradient(180deg, rgba(106,10,10,.45), rgba(58,6,6,.6));
+  box-shadow:
+    inset 0 1px 0 rgba(255,200,180,.16),
+    inset 0 -2px 0 rgba(0,0,0,.4),
+    0 0 14px rgba(138,13,13,.35);
+}
+button:active { transform: translateY(1px); }
+button:focus-visible { outline: 1px solid rgba(255,210,180,.5); outline-offset: 2px; }
+
+/* Home: links wrapping buttons shouldn't add underlines */
+a:has(> button) { text-decoration: none; }
+
+/* =========================================================
+   Search fields (Spells, generic textareas)
+   ========================================================= */
+textarea {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: 40px;
+  padding: 9px 12px;
+  margin: 4px 0 22px;
+  font-family: var(--sans);
+  font-size: 16px;
+  color: var(--bone);
+  background: rgba(10,8,9,.7);
+  border: 1px solid rgba(160,140,110,.25);
+  border-radius: 0;
+  resize: none;
+  outline: none;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.6);
+  transition: border-color .2s, box-shadow .2s;
+}
+textarea::placeholder { color: rgba(168,156,131,.5); font-style: italic; }
+textarea:focus {
+  border-color: var(--blood-bright);
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,.6),
+    0 0 0 1px rgba(138,13,13,.35),
+    0 0 14px rgba(138,13,13,.2);
+}
+
+/* =========================================================
+   Tables (Spells, and any generic table)
+   shop.css handles the Shop's own table.
+   ========================================================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+tbody tr { border-bottom: 1px dashed rgba(160,140,110,.18); }
+tbody tr:last-child { border-bottom: none; }
+td {
+  padding: 12px 14px 12px 0;
+  vertical-align: top;
+  line-height: 1.5;
+}
+td:first-child {
+  font-family: var(--heading);
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: .03em;
+  color: var(--bone);
+  white-space: nowrap;
+  padding-right: 28px;
+}
+td:not(:first-child) { color: var(--bone-soft); }
+
+/* =========================================================
+   Images (Maps)
+   ========================================================= */
+img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+  box-shadow: 0 20px 50px -24px rgba(0,0,0,.9);
+}
+
+/* =========================================================
+   Links (generic in-content)
+   ========================================================= */
+a { color: var(--tarnish); text-decoration-color: rgba(154,122,58,.5); }
+a:hover { color: #c79a46; }
 
 code {
+  font-family: var(--mono);
   font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  padding: 3px 7px;
+  border-radius: 3px;
+  color: var(--bone);
+  background: rgba(255,255,255,.05);
 }
