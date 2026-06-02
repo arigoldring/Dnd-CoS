@@ -8,6 +8,7 @@ import { Shop } from "./pages/Shop";
 import { User } from "@supabase/supabase-js";
 import { Maps } from "./pages/Maps";
 import { Spells } from "./pages/Spells";
+import { Layout } from "./assets/components/Layout";
 
 function App() {
   //sets user to null, no one signed in yet
@@ -30,10 +31,12 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/Shop" element={<Shop />} />
-        <Route path="/Maps" element={<Maps />} />
-        <Route path="/Spells" element={<Spells />} />
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/Shop" element={<Shop />} />
+          <Route path="/Maps" element={<Maps />} />
+          <Route path="/Spells" element={<Spells />} />
+        </Route>
       </Routes>
     </HashRouter>
   );
