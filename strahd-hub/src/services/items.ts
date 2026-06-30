@@ -25,7 +25,7 @@ export interface Item {
 // `as ItemRow[]` is a promise YOU make about the columns, not a check TS runs.
 // Swap for Supabase-generated types later to make this genuinely safe. --> look into this later
 // Explicit fields (vs `...row`) intentionally drop price_cp and created_at.
-export async function getItems() {
+export async function getItems(): Promise<Item[]> {
   const { data: items, error: retrievalError } = await supabase
     .from("items")
     .select("*");

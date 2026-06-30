@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { ITEMS, Item } from "../services/items";
+import { useItems } from "../Hooks/useItems";
+import { Item } from "../services/items";
 import "./shop.css";
-import { Link } from "react-router-dom";
 import { useSearchBar } from "../Hooks/Searchbar";
 
 export function Shop() {
+  const { items, loading, error } = useItems();
   const [panel, setPanel] = useState<Item | null>(null);
-  const { filter, setFilter, setSearch, filtered } = useSearchBar(ITEMS);
+  const { filter, setFilter, setSearch, filtered } = useSearchBar(items);
+  if (loading) return <p>Loading Items...</p>;
+  if (error) return <p>Couldn't load items: {error}</p>;
   function displayPanel(item: Item) {
     setPanel(item);
   }
@@ -16,7 +19,7 @@ export function Shop() {
       <table>
         <tbody>
           {filtered.map((item: Item) => (
-            <tr key={item.name}>
+            <tr key={item.id}>
               <td>
                 <button onClick={() => displayPanel(item)}>{item.name}</button>
               </td>
@@ -40,10 +43,11 @@ export function Shop() {
         <button onClick={() => setFilter("armor")}>Armor</button>
         <button onClick={() => setFilter("weapon")}>Weapons</button>
       </div>
-      <textarea
+      <input
+        type="text"
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search for an item"
-      ></textarea>
+      ></input>
       <div>
         {panel && (
           <div>
