@@ -5,7 +5,7 @@ import { Shop } from "./pages/Shop";
 import { Maps } from "./pages/Maps";
 import { Spells } from "./pages/Spells";
 import { Layout } from "./assets/components/Layout";
-import { AuthProvider } from "./services/profiles";
+import { AuthProvider } from "./services/AuthContext";
 
 function App() {
   return (
