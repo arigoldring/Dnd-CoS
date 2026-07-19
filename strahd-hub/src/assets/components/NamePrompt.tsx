@@ -30,10 +30,12 @@ export function NamePrompt() {
 
   return (
     <div>
+      <p>Welcome to Curse of Straud</p>
+      <p>Choose a Display Name:</p>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
-          placeholder="Type Display Name"
+          placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={submitting}
