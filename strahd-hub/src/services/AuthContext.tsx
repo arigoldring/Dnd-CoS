@@ -9,6 +9,7 @@ import {
 import { supabase } from "../lib/supabase";
 import { Profile, getOrCreateProfile } from "./profiles";
 import { NamePrompt } from "../assets/components/NamePrompt";
+import { signInWithGoogle } from "./auth";
 
 export interface AuthContextType {
   user: User | null;
@@ -104,11 +105,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { user, profile, loading, error } = useAuth();
+  const { user, profile, loading, error, refetchProfile } = useAuth();
 
-  if (loading) return /* loading UI */;
-  if (!user) return /* sign-in UI */;
-  if (error) return /* error UI — profile genuinely failed to load */;
+  if (loading)
+    return (
+      <div>
+        <p>Loading...</p>
+      </div>
+    );
+  if (!user)
+    return (
+      <div>
+        <button onClick={() => signInWithGoogle()}>Sign in with Google</button>
+      </div>
+    );
+  if (error)
+    return (
+      <div>
+        <p>{error}</p>
+        <button onClick={() => refetchProfile()}>Retry</button>
+      </div>
+    );
   if (!profile?.display_name) return <NamePrompt />;
   return <>{children}</>;
 }
