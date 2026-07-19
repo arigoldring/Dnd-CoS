@@ -37,3 +37,10 @@ export async function getOrCreateProfile(userId: string): Promise<Profile> {
   if (refetchError) throw refetchError;
   return winner;
 }
+
+export async function setDisplayName(newDisplayName: string): Promise<void> {
+  const { error } = await supabase.rpc("set_display_name", {
+    new_display_name: newDisplayName,
+  });
+  if (error) throw error;
+}

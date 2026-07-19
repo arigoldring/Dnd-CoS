@@ -8,11 +8,16 @@ import {
 } from "react";
 import { supabase } from "../lib/supabase";
 import { Profile, getOrCreateProfile } from "./profiles";
+import { NamePrompt } from "../assets/components/NamePrompt";
 
 export interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  error: string | null;
+  refetchProfile: () => Promise<void>;
+  //refetchProfile is a property that contains a function *(its value is a function)
+  //Will be used to force a re-read of the profile after mutating it
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -39,35 +44,71 @@ function useSession() {
   }, []);
   return user;
 }
+// Fetches (or creates) a profile. Rejects on failure — callers decide how
+// to log/surface the error.
+async function loadProfile(userId: string): Promise<Profile> {
+  return getOrCreateProfile(userId);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const user = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
       setProfile(null);
       setLoading(false);
+      setError(null);
       return;
     }
     let ignore = false;
     setLoading(true);
-    getOrCreateProfile(user.id)
+    setError(null);
+    loadProfile(user.id)
       .then((p) => {
-        if (!ignore) setProfile(p);
+        if (ignore) return;
+        setProfile(p);
+        setLoading(false);
       })
-      .catch((error) => {
-        if (!ignore) console.error("Problem loading profile:", error.message);
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
+      .catch((err) => {
+        if (ignore) return;
+        console.error("Problem loading profile:", err);
+        setError(
+          err instanceof Error ? err.message : "Problem loading profile",
+        );
+        setLoading(false);
       });
     return () => {
       ignore = true;
     };
   }, [user]);
 
-  const value = { user, profile, loading };
+  async function refetchProfile() {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const p = await loadProfile(user.id);
+      setProfile(p);
+    } catch (err) {
+      console.error("Problem loading profile:", err);
+      setError(err instanceof Error ? err.message : "Problem loading profile");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const value = { user, profile, loading, error, refetchProfile };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+export function AuthGate({ children }: { children: ReactNode }) {
+  const { user, profile, loading, error } = useAuth();
+
+  if (loading) return /* loading UI */;
+  if (!user) return /* sign-in UI */;
+  if (error) return /* error UI — profile genuinely failed to load */;
+  if (!profile?.display_name) return <NamePrompt />;
+  return <>{children}</>;
 }
