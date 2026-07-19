@@ -6,13 +6,12 @@ import { Maps } from "./pages/Maps";
 import { Spells } from "./pages/Spells";
 import { Layout } from "./assets/components/Layout";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
-import { signOut } from "./services/auth";
 
 function App() {
   return (
     <AuthProvider>
-      <AuthGate>
-        <HashRouter>
+      <HashRouter>
+        <AuthGate>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
@@ -21,11 +20,8 @@ function App() {
               <Route path="/Spells" element={<Spells />} />
             </Route>
           </Routes>
-          <div>
-            <button onClick={() => signOut()}>Sign out</button>
-          </div>
-        </HashRouter>
-      </AuthGate>
+        </AuthGate>
+      </HashRouter>
     </AuthProvider>
   );
 }

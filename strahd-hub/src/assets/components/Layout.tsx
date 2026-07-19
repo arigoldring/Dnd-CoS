@@ -1,4 +1,5 @@
 import { Outlet, Link } from "react-router-dom";
+import { signOut } from "../../services/auth";
 
 export function Layout() {
   return (
@@ -7,6 +8,7 @@ export function Layout() {
       <Link to="/Shop">Shop</Link>
       <Link to="/Maps">Maps</Link>
       <Link to="/Spells">Spells</Link>
+      <button onClick={() => signOut()}>Sign out</button>
       <Outlet />
     </div>
   );
