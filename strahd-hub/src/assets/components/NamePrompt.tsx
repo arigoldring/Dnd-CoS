@@ -2,9 +2,19 @@ import { SubmitEvent, useState } from "react";
 import { setDisplayName } from "../../services/profiles";
 import { useAuth } from "../../services/AuthContext";
 
-export function NamePrompt() {
+interface NamePromptProps {
+  initialName?: string;
+  heading?: string;
+  onSuccess?: () => void;
+}
+
+export function NamePrompt({
+  initialName,
+  heading = "Choose a display name:",
+  onSuccess,
+}: NamePromptProps) {
   const { refetchProfile } = useAuth();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,6 +28,7 @@ export function NamePrompt() {
     try {
       await setDisplayName(trimmed);
       await refetchProfile();
+      onSuccess?.();
     } catch (err) {
       console.error("Problem setting display name:", err);
       setError(
@@ -30,8 +41,7 @@ export function NamePrompt() {
 
   return (
     <div>
-      <p>Welcome to Curse of Straud</p>
-      <p>Choose a Display Name:</p>
+      {heading && <p>{heading}</p>}
       <form onSubmit={handleSubmit}>
         <input
           type="text"
