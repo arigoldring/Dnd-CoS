@@ -13,6 +13,9 @@ export function Home() {
       <Link to="/Spells">
         <button>Spells</button>
       </Link>
+      <Link to="/NPC">
+        <button>NPCs</button>
+      </Link>
     </div>
   );
 }
