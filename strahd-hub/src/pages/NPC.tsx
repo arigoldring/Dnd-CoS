@@ -2,6 +2,9 @@ interface NPC {
   name: string;
   description: string;
   location: string;
+  is_revealed: boolean;
+  dm_notes?: string;
+  portrait?: string;
 }
 const NPCS: NPC[] = [
   {
@@ -9,30 +12,9 @@ const NPCS: NPC[] = [
     description:
       "The vampire lord who rules Barovia, ancient and cursed to relive his tragic love story forever.",
     location: "Castle Ravenloft",
-  },
-  {
-    name: "Ismark Kolyanovich",
-    description:
-      "Burgomaster's son of Vallaki's neighboring village, trying to protect his sister Ireena from Strahd.",
-    location: "Village of Barovia",
-  },
-  {
-    name: "Ireena Kolyana",
-    description:
-      "Strahd's reincarnated love interest, hunted by the vampire and in need of protection.",
-    location: "Village of Barovia",
-  },
-  {
-    name: "Madam Eva",
-    description:
-      "Fortune teller of the Vistani who reads the Tarokka deck to reveal the locations of the Sunsword, Holy Symbol, and Tome of Strahd.",
-    location: "Tser Pool Encampment",
-  },
-  {
-    name: "Rudolph van Richten",
-    description:
-      "Famed monster hunter who may aid or share knowledge with adventurers battling Strahd, if they can find him.",
-    location: "Village of Krezk",
+    is_revealed: true,
+    dm_notes: "none",
+    portrait: "/portraits/strahd.png",
   },
 ];
 export function Npcs() {
@@ -43,6 +25,7 @@ export function Npcs() {
           <h3>{npc.name}</h3>
           <p>{npc.description}</p>
           <p>{npc.location}</p>
+          {npc.portrait && <img src={npc.portrait} alt={npc.name} />}
         </div>
       ))}
     </div>
