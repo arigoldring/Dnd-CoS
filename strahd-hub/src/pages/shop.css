@@ -1,6 +1,9 @@
 /* =========================================================
    Bildrath's Mercantile — Barovia theme (Shop page only)
    Overlay/modal detail panel + capped, scrollable item list.
+
+   REQUIRES 3 small JSX additions in Shop.tsx (marked below with »).
+   Everything else in Shop.tsx is untouched.
    ========================================================= */
 
 html { overflow-y: scroll; }
@@ -8,14 +11,35 @@ html { overflow-y: scroll; }
 body:has(.shop) {
   margin: 0;
   background:
-    radial-gradient(900px 500px at 50% -10%, rgba(160,150,130,.08), transparent 60%),
-    radial-gradient(700px 380px at 90% 110%, rgba(106,10,10,.18), transparent 60%),
-    radial-gradient(600px 380px at 10% 100%, rgba(60,50,40,.18), transparent 60%),
-    #07060a;
+    radial-gradient(1100px 620px at 50% 0%, rgba(140,110,60,.10), transparent 60%),
+    radial-gradient(900px 500px at 88% 15%, rgba(138,13,13,.16), transparent 55%),
+    radial-gradient(800px 460px at 8% 85%, rgba(90,70,40,.14), transparent 55%),
+    radial-gradient(1400px 900px at 50% 100%, rgba(30,22,14,.5), transparent 70%),
+    #0a0810;
   background-attachment: fixed;
   color: #d6cab2;
   font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
   min-height: 100vh;
+  position: relative;
+}
+/* drifting mist behind the card, purely atmospheric */
+body:has(.shop)::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(700px 280px at 22% 28%, rgba(200,190,170,.05), transparent 70%),
+    radial-gradient(620px 240px at 78% 68%, rgba(200,190,170,.045), transparent 70%);
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+/* vignette so edges recede instead of reading as flat black */
+body:has(.shop)::after {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 240px 60px rgba(0,0,0,.7);
+  z-index: 0;
 }
 
 #root:has(.shop) {
@@ -38,9 +62,10 @@ body:has(.shop) {
   --tarnish:      #9a7a3a;
 
   position: relative;
+  z-index: 1;
   width: 90%;
   max-width: 720px;
-  margin: 48px auto 80px;
+  margin: 64px auto 80px;
   padding: 32px 36px 38px;
   font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
   font-size: 17px;
@@ -49,10 +74,11 @@ body:has(.shop) {
     linear-gradient(180deg, rgba(20,15,16,.96), rgba(12,9,11,.98)),
     repeating-linear-gradient(0deg, rgba(255,240,210,.012) 0 2px, transparent 2px 4px),
     var(--void);
-  border: 1px solid rgba(160,140,110,.22);
+  border: 1px solid rgba(160,140,110,.28);
   box-shadow:
     0 0 0 1px rgba(0,0,0,.6),
-    0 24px 60px -28px rgba(0,0,0,.9),
+    0 34px 90px -28px rgba(0,0,0,.9),
+    0 0 120px -40px rgba(138,13,13,.35),
     inset 0 1px 0 rgba(255,240,210,.04);
 }
 .shop::before, .shop::after {
@@ -63,6 +89,33 @@ body:has(.shop) {
   pointer-events: none;
 }
 .shop::after { inset: 14px; border: 1px dashed rgba(160,140,110,.08); }
+
+/* title banner above the card, filling the top void */
+.shop-eyebrow, .shop-title {
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+.shop-eyebrow {
+  margin-top: 32px;
+  font-family: "Cinzel", serif;
+  letter-spacing: .42em;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #c79a5a;
+}
+.shop-title {
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  font-size: 40px;
+  letter-spacing: .08em;
+  margin: 10px auto 0;
+  color: var(--bone);
+  text-shadow: 0 0 1px rgba(214,202,178,.5), 0 0 28px rgba(138,13,13,.35), 0 0 60px rgba(138,13,13,.18);
+}
 
 /* header the page doesn't have yet — safe to ignore if unused */
 .shop h1 {
@@ -232,7 +285,10 @@ body:has(.shop) {
   border-top: 1px solid rgba(160,140,110,.18);
   font-family: "Cormorant Garamond", serif; font-weight: 400; font-style: italic;
   font-size: 16px; line-height: 1.55; color: var(--bone-soft);
-  font-variant-numeric: lining-nums;
+}
+.shop > div:nth-of-type(2) p::first-letter {
+  font-family: "Cinzel", serif; font-size: 1.5em; color: var(--blood-bright);
+  padding-right: 2px; font-style: normal;
 }
 
 .item-detail-tags { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; }

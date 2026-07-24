@@ -88,85 +88,89 @@ export function Shop() {
     );
   }
   return (
-    <div className="shop">
-      <div>
-        <p>Filters</p>
-        <button
-          className={filter === "" ? "active" : ""}
-          onClick={() => setFilter("")}
-        >
-          All
-        </button>
-        <button
-          className={filter === "general" ? "active" : ""}
-          onClick={() => setFilter("general")}
-        >
-          general
-        </button>
-        <button
-          className={filter === "armor" ? "active" : ""}
-          onClick={() => setFilter("armor")}
-        >
-          Armor
-        </button>
-        <button
-          className={filter === "weapon" ? "active" : ""}
-          onClick={() => setFilter("weapon")}
-        >
-          Weapons
-        </button>
-      </div>
-      <input
-        type="text"
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search for an item"
-      ></input>
-      <div onClick={() => setPanel(null)}>
-        {panel && (
-          <div
-            className="item-detail-card"
-            onClick={(e) => e.stopPropagation()}
+    <>
+      <p className="shop-eyebrow">— Village of Barovia —</p>
+      <h1 className="shop-title">Bildrath's Mercantile</h1>
+      <div className="shop">
+        <div>
+          <p>Filters</p>
+          <button
+            className={filter === "" ? "active" : ""}
+            onClick={() => setFilter("")}
           >
-            <button
-              className="item-detail-close"
-              onClick={() => setPanel(null)}
+            All
+          </button>
+          <button
+            className={filter === "general" ? "active" : ""}
+            onClick={() => setFilter("general")}
+          >
+            general
+          </button>
+          <button
+            className={filter === "armor" ? "active" : ""}
+            onClick={() => setFilter("armor")}
+          >
+            Armor
+          </button>
+          <button
+            className={filter === "weapon" ? "active" : ""}
+            onClick={() => setFilter("weapon")}
+          >
+            Weapons
+          </button>
+        </div>
+        <input
+          type="text"
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search for an item"
+        ></input>
+        <div onClick={() => setPanel(null)}>
+          {panel && (
+            <div
+              className="item-detail-card"
+              onClick={(e) => e.stopPropagation()}
             >
-              ×
-            </button>
-            <div className="item-detail-header">
-              <span className="item-detail-name">{panel.name}</span>
-              <span className="item-detail-price">{panel.price} gold</span>
-            </div>
-            {stats.length > 0 && (
-              <dl className="item-detail-stats">
-                {stats.map((stat) => (
-                  <div className="item-detail-stat" key={stat.label}>
-                    <dt>{stat.label}</dt>
-                    <dd>{stat.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            <p>{panel.description}</p>
-            {panel.tags.length > 0 && (
-              <div className="item-detail-tags">
-                {panel.tags.map((tag) => (
-                  <span className="item-tag" key={tag}>
-                    {tag}
-                  </span>
-                ))}
+              <button
+                className="item-detail-close"
+                onClick={() => setPanel(null)}
+              >
+                ×
+              </button>
+              <div className="item-detail-header">
+                <span className="item-detail-name">{panel.name}</span>
+                <span className="item-detail-price">{panel.price} gold</span>
               </div>
-            )}
-          </div>
+              {stats.length > 0 && (
+                <dl className="item-detail-stats">
+                  {stats.map((stat) => (
+                    <div className="item-detail-stat" key={stat.label}>
+                      <dt>{stat.label}</dt>
+                      <dd>{stat.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <p>{panel.description}</p>
+              {panel.tags.length > 0 && (
+                <div className="item-detail-tags">
+                  {panel.tags.map((tag) => (
+                    <span className="item-tag" key={tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {!panel && (
+          <p className="item-detail-empty">
+            "Looking to arm yourself, are you? Mind the mist on your way out."
+            <span className="sub">— select an item to inspect it —</span>
+          </p>
         )}
+        <div>{createTable()}</div>
       </div>
-      {!panel && (
-        <p className="item-detail-empty">
-          "Looking to arm yourself, are you? Mind the mist on your way out."
-          <span className="sub">— select an item to inspect it —</span>
-        </p>
-      )}
-      <div>{createTable()}</div>
-    </div>
+    </>
   );
 }
