@@ -99,6 +99,7 @@ export function Shop() {
         </button>
         <button onClick={() => setFilter("armor")}>Armor</button>
         <button onClick={() => setFilter("weapon")}>Weapons</button>
+        <button onClick={() => setFilter("general")}>general</button>
       </div>
       <input
         type="text"
