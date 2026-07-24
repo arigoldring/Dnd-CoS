@@ -1,14 +1,18 @@
 import { useState } from "react";
 
-// T is a placeholder that gets filled at call time, object calling must containe a name and tages field
-export function useSearchBar<T extends { name: string; tags: string[] }>(
+// T is a placeholder that gets filled at call time, object calling must contain a name field.
+// matchesFilter decides how the `filter` string maps onto an item - callers own that
+// meaning (tags, kind, category, ...) since it differs per item shape. Defaults to
+// "everything matches", which is a no-op for callers that never call setFilter.
+export function useSearchBar<T extends { name: string }>(
   items: T[],
+  matchesFilter: (item: T, filter: string) => boolean = () => true,
 ) {
   const [filter, setFilter] = useState<string>("");
   const [search, setSearch] = useState<string>("");
 
   const filtered = items
-    .filter((item) => filter === "" || item.tags.includes(filter))
+    .filter((item) => filter === "" || matchesFilter(item, filter))
     .filter((item) => item.name.toLowerCase().includes(search.toLowerCase()));
   return { filter, setFilter, search, setSearch, filtered };
 }

@@ -226,6 +226,72 @@ body:has(.shop) {
   font-style: normal;
 }
 
+/* --- detail panel header: name + price --- */
+.item-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.item-detail-name {
+  font-size: 17px;
+  letter-spacing: .04em;
+}
+.item-detail-price {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: .06em;
+  color: var(--tarnish);
+  white-space: nowrap;
+}
+
+/* --- detail panel stat rows (weapon/armor specifics) --- */
+.item-detail-stats {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(160,140,110,.18);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.item-detail-stat {
+  display: flex;
+  gap: 8px;
+  font-weight: 400;
+}
+.item-detail-stat dt {
+  min-width: 130px;
+  font-family: "Cinzel", serif;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--bone-soft);
+}
+.item-detail-stat dd {
+  margin: 0;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 15px;
+  color: var(--bone);
+}
+
+/* --- detail panel tags --- */
+.item-detail-tags {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.item-tag {
+  font-family: "Cinzel", serif;
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--bone-soft);
+  border: 1px solid rgba(160,140,110,.3);
+  padding: 3px 8px;
+}
+
 /* =========================================================
    ITEM TABLE
    ========================================================= */
