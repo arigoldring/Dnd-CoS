@@ -66,6 +66,7 @@ export function Shop() {
   );
   if (loading) return <p>Loading Items...</p>;
   if (error) return <p>Couldn't load items: {error}</p>;
+  const stats = panel ? itemStats(panel) : [];
   function displayPanel(item: Item) {
     setPanel(item);
   }
@@ -111,9 +112,9 @@ export function Shop() {
               <span className="item-detail-name">{panel.name}</span>
               <span className="item-detail-price">{panel.price} gold</span>
             </div>
-            {itemStats(panel).length > 0 && (
+            {stats.length > 0 && (
               <dl className="item-detail-stats">
-                {itemStats(panel).map((stat) => (
+                {stats.map((stat) => (
                   <div className="item-detail-stat" key={stat.label}>
                     <dt>{stat.label}</dt>
                     <dd>{stat.value}</dd>
