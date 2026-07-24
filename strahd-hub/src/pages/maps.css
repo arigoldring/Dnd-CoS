@@ -1,0 +1,309 @@
+
+.maps {
+  --void:         #07060a;
+  --stone:        #1a1518;
+  --stone-2:      #241d20;
+  --bone:         #d6cab2;
+  --bone-soft:    #a89c83;
+  --bone-dim:     #6f6555;
+  --blood:        #6a0a0a;
+  --blood-bright: #8a0d0d;
+  --blood-deep:   #3a0606;
+  --tarnish:      #9a7a3a;
+
+  --dot: 18px;   /* visible marker diameter */
+  --hit: 30px;   /* invisible tap target */
+
+  color: var(--bone);
+  font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+}
+
+/* the stage: positioning context for the drawer + peek, and it clips them */
+.maps .map-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(160,140,110,.28);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 34px 90px -28px rgba(0,0,0,.9);
+  background: #0b0810;
+}
+
+/* ---------------------------------------------------------
+   MARKER
+   The button is the hit target; ::before is the dot,
+   ::after is the hover label.
+   NOTE: the button's `transform` is set inline in Maps.tsx
+   (translate(-50%,-50%)) so nothing here touches transform —
+   all motion happens on the pseudo-elements.
+   --------------------------------------------------------- */
+
+.maps .map-hotspot {
+  width: var(--hit);
+  height: var(--hit);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  appearance: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+}
+
+/* the dot + its static halo ring */
+.maps .map-hotspot::before {
+  content: "";
+  width: var(--dot);
+  height: var(--dot);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b81616, var(--blood-bright) 55%, var(--blood-deep));
+  border: 2px solid rgba(214,202,178,.9);
+  outline: 1px solid rgba(138,13,13,.55);
+  outline-offset: 4px;
+  box-shadow: 0 0 10px 2px rgba(138,13,13,.45), 0 1px 3px rgba(0,0,0,.8);
+  transition: box-shadow .22s ease, width .18s ease, height .18s ease, border-color .18s ease;
+  animation: hotspotBeat 3.6s ease-in-out infinite;
+}
+
+/* slow candle-beat: the glow breathes, the dot never jumps position */
+@keyframes hotspotBeat {
+  0%, 100% { box-shadow: 0 0 8px 1px rgba(138,13,13,.35), 0 1px 3px rgba(0,0,0,.8); }
+  50%      { box-shadow: 0 0 16px 4px rgba(138,13,13,.6),  0 1px 3px rgba(0,0,0,.8); }
+}
+
+/* hover / focus */
+.maps .map-hotspot:hover::before,
+.maps .map-hotspot:focus-visible::before {
+  width: calc(var(--dot) + 4px);
+  height: calc(var(--dot) + 4px);
+  border-color: #f0e6d2;
+  box-shadow: 0 0 20px 5px rgba(138,13,13,.7), 0 1px 3px rgba(0,0,0,.8);
+  animation: none;
+}
+.maps .map-hotspot:focus-visible {
+  outline: none;
+}
+.maps .map-hotspot:focus-visible::before {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 6px;
+}
+.maps .map-hotspot:active::before {
+  width: var(--dot);
+  height: var(--dot);
+}
+
+/* selected — gold-ringed, glow held open */
+.maps .map-hotspot.is-active::before {         /* » add className={loc.id === selected?.id ? "map-hotspot is-active" : "map-hotspot"} */
+  width: calc(var(--dot) + 4px);
+  height: calc(var(--dot) + 4px);
+  border-color: var(--tarnish);
+  outline-color: rgba(154,122,58,.7);
+  box-shadow: 0 0 22px 6px rgba(138,13,13,.6), 0 0 0 1px rgba(154,122,58,.35), 0 1px 3px rgba(0,0,0,.8);
+  animation: none;
+}
+
+/* hover label — reads the button's title attribute, no extra markup */
+.maps .map-hotspot::after {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  font-size: 13px;
+  font-variant: small-caps;
+  letter-spacing: .1em;
+  color: var(--bone);
+  background: linear-gradient(180deg, rgba(26,21,24,.97), rgba(12,9,11,.97));
+  border: 1px solid rgba(154,122,58,.45);
+  padding: 3px 9px 2px;
+  box-shadow: 0 6px 18px -6px rgba(0,0,0,.9);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease, translate .16s ease;
+  translate: -50% 4px;
+}
+.maps .map-hotspot:hover::after,
+.maps .map-hotspot:focus-visible::after {
+  opacity: 1;
+  translate: -50% 0;
+}
+/* keep the label out of the way while its own panel is open */
+.maps .map-hotspot.is-active::after { opacity: 0; }
+
+/* ---------------------------------------------------------
+   PANEL — shared shell
+   --------------------------------------------------------- */
+
+.maps .loc-panel {
+  --edge: 1px solid rgba(160,140,110,.28);
+  position: relative;
+  color: var(--bone);
+  background:
+    linear-gradient(180deg, rgba(20,15,16,.97), rgba(12,9,11,.99)),
+    repeating-linear-gradient(0deg, rgba(255,240,210,.012) 0 2px, transparent 2px 4px),
+    var(--void);
+  border: var(--edge);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 34px 90px -28px rgba(0,0,0,.95);
+}
+.maps .loc-panel__name {
+  margin: 0 34px 0 0;
+  font-size: 26px;
+  font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: .04em;
+  color: var(--bone);
+  text-shadow: 0 1px 0 rgba(0,0,0,.8);
+}
+.maps .loc-panel__rule {
+  height: 1px;
+  margin: 12px 0 14px;
+  background: linear-gradient(90deg, transparent, rgba(154,122,58,.55) 20%, rgba(154,122,58,.55) 80%, transparent);
+}
+.maps .loc-panel__desc {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--bone-soft);
+  text-wrap: pretty;
+}
+.maps .loc-panel__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font: 400 20px/1 "Cormorant Garamond", Georgia, serif;
+  color: var(--bone-dim);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.maps .loc-panel__close:hover {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.45);
+  background: rgba(154,122,58,.08);
+}
+.maps .loc-panel__close:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------
+   VARIANT A — overlay modal (matches the Shop page)
+   --------------------------------------------------------- */
+
+.maps .loc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5,4,7,.72);
+  backdrop-filter: blur(2px);
+  animation: locFade .2s ease both;
+}
+.maps .loc-panel--modal {
+  width: min(440px, 100%);
+  padding: 26px 30px 28px;
+  animation: locRise .24s cubic-bezier(.2,.7,.3,1) both;
+}
+
+/* ---------------------------------------------------------
+   VARIANT B — side drawer, over the map's right edge
+   Requires the map stage to be position:relative + overflow:hidden.
+   --------------------------------------------------------- */
+
+.maps .loc-panel--drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 40;
+  width: min(340px, 82%);
+  height: 100%;
+  padding: 26px 28px;
+  overflow-y: auto;
+  border-width: 0 0 0 1px;
+  box-shadow: -30px 0 70px -30px rgba(0,0,0,.95);
+  animation: locSlide .26s cubic-bezier(.2,.7,.3,1) both;
+}
+
+/* ---------------------------------------------------------
+   VARIANT C — popover tethered to the marker
+   Position is set inline (left/top in %) from the location's coords.
+   --------------------------------------------------------- */
+
+.maps .loc-panel--popover {
+  position: absolute;
+  z-index: 40;
+  width: 260px;
+  padding: 18px 20px 20px;
+  translate: -50% calc(-100% - 20px);
+  animation: locPop .18s cubic-bezier(.2,.7,.3,1) both;
+}
+.maps .loc-panel--popover .loc-panel__name { font-size: 21px; }
+.maps .loc-panel--popover .loc-panel__desc { font-size: 15px; }
+/* tether notch */
+.maps .loc-panel--popover::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  translate: -50% -6px;
+  rotate: 45deg;
+  background: rgba(12,9,11,.99);
+  border-right: 1px solid rgba(160,140,110,.28);
+  border-bottom: 1px solid rgba(160,140,110,.28);
+}
+
+/* ---------------------------------------------------------
+   VARIANT D — hover peek (popover) that promotes to the drawer
+   Applied WITH --popover: class="loc-panel loc-panel--popover loc-panel--peek"
+   Shown after a ~600ms dwell, purely informational: no close
+   button, never takes the pointer, so moving toward it or
+   clicking through it still hits the map.
+   --------------------------------------------------------- */
+
+.maps .loc-panel--peek {
+  width: 230px;
+  padding: 13px 16px 15px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 18px 44px -18px rgba(0,0,0,.9);
+}
+.maps .loc-panel--peek .loc-panel__name { font-size: 19px; }
+.maps .loc-panel--peek .loc-panel__rule { margin: 8px 0 9px; }
+.maps .loc-panel--peek .loc-panel__desc {
+  font-size: 14px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.maps .loc-panel__more {
+  display: block;
+  margin-top: 9px;
+  font-size: 12px;
+  font-variant: small-caps;
+  letter-spacing: .12em;
+  color: var(--tarnish);
+}
+/* the peek already shows the name — suppress the tiny hover label */
+.maps.has-peek .map-hotspot::after { display: none; }
+
+@keyframes locFade  { from { opacity: 0 } }
+@keyframes locRise  { from { opacity: 0; translate: 0 12px } }
+@keyframes locSlide { from { translate: 100% 0 } }
+@keyframes locPop   { from { opacity: 0; translate: -50% calc(-100% - 10px) } }
+
+@media (prefers-reduced-motion: reduce) {
+  .maps .map-hotspot::before { animation: none; }
+  .maps .loc-backdrop, .maps .loc-panel { animation: none; }
+}
