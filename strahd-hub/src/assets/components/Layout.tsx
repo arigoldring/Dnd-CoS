@@ -17,7 +17,7 @@ export function Layout() {
       <button onClick={() => signOut()}>Sign out</button>
       {!isEditing ? (
         <span>
-          {profile?.display_name}
+          {profile?.display_name} Role: {profile?.role}
           <button onClick={() => setIsEditing(true)}>Edit</button>
         </span>
       ) : (
