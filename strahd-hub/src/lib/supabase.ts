@@ -8,7 +8,3 @@ console.log(supabaseUrl, supabaseKey);
 // Supabase client is used to interact with the database
 // gives access to methods to insert, update, delete, and query data in the database
 export const supabase = createClient(supabaseUrl, supabaseKey);
-// TEMPORARY — for console testing only, remove before committing
-if (import.meta.env.DEV) {
-  (window as any).supabase = supabase;
-}
