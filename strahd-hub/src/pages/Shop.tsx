@@ -97,18 +97,42 @@ export function Shop() {
         >
           All
         </button>
-        <button onClick={() => setFilter("armor")}>Armor</button>
-        <button onClick={() => setFilter("weapon")}>Weapons</button>
-        <button onClick={() => setFilter("general")}>general</button>
+        <button
+          className={filter === "general" ? "active" : ""}
+          onClick={() => setFilter("general")}
+        >
+          general
+        </button>
+        <button
+          className={filter === "armor" ? "active" : ""}
+          onClick={() => setFilter("armor")}
+        >
+          Armor
+        </button>
+        <button
+          className={filter === "weapon" ? "active" : ""}
+          onClick={() => setFilter("weapon")}
+        >
+          Weapons
+        </button>
       </div>
       <input
         type="text"
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search for an item"
       ></input>
-      <div>
+      <div onClick={() => setPanel(null)}>
         {panel && (
-          <div>
+          <div
+            className="item-detail-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="item-detail-close"
+              onClick={() => setPanel(null)}
+            >
+              ×
+            </button>
             <div className="item-detail-header">
               <span className="item-detail-name">{panel.name}</span>
               <span className="item-detail-price">{panel.price} gold</span>
@@ -136,6 +160,12 @@ export function Shop() {
           </div>
         )}
       </div>
+      {!panel && (
+        <p className="item-detail-empty">
+          "Looking to arm yourself, are you? Mind the mist on your way out."
+          <span className="sub">— select an item to inspect it —</span>
+        </p>
+      )}
       <div>{createTable()}</div>
     </div>
   );
