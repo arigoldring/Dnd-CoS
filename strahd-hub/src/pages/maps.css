@@ -102,6 +102,17 @@
   animation: none;
 }
 
+/* hidden location — only ever rendered for the DM. Muted grey dot with a
+   dashed ring so it reads as "not yet revealed to the players." */
+.maps .map-hotspot.is-hidden::before {
+  background: radial-gradient(circle at 35% 30%, #6f6555, #4a4238 60%, #2a251f);
+  border-style: dashed;
+  border-color: rgba(214,202,178,.55);
+  outline-color: rgba(154,122,58,.4);
+  box-shadow: 0 1px 3px rgba(0,0,0,.8);
+  animation: none;
+}
+
 /* hover label — reads the button's title attribute, no extra markup */
 .maps .map-hotspot::after {
   content: attr(title);
@@ -167,6 +178,17 @@
   color: var(--bone-soft);
   text-wrap: pretty;
 }
+/* DM-only notes block — set apart from the player-facing description */
+.maps .loc-panel__dm {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--bone-soft);
+  background: rgba(106,10,10,.14);
+  border: 1px solid rgba(138,13,13,.4);
+  border-left: 3px solid var(--blood-bright);
+}
 .maps .loc-panel__close {
   position: absolute;
   top: 10px;
@@ -194,27 +216,6 @@
 }
 
 /* ---------------------------------------------------------
-   VARIANT A — overlay modal (matches the Shop page)
-   --------------------------------------------------------- */
-
-.maps .loc-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(5,4,7,.72);
-  backdrop-filter: blur(2px);
-  animation: locFade .2s ease both;
-}
-.maps .loc-panel--modal {
-  width: min(440px, 100%);
-  padding: 26px 30px 28px;
-  animation: locRise .24s cubic-bezier(.2,.7,.3,1) both;
-}
-
-/* ---------------------------------------------------------
    VARIANT B — side drawer, over the map's right edge
    Requires the map stage to be position:relative + overflow:hidden.
    --------------------------------------------------------- */
@@ -231,6 +232,14 @@
   border-width: 0 0 0 1px;
   box-shadow: -30px 0 70px -30px rgba(0,0,0,.95);
   animation: locSlide .26s cubic-bezier(.2,.7,.3,1) both;
+}
+/* opened on the left for markers on the right half of the map */
+.maps .loc-panel--drawer.loc-panel--left {
+  right: auto;
+  left: 0;
+  border-width: 0 1px 0 0;
+  box-shadow: 30px 0 70px -30px rgba(0,0,0,.95);
+  animation: locSlideLeft .26s cubic-bezier(.2,.7,.3,1) both;
 }
 
 /* ---------------------------------------------------------
@@ -277,6 +286,22 @@
   pointer-events: none;
   box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 18px 44px -18px rgba(0,0,0,.9);
 }
+
+/* flipped to render BELOW the marker (for markers near the top edge, where
+   there's no room above). Position is anchored at the marker's bottom in JS;
+   here we drop the panel down and move the tether notch to its top edge. */
+.maps .loc-panel--popover.loc-panel--below {
+  translate: -50% 20px;
+  animation-name: locPopBelow;
+}
+.maps .loc-panel--popover.loc-panel--below::after {
+  top: auto;
+  bottom: 100%;
+  translate: -50% 6px;
+  border: 0;
+  border-left: 1px solid rgba(160,140,110,.28);
+  border-top: 1px solid rgba(160,140,110,.28);
+}
 .maps .loc-panel--peek .loc-panel__name { font-size: 19px; }
 .maps .loc-panel--peek .loc-panel__rule { margin: 8px 0 9px; }
 .maps .loc-panel--peek .loc-panel__desc {
@@ -298,12 +323,12 @@
 /* the peek already shows the name — suppress the tiny hover label */
 .maps.has-peek .map-hotspot::after { display: none; }
 
-@keyframes locFade  { from { opacity: 0 } }
-@keyframes locRise  { from { opacity: 0; translate: 0 12px } }
-@keyframes locSlide { from { translate: 100% 0 } }
-@keyframes locPop   { from { opacity: 0; translate: -50% calc(-100% - 10px) } }
+@keyframes locSlide     { from { translate: 100% 0 } }
+@keyframes locSlideLeft { from { translate: -100% 0 } }
+@keyframes locPop       { from { opacity: 0; translate: -50% calc(-100% - 10px) } }
+@keyframes locPopBelow  { from { opacity: 0; translate: -50% 10px } }
 
 @media (prefers-reduced-motion: reduce) {
   .maps .map-hotspot::before { animation: none; }
-  .maps .loc-backdrop, .maps .loc-panel { animation: none; }
+  .maps .loc-panel { animation: none; }
 }

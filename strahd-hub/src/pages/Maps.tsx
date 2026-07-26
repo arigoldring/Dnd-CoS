@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import barovia_map from "../assets/Maps/Spoiler Free Map.png";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { useAuth } from "../services/AuthContext";
 import "./maps.css";
 
 interface MapLocation {
@@ -53,14 +54,29 @@ const locations: MapLocation[] = [
     y: 51.2,
     description: "Strahd's mountaintop fortress, seat of the land's curse.",
     is_revealed: true,
+    dm_notes: "Strahd is home. The Heart of Sorrow beats in the north tower.",
+  },
+  {
+    id: "loc-6",
+    name: "Abbey of Saint Markovia",
+    x: 8.4,
+    y: 22.6,
+    description: "Ruined abbey on the heights above Krezk.",
+    is_revealed: false,
+    dm_notes: "The Abbot dwells here with his mongrelfolk flock.",
   },
 ];
 
 const DWELL = 600; // ms of hover before the peek appears
+// Vertical room the peek needs above a marker (panel height + tether gap).
+// Below this, the peek flips to render underneath the marker instead.
+const PEEK_CLEARANCE = 150;
 
-type Peek = { loc: MapLocation; left: number; top: number };
+type Peek = { loc: MapLocation; left: number; top: number; below: boolean };
 
 export function Maps() {
+  const { profile, loading } = useAuth();
+  const isDm = profile?.role === "dm";
   const [selected, setSelected] = useState<MapLocation | null>(null);
   const [peek, setPeek] = useState<Peek | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -86,7 +102,13 @@ export function Maps() {
         Math.max(m.left + m.width / 2 - s.left, 140),
         s.width - 140,
       );
-      setPeek({ loc, left, top: m.top - s.top });
+      // The peek renders above the marker by default. For markers near the top
+      // of the stage there isn't room — it would be clipped by the stage's
+      // overflow:hidden — so flip it below the marker instead.
+      const top = m.top - s.top;
+      const bottom = m.bottom - s.top;
+      const below = top < PEEK_CLEARANCE;
+      setPeek({ loc, left, top: below ? bottom : top, below });
     }, DWELL);
   };
 
@@ -100,7 +122,12 @@ export function Maps() {
     return () => window.removeEventListener("keydown", onKey);
   }, [clearPeek]);
 
-  const revealed = locations.filter((l) => l.is_revealed);
+  if (loading) return <p>Loading...</p>;
+  // DMs see every location (including hidden ones, styled differently below);
+  // players see only what's been revealed to them.
+  const visible = isDm
+    ? locations
+    : locations.filter((l) => l.is_revealed);
 
   return (
     <div className="maps has-peek">
@@ -145,7 +172,7 @@ export function Maps() {
                   height: "auto",
                 }}
               />
-              {revealed.map((loc) => (
+              {visible.map((loc) => (
                 <button
                   key={loc.id}
                   onClick={() => {
@@ -160,7 +187,8 @@ export function Maps() {
                   title={loc.name}
                   className={
                     "map-hotspot" +
-                    (selected?.id === loc.id ? " is-active" : "")
+                    (selected?.id === loc.id ? " is-active" : "") +
+                    (!loc.is_revealed ? " is-hidden" : "")
                   }
                   style={{
                     position: "absolute",
@@ -176,7 +204,10 @@ export function Maps() {
 
         {peek && peek.loc.id !== selected?.id && (
           <aside
-            className="loc-panel loc-panel--popover loc-panel--peek"
+            className={
+              "loc-panel loc-panel--popover loc-panel--peek" +
+              (peek.below ? " loc-panel--below" : "")
+            }
             style={{ left: peek.left, top: peek.top }}
             aria-hidden="true"
           >
@@ -189,7 +220,12 @@ export function Maps() {
 
         {selected && (
           <aside
-            className="loc-panel loc-panel--drawer"
+            // Open on the side away from the marker so the drawer never covers
+            // the pin you just clicked (and its gold is-active ring).
+            className={
+              "loc-panel loc-panel--drawer" +
+              (selected.x > 50 ? " loc-panel--left" : "")
+            }
             role="dialog"
             aria-label={selected.name}
           >
@@ -203,6 +239,9 @@ export function Maps() {
             <h2 className="loc-panel__name">{selected.name}</h2>
             <div className="loc-panel__rule"></div>
             <p className="loc-panel__desc">{selected.description}</p>
+            {isDm && selected.dm_notes && (
+              <p className="loc-panel__dm">DM notes: {selected.dm_notes}</p>
+            )}
           </aside>
         )}
       </div>
