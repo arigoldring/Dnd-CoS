@@ -22,6 +22,38 @@ const locations: MapLocation[] = [
     description: "Cursed Town",
     is_revealed: true,
   },
+  {
+    id: "loc-2",
+    name: "Tser Falls",
+    x: 56.8,
+    y: 55.9,
+    description: "Thundering falls above the Vistani camp at Tser Pool.",
+    is_revealed: true,
+  },
+  {
+    id: "loc-3",
+    name: "Vallaki",
+    x: 39.8,
+    y: 33.4,
+    description: "Walled town ruled by a paranoid baron.",
+    is_revealed: true,
+  },
+  {
+    id: "loc-4",
+    name: "Krezk",
+    x: 11.2,
+    y: 29.9,
+    description: "Remote walled village guarding the Abbey of Saint Markovia.",
+    is_revealed: true,
+  },
+  {
+    id: "loc-5",
+    name: "Castle Ravenloft",
+    x: 71,
+    y: 51.2,
+    description: "Strahd's mountaintop fortress, seat of the land's curse.",
+    is_revealed: true,
+  },
 ];
 
 const DWELL = 600; // ms of hover before the peek appears
@@ -81,7 +113,14 @@ export function Maps() {
           onPanningStart={clearPeek}
           onZoomStart={clearPeek}
         >
-          <TransformComponent wrapperStyle={{ width: "100%", height: "80vh" }}>
+          <TransformComponent
+            wrapperStyle={{ width: "100%" }}
+            contentStyle={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
             <div
               style={{ position: "relative", display: "inline-block" }}
               // TEMP: uncomment to find the next hotspot's x%/y% in the console.
@@ -98,7 +137,13 @@ export function Maps() {
                 ref={imgRef}
                 src={barovia_map}
                 alt="Map of Barovia"
-                style={{ display: "block", width: "800px", height: "auto" }}
+                style={{
+                  display: "block",
+                  maxWidth: "100%",
+                  maxHeight: "82vh",
+                  width: "auto",
+                  height: "auto",
+                }}
               />
               {revealed.map((loc) => (
                 <button

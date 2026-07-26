@@ -11,7 +11,7 @@
   --blood-deep:   #3a0606;
   --tarnish:      #9a7a3a;
 
-  --dot: 18px;   /* visible marker diameter */
+  --dot: 14px;   /* visible marker diameter */
   --hit: 30px;   /* invisible tap target */
 
   color: var(--bone);
