@@ -1,32 +1,13 @@
 import { supabase } from "../lib/supabase";
 /**
- * Using 2 interfaces on purpose
- * ItemRow: what the item table from supabase returns
- * Item: How the rest of the application sees an item
- * Biggest Change in the conversation from price in copper to price in gold
+ * The DB row shape ("what the items table returns") now comes from the
+ * generated Database types via the typed supabase client, so getItems maps
+ * that row directly into Item ("how the rest of the app sees an item") with
+ * no hand-written interface and no `as ItemRow[]` cast to keep in sync.
+ * Biggest Change in the conversation from price in copper to price in gold.
+ * Note the generated row marks description as nullable (the DB column is), so
+ * it's routed through requireField below like every other required field.
  */
-interface ItemRow {
-  id: string;
-  name: string;
-  description: string;
-  price_cp: number;
-  tags: string[];
-  created_at: string;
-  kind: string;
-
-  weapon_category: string | null;
-  damage_dice: string | null;
-  damage_type: string | null;
-  properties: string[] | null;
-  versatile_dice: string | null;
-  range_normal: number | null;
-  range_long: number | null;
-
-  armor_category: string | null;
-  base_armor_class: number | null;
-  strength_requirement: number | null;
-  stealth_disadvantage: boolean | null;
-}
 export interface ItemBase {
   id: string;
   name: string;
@@ -99,16 +80,19 @@ export type Item = GeneralItem | Weapon | Armor;
 
 // --- Parsing helpers -------------------------------------------------------
 // Module scope, not inside getItems: neither closes over anything, so
-// rebuilding them per call was pointless. TODO: move to lib/parse.ts when the
-// NPC/locations pages need the same checks — they aren't Supabase calls, so
-// they don't really belong in services/.
+// rebuilding them per call was pointless. TODO: move to lib/parse.ts when
+// another page needs the same checks — locations.ts got by without them
+// (its one optional field is a plain lookup, no narrowing), but NPC will
+// likely want parseOneOf once it moves off its hardcoded array.
 
-// Throws instead of letting a missing column silently flow through as a
-// mistyped value.
-// Accepts undefined as well as null on purpose: ItemRow is a hand-written
-// promise, not a checked fact. If a column is renamed in Postgres but not
-// here, `select("*")` returns a row with no such key and the value is
-// undefined, not null. `== null` (loose) catches both; `=== null` would not.
+// Throws instead of letting a null/missing value silently flow through as a
+// mistyped one. The row type is generated now, so a renamed *column* is a
+// compile error — this no longer guards against that. What it still guards:
+// columns the schema types as nullable (e.g. description) but the app treats
+// as required, and rows RLS or bad seed data could leave empty. Those are
+// real values of null at runtime that the type alone won't stop.
+// Accepts undefined as well as null on purpose: `== null` (loose) catches
+// both, so a would-be-undefined value is handled too; `=== null` would not.
 function requireField<T>(
   value: T | null | undefined,
   field: string,
@@ -137,8 +121,8 @@ function parseOneOf<T extends string>(
   return value as T;
 }
 
-// `as ItemRow[]` is a promise YOU make about the columns, not a check TS runs.
-// Swap for Supabase-generated types later to make this genuinely safe. --> look into this later
+// Rows come back typed from the generated schema now (the client is
+// createClient<Database>), so no cast — `items` is already ItemRow[].
 // Explicit fields (vs `...row`) intentionally drop price_cp and created_at.
 export async function getItems(): Promise<Item[]> {
   const { data: items, error: retrievalError } = await supabase
@@ -153,11 +137,11 @@ export async function getItems(): Promise<Item[]> {
   // NOTE: a throw here aborts the whole map, so one malformed row hides all
   // the good ones. That's the right tradeoff while seeding (fail loud, fix the
   // row) but revisit once the data is stable.
-  return (items as ItemRow[]).map((row): Item => {
+  return items.map((row): Item => {
     const base: ItemBase = {
       id: row.id,
       name: row.name,
-      description: row.description,
+      description: requireField(row.description, "description", row.id),
       price: row.price_cp / 100,
       tags: row.tags,
     };

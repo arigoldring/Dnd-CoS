@@ -1,9 +1,29 @@
 import { supabase } from "../lib/supabase";
+import type { Tables } from "../types/database.types";
+
+type ProfileRow = Tables<"profiles">;
+
 export interface Profile {
   id: string;
   display_name: string | null;
   created_at: string;
   role: "dm" | "player";
+}
+
+// The DB types `role` as plain `text` (string), but the app only ever expects
+// 'dm' or 'player'. Narrow it at the boundary instead of trusting the string —
+// same idea as items.ts's parseOneOf. An unexpected value fails loud here
+// rather than silently flowing through as a bogus role.
+function toProfile(row: ProfileRow): Profile {
+  if (row.role !== "dm" && row.role !== "player") {
+    throw new Error(`Profile ${row.id}: invalid role "${row.role}"`);
+  }
+  return {
+    id: row.id,
+    display_name: row.display_name,
+    created_at: row.created_at,
+    role: row.role,
+  };
 }
 
 export async function getOrCreateProfile(userId: string): Promise<Profile> {
@@ -14,7 +34,7 @@ export async function getOrCreateProfile(userId: string): Promise<Profile> {
     .maybeSingle();
 
   if (error) throw error;
-  if (existing) return existing;
+  if (existing) return toProfile(existing);
 
   // Two calls can race here (e.g. onAuthStateChange firing twice, or two tabs).
   // ignoreDuplicates makes a losing insert no-op instead of throwing a unique-constraint error.
@@ -25,7 +45,7 @@ export async function getOrCreateProfile(userId: string): Promise<Profile> {
     .maybeSingle();
 
   if (insertError) throw insertError;
-  if (created) return created;
+  if (created) return toProfile(created);
 
   // Lost the race — another call already created the row, so fetch it.
   const { data: winner, error: refetchError } = await supabase
@@ -35,7 +55,7 @@ export async function getOrCreateProfile(userId: string): Promise<Profile> {
     .single();
 
   if (refetchError) throw refetchError;
-  return winner;
+  return toProfile(winner);
 }
 
 export async function setDisplayName(newDisplayName: string): Promise<void> {

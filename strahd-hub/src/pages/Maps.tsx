@@ -2,82 +2,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import barovia_map from "../assets/Maps/Spoiler Free Map.png";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useAuth } from "../services/AuthContext";
+import { useLocations } from "../Hooks/useLocations";
+import { Location } from "../services/locations";
 import "./maps.css";
-
-interface MapLocation {
-  id: string;
-  name: string;
-  x: number; // percent across image
-  y: number; // percent down image
-  description: string;
-  is_revealed: boolean;
-  dm_notes?: string;
-}
-
-const locations: MapLocation[] = [
-  {
-    id: "loc-1",
-    name: "Village of Barovia",
-    x: 78.5,
-    y: 61.3,
-    description: "Cursed Town",
-    is_revealed: true,
-  },
-  {
-    id: "loc-2",
-    name: "Tser Falls",
-    x: 56.8,
-    y: 55.9,
-    description: "Thundering falls above the Vistani camp at Tser Pool.",
-    is_revealed: true,
-  },
-  {
-    id: "loc-3",
-    name: "Vallaki",
-    x: 39.8,
-    y: 33.4,
-    description: "Walled town ruled by a paranoid baron.",
-    is_revealed: true,
-  },
-  {
-    id: "loc-4",
-    name: "Krezk",
-    x: 11.2,
-    y: 29.9,
-    description: "Remote walled village guarding the Abbey of Saint Markovia.",
-    is_revealed: true,
-  },
-  {
-    id: "loc-5",
-    name: "Castle Ravenloft",
-    x: 71,
-    y: 51.2,
-    description: "Strahd's mountaintop fortress, seat of the land's curse.",
-    is_revealed: true,
-    dm_notes: "Strahd is home. The Heart of Sorrow beats in the north tower.",
-  },
-  {
-    id: "loc-6",
-    name: "Abbey of Saint Markovia",
-    x: 8.4,
-    y: 22.6,
-    description: "Ruined abbey on the heights above Krezk.",
-    is_revealed: false,
-    dm_notes: "The Abbot dwells here with his mongrelfolk flock.",
-  },
-];
 
 const DWELL = 600; // ms of hover before the peek appears
 // Vertical room the peek needs above a marker (panel height + tether gap).
 // Below this, the peek flips to render underneath the marker instead.
 const PEEK_CLEARANCE = 150;
 
-type Peek = { loc: MapLocation; left: number; top: number; below: boolean };
+type Peek = { loc: Location; left: number; top: number; below: boolean };
 
 export function Maps() {
-  const { profile, loading } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const isDm = profile?.role === "dm";
-  const [selected, setSelected] = useState<MapLocation | null>(null);
+  const { locations, loading: locationsLoading, error } = useLocations();
+  const [selected, setSelected] = useState<Location | null>(null);
   const [peek, setPeek] = useState<Peek | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -91,7 +31,7 @@ export function Maps() {
   // The peek is rendered OUTSIDE the zoom transform and positioned from the
   // marker's live screen rect, so it stays a constant size at any zoom level
   // while still pointing at the right spot.
-  const startDwell = (loc: MapLocation, el: HTMLElement) => {
+  const startDwell = (loc: Location, el: HTMLElement) => {
     window.clearTimeout(dwell.current);
     dwell.current = window.setTimeout(() => {
       const stage = stageRef.current;
@@ -122,13 +62,12 @@ export function Maps() {
     return () => window.removeEventListener("keydown", onKey);
   }, [clearPeek]);
 
-  if (loading) return <p>Loading...</p>;
-  // DMs see every location (including hidden ones, styled differently below);
-  // players see only what's been revealed to them.
-  const visible = isDm
-    ? locations
-    : locations.filter((l) => l.is_revealed);
+  if (authLoading || locationsLoading) return <p>Loading...</p>;
+  if (error) return <p>{error}</p>;
 
+  // No reveal filter here anymore: RLS already dropped hidden rows from a
+  // player's response, so `locations` is exactly what this user may see.
+  // isDm survives only to STYLE the hidden pins a DM still receives.
   return (
     <div className="maps has-peek">
       <p>Maps</p>
@@ -172,7 +111,7 @@ export function Maps() {
                   height: "auto",
                 }}
               />
-              {visible.map((loc) => (
+              {locations.map((loc) => (
                 <button
                   key={loc.id}
                   onClick={() => {
@@ -188,7 +127,7 @@ export function Maps() {
                   className={
                     "map-hotspot" +
                     (selected?.id === loc.id ? " is-active" : "") +
-                    (!loc.is_revealed ? " is-hidden" : "")
+                    (!loc.isRevealed ? " is-hidden" : "")
                   }
                   style={{
                     position: "absolute",
@@ -239,8 +178,8 @@ export function Maps() {
             <h2 className="loc-panel__name">{selected.name}</h2>
             <div className="loc-panel__rule"></div>
             <p className="loc-panel__desc">{selected.description}</p>
-            {isDm && selected.dm_notes && (
-              <p className="loc-panel__dm">DM notes: {selected.dm_notes}</p>
+            {isDm && selected.dmNotes && (
+              <p className="loc-panel__dm">DM notes: {selected.dmNotes}</p>
             )}
           </aside>
         )}
