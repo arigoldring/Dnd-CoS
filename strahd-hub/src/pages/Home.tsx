@@ -16,6 +16,9 @@ export function Home() {
       <Link to="/NPC">
         <button>NPCs</button>
       </Link>
+      <Link to="/Recaps">
+        <button>Recaps</button>
+      </Link>
     </div>
   );
 }
