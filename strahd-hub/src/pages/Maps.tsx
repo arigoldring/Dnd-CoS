@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
 import barovia_map from "../assets/Maps/Spoiler Free Map.png";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useAuth } from "../services/AuthContext";
@@ -16,12 +16,28 @@ type Peek = { loc: Location; left: number; top: number; below: boolean };
 export function Maps() {
   const { profile, loading: authLoading } = useAuth();
   const isDm = profile?.role === "dm";
-  const { locations, loading: locationsLoading, error } = useLocations();
-  const [selected, setSelected] = useState<Location | null>(null);
+  const {
+    locations,
+    loading: locationsLoading,
+    error,
+    saveDescription,
+  } = useLocations();
+  // The open location is held by id, not as a copied Location object: the
+  // drawer then re-renders straight from the list, so a saved edit shows up
+  // instead of a stale snapshot taken at click time.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [peek, setPeek] = useState<Peek | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const dwell = useRef<number | undefined>(undefined);
+
+  const selected = locations.find((loc) => loc.id === selectedId) ?? null;
+
+  const closePanel = useCallback(() => {
+    setSelectedId(null);
+    setEditing(false);
+  }, []);
 
   const clearPeek = useCallback(() => {
     window.clearTimeout(dwell.current);
@@ -56,11 +72,14 @@ export function Maps() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       clearPeek();
-      setSelected(null);
+      // Back out one layer at a time: an open editor first, then the drawer —
+      // so Escape on a half-typed description doesn't also close the panel.
+      if (editing) setEditing(false);
+      else setSelectedId(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clearPeek]);
+  }, [clearPeek, editing]);
 
   if (authLoading || locationsLoading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
@@ -116,7 +135,10 @@ export function Maps() {
                   key={loc.id}
                   onClick={() => {
                     clearPeek();
-                    setSelected((cur) => (cur?.id === loc.id ? null : loc));
+                    // Moving to another location drops any open editor with it,
+                    // so an unsaved draft can never bleed onto the next panel.
+                    setEditing(false);
+                    setSelectedId((cur) => (cur === loc.id ? null : loc.id));
                   }}
                   onMouseEnter={(e) => startDwell(loc, e.currentTarget)}
                   onMouseLeave={clearPeek}
@@ -171,13 +193,42 @@ export function Maps() {
             <button
               className="loc-panel__close"
               aria-label="Close"
-              onClick={() => setSelected(null)}
+              onClick={closePanel}
             >
               ×
             </button>
             <h2 className="loc-panel__name">{selected.name}</h2>
             <div className="loc-panel__rule"></div>
-            <p className="loc-panel__desc">{selected.description}</p>
+
+            {editing ? (
+              // key: a fresh editor per location, so its draft can never carry
+              // over from the last one it was opened on.
+              <DescriptionEditor
+                key={selected.id}
+                location={selected}
+                onSave={saveDescription}
+                onClose={() => setEditing(false)}
+              />
+            ) : (
+              <>
+                <p className="loc-panel__desc">
+                  {selected.description ?? (
+                    <span className="loc-panel__empty">
+                      No description yet.
+                    </span>
+                  )}
+                </p>
+                {isDm && (
+                  <button
+                    className="loc-panel__edit"
+                    onClick={() => setEditing(true)}
+                  >
+                    Edit description
+                  </button>
+                )}
+              </>
+            )}
+
             {isDm && selected.dmNotes && (
               <p className="loc-panel__dm">DM notes: {selected.dmNotes}</p>
             )}
@@ -185,5 +236,76 @@ export function Maps() {
         )}
       </div>
     </div>
+  );
+}
+
+// The DM's description editor. Draft/saving/error state lives here rather than
+// in Maps so that unmounting it is the whole of "cancel" — nothing to reset —
+// and a keystroke in the textarea re-renders the form, not the map.
+function DescriptionEditor({
+  location,
+  onSave,
+  onClose,
+}: {
+  location: Location;
+  onSave: (id: string, description: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState(location.description ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(location.id, draft);
+      onClose();
+    } catch (err) {
+      // Stay open on failure, holding the draft: closing here would throw away
+      // text the DM just wrote and that the database never took.
+      console.error("Problem saving description:", err);
+      setError(
+        err instanceof Error ? err.message : "Problem saving description",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="loc-edit" onSubmit={handleSubmit}>
+      <label className="loc-edit__label" htmlFor="loc-desc">
+        Description
+      </label>
+      <textarea
+        id="loc-desc"
+        className="loc-edit__field"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        disabled={saving}
+        rows={7}
+        autoFocus
+      />
+      <div className="loc-edit__actions">
+        <button
+          type="button"
+          className="loc-edit__btn"
+          onClick={onClose}
+          disabled={saving}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="loc-edit__btn loc-edit__btn--save"
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+      </div>
+      {error && <p className="loc-edit__error">{error}</p>}
+    </form>
   );
 }

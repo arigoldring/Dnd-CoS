@@ -178,6 +178,120 @@
   color: var(--bone-soft);
   text-wrap: pretty;
 }
+/* stands in for a description that hasn't been written yet — dimmer and
+   italic so it reads as absence, not as the location's actual blurb */
+.maps .loc-panel__empty {
+  color: var(--bone-dim);
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------
+   DM EDITING
+   Only ever rendered for a DM (Maps.tsx gates it), and only
+   inside the drawer. RLS is the real gate; this is the door.
+   --------------------------------------------------------- */
+
+.maps .loc-panel__edit {
+  margin-top: 16px;
+  padding: 5px 12px 4px;
+  font: 400 13px/1 "Cormorant Garamond", Georgia, serif;
+  font-variant: small-caps;
+  letter-spacing: .12em;
+  color: var(--tarnish);
+  background: none;
+  border: 1px solid rgba(154,122,58,.4);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.maps .loc-panel__edit:hover {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.75);
+  background: rgba(154,122,58,.1);
+}
+.maps .loc-panel__edit:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 2px;
+}
+
+.maps .loc-edit__label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-variant: small-caps;
+  letter-spacing: .14em;
+  color: var(--bone-dim);
+}
+.maps .loc-edit__field {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  font: 400 15px/1.5 "Cormorant Garamond", Georgia, serif;
+  color: var(--bone);
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(160,140,110,.28);
+  resize: vertical;
+  /* keep the textarea inside the drawer's padding — default box-sizing would
+     put its border outside the 100% width and force a horizontal scrollbar */
+  box-sizing: border-box;
+}
+.maps .loc-edit__field:focus {
+  outline: none;
+  border-color: rgba(154,122,58,.7);
+  box-shadow: 0 0 0 1px rgba(154,122,58,.25);
+}
+.maps .loc-edit__field:disabled {
+  color: var(--bone-dim);
+}
+
+.maps .loc-edit__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.maps .loc-edit__btn {
+  padding: 6px 14px 5px;
+  font: 400 13px/1 "Cormorant Garamond", Georgia, serif;
+  font-variant: small-caps;
+  letter-spacing: .12em;
+  color: var(--bone-soft);
+  background: none;
+  border: 1px solid rgba(160,140,110,.28);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.maps .loc-edit__btn:hover:not(:disabled) {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.6);
+  background: rgba(154,122,58,.08);
+}
+.maps .loc-edit__btn--save {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.55);
+  background: rgba(106,10,10,.28);
+}
+.maps .loc-edit__btn--save:hover:not(:disabled) {
+  background: rgba(138,13,13,.42);
+}
+.maps .loc-edit__btn:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 2px;
+}
+.maps .loc-edit__btn:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.maps .loc-edit__error {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #e2b4b4;
+  background: rgba(106,10,10,.18);
+  border: 1px solid rgba(138,13,13,.5);
+  border-left: 3px solid var(--blood-bright);
+}
+
 /* DM-only notes block — set apart from the player-facing description */
 .maps .loc-panel__dm {
   margin: 16px 0 0;

@@ -78,3 +78,36 @@ export async function getLocations(): Promise<Location[]> {
     return location;
   });
 }
+
+// Edit the player-facing description. Same division of labour as the reads:
+// the DM-only rule lives in RLS ("dms update locations" in 006_location_edit),
+// not in a role check here.
+//
+// Returns the saved value so the caller updates from what the DB actually
+// stored rather than from its own draft.
+export async function updateLocationDescription(
+  id: string,
+  description: string,
+): Promise<string | null> {
+  const trimmed = description.trim();
+
+  const { data, error } = await supabase
+    .from("locations")
+    .update({ description: trimmed === "" ? null : trimmed })
+    .eq("id", id)
+    .select("description")
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+  // An update RLS blocked is not an error — it simply matches no rows and
+  // comes back clean. Without this the caller would treat a silently discarded
+  // save as a success and show the unsaved draft as if it had stuck.
+  if (!data) {
+    throw new Error("You do not have permission to edit this location");
+  }
+
+  return data.description;
+}
