@@ -136,6 +136,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
         <button onClick={() => refetchProfile()}>Retry</button>
       </div>
     );
-  if (!profile?.display_name) return <NamePrompt />;
+  if (!profile?.displayName) return <NamePrompt />;
   return <>{children}</>;
 }

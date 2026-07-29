@@ -18,12 +18,12 @@ export function Layout() {
       <button onClick={() => signOut()}>Sign out</button>
       {!isEditing ? (
         <span>
-          {profile?.display_name} Role: {profile?.role}
+          {profile?.displayName} Role: {profile?.role}
           <button onClick={() => setIsEditing(true)}>Edit</button>
         </span>
       ) : (
         <NamePrompt
-          initialName={profile?.display_name ?? ""}
+          initialName={profile?.displayName ?? ""}
           heading="Name:"
           onSuccess={() => setIsEditing(false)}
         />

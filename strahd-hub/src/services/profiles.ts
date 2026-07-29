@@ -9,10 +9,12 @@ type ProfileRow = Tables<"profiles">;
 export const roles = ["player", "dm"] as const;
 export type Role = (typeof roles)[number];
 
+// camelCase like Item/Location/Recap, so a consumer can tell from the shape
+// which side of the boundary it's holding. created_at is dropped rather than
+// carried: nothing renders it, and the row type still has it if that changes.
 export interface Profile {
   id: string;
-  display_name: string | null;
-  created_at: string;
+  displayName: string | null;
   role: Role;
 }
 
@@ -23,8 +25,7 @@ export interface Profile {
 function toProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
-    display_name: row.display_name,
-    created_at: row.created_at,
+    displayName: row.display_name,
     role: parseOneOf(row.role, roles, "role", `Profile ${row.id}`),
   };
 }
