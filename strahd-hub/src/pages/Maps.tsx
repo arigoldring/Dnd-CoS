@@ -1,5 +1,5 @@
 import { SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
-import barovia_map from "../assets/Maps/Spoiler Free Map.png";
+import barovia_map from "../assets/Maps/barovia.webp";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useAuth } from "../services/AuthContext";
 import { useLocations } from "../hooks/useLocations";
