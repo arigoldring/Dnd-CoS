@@ -51,12 +51,6 @@ function useSession() {
   }, []);
   return { user, resolved };
 }
-// Fetches (or creates) a profile. Rejects on failure — callers decide how
-// to log/surface the error.
-async function loadProfile(userId: string): Promise<Profile> {
-  return getOrCreateProfile(userId);
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, resolved } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -77,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let ignore = false;
     setLoading(true);
     setError(null);
-    loadProfile(user.id)
+    getOrCreateProfile(user.id)
       .then((p) => {
         if (ignore) return;
         setProfile(p);
@@ -101,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const p = await loadProfile(user.id);
+      const p = await getOrCreateProfile(user.id);
       setProfile(p);
     } catch (err) {
       console.error("Problem loading profile:", err);
