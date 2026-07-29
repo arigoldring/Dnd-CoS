@@ -130,6 +130,8 @@ alter table public.dm_invites enable row level security;
 -- user insert themselves with role = 'dm'.
 create policy "insert own profile" on public.profiles for INSERT to public with check ((auth.uid() = id));
 
+-- Superseded by 007: widened to `using (true)` so recap bylines can resolve
+-- other players' display names. Permissive policies OR, so this is a no-op now.
 create policy "select own profile" on public.profiles for SELECT to public using ((auth.uid() = id));
 
 create policy "dms can view invites" on public.dm_invites for SELECT to public using ((EXISTS ( SELECT 1
