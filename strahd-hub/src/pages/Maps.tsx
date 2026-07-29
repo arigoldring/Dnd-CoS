@@ -2,7 +2,7 @@ import { SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
 import barovia_map from "../assets/Maps/Spoiler Free Map.png";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useAuth } from "../services/AuthContext";
-import { useLocations } from "../Hooks/useLocations";
+import { useLocations } from "../hooks/useLocations";
 import { Location } from "../services/locations";
 import "./maps.css";
 
@@ -86,9 +86,9 @@ export function Maps() {
 
   // No reveal filter here anymore: RLS already dropped hidden rows from a
   // player's response, so `locations` is exactly what this user may see.
-  // isDm is now only about the DM's own UI — styling the hidden pins they
-  // alone receive, and showing the edit button. The check on dmNotes below is
-  // redundant: RLS already left that key absent for players.
+  // isDm has one job left: showing the edit button. The hidden-pin styling
+  // reads loc.isRevealed, not the role, and dmNotes needs no check at all —
+  // RLS already left that key absent for players.
   return (
     <div className="maps has-peek">
       <p>Maps</p>
@@ -231,7 +231,7 @@ export function Maps() {
               </>
             )}
 
-            {isDm && selected.dmNotes && (
+            {selected.dmNotes && (
               <p className="loc-panel__dm">DM notes: {selected.dmNotes}</p>
             )}
           </aside>

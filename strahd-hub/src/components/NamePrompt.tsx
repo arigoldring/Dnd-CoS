@@ -1,6 +1,6 @@
 import { SubmitEvent, useState } from "react";
-import { setDisplayName } from "../../services/profiles";
-import { useAuth } from "../../services/AuthContext";
+import { setDisplayName } from "../services/profiles";
+import { useAuth } from "../services/AuthContext";
 
 interface NamePromptProps {
   initialName?: string;

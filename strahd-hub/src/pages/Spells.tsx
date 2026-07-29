@@ -1,4 +1,4 @@
-import { useSearchBar } from "../Hooks/Searchbar";
+import { useSearchBar } from "../hooks/useSearchBar";
 import { SPELLS } from "../services/spells";
 import { Spell } from "../services/spells";
 

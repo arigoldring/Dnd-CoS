@@ -8,7 +8,7 @@ import {
 } from "react";
 import { supabase } from "../lib/supabase";
 import { Profile, getOrCreateProfile } from "./profiles";
-import { NamePrompt } from "../assets/components/NamePrompt";
+import { NamePrompt } from "../components/NamePrompt";
 import { signInWithGoogle } from "./auth";
 
 export interface AuthContextType {

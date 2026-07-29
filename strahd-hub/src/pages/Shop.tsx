@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useItems } from "../Hooks/useItems";
+import { useItems } from "../hooks/useItems";
 import { Item } from "../services/items";
 import "./shop.css";
-import { useSearchBar } from "../Hooks/Searchbar";
+import { useSearchBar } from "../hooks/useSearchBar";
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);

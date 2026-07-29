@@ -1,6 +1,6 @@
 import { SubmitEvent, useState } from "react";
 import { useAuth } from "../services/AuthContext";
-import { useRecaps } from "../Hooks/useRecaps";
+import { useRecaps } from "../hooks/useRecaps";
 import { Recap } from "../services/recaps";
 import "./recaps.css";
 

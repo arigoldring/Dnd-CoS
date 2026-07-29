@@ -1,7 +1,7 @@
 import { Outlet, Link } from "react-router-dom";
-import { signOut } from "../../services/auth";
+import { signOut } from "../services/auth";
 import { NamePrompt } from "./NamePrompt";
-import { useAuth } from "../../services/AuthContext";
+import { useAuth } from "../services/AuthContext";
 import { useState } from "react";
 
 export function Layout() {

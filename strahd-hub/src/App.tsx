@@ -4,7 +4,7 @@ import { Home } from "./pages/Home";
 import { Shop } from "./pages/Shop";
 import { Maps } from "./pages/Maps";
 import { Spells } from "./pages/Spells";
-import { Layout } from "./assets/components/Layout";
+import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/NPC";
 import { Recaps } from "./pages/Recaps";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
