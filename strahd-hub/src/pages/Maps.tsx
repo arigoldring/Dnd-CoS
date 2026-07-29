@@ -86,7 +86,9 @@ export function Maps() {
 
   // No reveal filter here anymore: RLS already dropped hidden rows from a
   // player's response, so `locations` is exactly what this user may see.
-  // isDm survives only to STYLE the hidden pins a DM still receives.
+  // isDm is now only about the DM's own UI — styling the hidden pins they
+  // alone receive, and showing the edit button. The check on dmNotes below is
+  // redundant: RLS already left that key absent for players.
   return (
     <div className="maps has-peek">
       <p>Maps</p>

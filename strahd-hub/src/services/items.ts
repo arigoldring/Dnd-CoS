@@ -153,8 +153,9 @@ export async function getItems(): Promise<Item[]> {
           strengthRequirement: row.strength_requirement ?? undefined,
           // Was `?? false`, which quietly turned missing data into a confident
           // "no" while every other field here treated null as an error.
-          // Uniform contract now — REQUIRES `not null default false` on the
-          // column, or every armor row throws.
+          // Safe to require: armor_fields_required (001) guarantees non-null
+          // whenever kind = 'armor'. The column itself stays nullable — it has
+          // to, since armor_fields_absent needs it null on every other row.
           stealthDisadvantage: requireField(
             row.stealth_disadvantage,
             "stealth_disadvantage",
