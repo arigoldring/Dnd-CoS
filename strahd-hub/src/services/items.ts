@@ -5,7 +5,7 @@ import { parseOneOf, requireField } from "../lib/parse";
  * generated Database types via the typed supabase client, so getItems maps
  * that row directly into Item ("how the rest of the app sees an item") with
  * no hand-written interface and no `as ItemRow[]` cast to keep in sync.
- * Biggest Change in the conversation from price in copper to price in gold.
+ * Prices are stored in copper (price_cp) and exposed as gold — hence the /100.
  * Note the generated row marks description as nullable (the DB column is), so
  * it's routed through requireField (lib/parse) like every other required field.
  */

@@ -124,7 +124,8 @@ p { margin: 0 0 12px; }
 /* =========================================================
    Buttons (Home page, sign-in, generic)
    ========================================================= */
-button {
+button,
+.btn {
   font-family: var(--heading);
   font-size: 13px;
   font-weight: 500;
@@ -142,7 +143,8 @@ button {
     inset 0 -2px 0 rgba(0,0,0,.35);
   transition: background .2s, color .2s, border-color .2s, box-shadow .2s, transform .05s;
 }
-button:hover {
+button:hover,
+.btn:hover {
   color: #fbeec9;
   border-color: var(--blood-bright);
   background: linear-gradient(180deg, rgba(106,10,10,.45), rgba(58,6,6,.6));
@@ -151,11 +153,18 @@ button:hover {
     inset 0 -2px 0 rgba(0,0,0,.4),
     0 0 14px rgba(138,13,13,.35);
 }
-button:active { transform: translateY(1px); }
-button:focus-visible { outline: 1px solid rgba(255,210,180,.5); outline-offset: 2px; }
+button:active,
+.btn:active { transform: translateY(1px); }
+button:focus-visible,
+.btn:focus-visible { outline: 1px solid rgba(255,210,180,.5); outline-offset: 2px; }
 
-/* Home: links wrapping buttons shouldn't add underlines */
-a:has(> button) { text-decoration: none; }
+/* .btn is for an <a> that should look like a button (Home nav). Anchors are
+   inline and underlined by default, so these two put one in the same box a
+   <button> gets — a <button> inside an <a> would be invalid HTML. */
+.btn {
+  display: inline-block;
+  text-decoration: none;
+}
 
 /* =========================================================
    Search fields (Spells, generic textareas)

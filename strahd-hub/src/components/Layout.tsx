@@ -14,6 +14,7 @@ export function Layout() {
       <Link to="/Shop">Shop</Link>
       <Link to="/Maps">Maps</Link>
       <Link to="/Spells">Spells</Link>
+      <Link to="/NPC">NPCs</Link>
       <Link to="/Recaps">Recaps</Link>
       <button onClick={() => signOut()}>Sign out</button>
       {!isEditing ? (

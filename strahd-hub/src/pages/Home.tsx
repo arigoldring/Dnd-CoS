@@ -4,20 +4,23 @@ export function Home() {
   return (
     <div>
       <h1>Welcome to Curse of Strahd</h1>
-      <Link to="/Shop">
-        <button>Shop</button>
+      {/* Links styled as buttons, not links wrapping buttons — a <button>
+          inside an <a> is invalid HTML, and nesting two focusable controls
+          gives keyboard users two stops for one destination. */}
+      <Link className="btn" to="/Shop">
+        Shop
       </Link>
-      <Link to="/Maps">
-        <button>Maps</button>
+      <Link className="btn" to="/Maps">
+        Maps
       </Link>
-      <Link to="/Spells">
-        <button>Spells</button>
+      <Link className="btn" to="/Spells">
+        Spells
       </Link>
-      <Link to="/NPC">
-        <button>NPCs</button>
+      <Link className="btn" to="/NPC">
+        NPCs
       </Link>
-      <Link to="/Recaps">
-        <button>Recaps</button>
+      <Link className="btn" to="/Recaps">
+        Recaps
       </Link>
     </div>
   );
