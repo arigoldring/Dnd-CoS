@@ -59,17 +59,20 @@ function itemStats(item: Item): { label: string; value: string }[] {
 
 export function Shop() {
   const { items, loading, error } = useItems();
-  const [panel, setPanel] = useState<Item | null>(null);
+  // The open item is held by id, not as the Item itself — same as Maps holds a
+  // location id. Storing the object would leave `panel` pointing at whichever
+  // object was in the list at click time, so a later edit or refetch (which
+  // replaces the row with a new object) would show a stale card beside a fresh
+  // table row, and a delete would leave a card for an item that's gone.
+  const [panelId, setPanelId] = useState<string | null>(null);
   const { filter, setFilter, setSearch, filtered } = useSearchBar(
     items,
     (item, filter) => item.kind === filter,
   );
   if (loading) return <p>Loading Items...</p>;
   if (error) return <p>Couldn't load items: {error}</p>;
+  const panel = items.find((item) => item.id === panelId) ?? null;
   const stats = panel ? itemStats(panel) : [];
-  function displayPanel(item: Item) {
-    setPanel(item);
-  }
 
   function createTable() {
     return (
@@ -78,7 +81,7 @@ export function Shop() {
           {filtered.map((item: Item) => (
             <tr key={item.id}>
               <td>
-                <button onClick={() => displayPanel(item)}>{item.name}</button>
+                <button onClick={() => setPanelId(item.id)}>{item.name}</button>
               </td>
               <td>{item.price} gold</td>
             </tr>
@@ -124,7 +127,7 @@ export function Shop() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search for an item"
         ></input>
-        <div onClick={() => setPanel(null)}>
+        <div onClick={() => setPanelId(null)}>
           {panel && (
             <div
               className="item-detail-card"
@@ -132,7 +135,7 @@ export function Shop() {
             >
               <button
                 className="item-detail-close"
-                onClick={() => setPanel(null)}
+                onClick={() => setPanelId(null)}
               >
                 ×
               </button>
