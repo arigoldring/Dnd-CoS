@@ -33,17 +33,23 @@ export function useAuth() {
 }
 function useSession() {
   const [user, setUser] = useState<User | null>(null);
+  // "Signed out" and "haven't read the session yet" both leave user null, so
+  // this is the only thing that tells them apart. onAuthStateChange fires
+  // INITIAL_SESSION once the client has read storage — session or not — which
+  // is the moment null becomes a real answer.
+  const [resolved, setResolved] = useState(false);
   useEffect(() => {
     // Listen for changes to the user's authentication state
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
+      setResolved(true);
     });
     //Need to unsubscribe when component unmount to prevent memory leaks
     return () => subscription.unsubscribe();
   }, []);
-  return user;
+  return { user, resolved };
 }
 // Fetches (or creates) a profile. Rejects on failure — callers decide how
 // to log/surface the error.
@@ -52,12 +58,16 @@ async function loadProfile(userId: string): Promise<Profile> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const user = useSession();
+  const { user, resolved } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Nothing to decide until the session is known. Without this the first pass
+    // runs with user still null and drops loading, so a signed-in user gets a
+    // flash of the sign-in button before INITIAL_SESSION arrives.
+    if (!resolved) return;
     if (!user) {
       setProfile(null);
       setLoading(false);
@@ -84,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       ignore = true;
     };
-  }, [user]);
+  }, [user, resolved]);
 
   async function refetchProfile() {
     if (!user) return;
