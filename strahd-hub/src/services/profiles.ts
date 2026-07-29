@@ -1,28 +1,31 @@
 import { supabase } from "../lib/supabase";
+import { parseOneOf } from "../lib/parse";
 import type { Tables } from "../types/database.types";
 
 type ProfileRow = Tables<"profiles">;
+
+// Mirrors the check constraint on profiles.role. The array drives the type, so
+// adding a role here is the only edit needed to accept it.
+export const roles = ["player", "dm"] as const;
+export type Role = (typeof roles)[number];
 
 export interface Profile {
   id: string;
   display_name: string | null;
   created_at: string;
-  role: "dm" | "player";
+  role: Role;
 }
 
-// The DB types `role` as plain `text` (string), but the app only ever expects
-// 'dm' or 'player'. Narrow it at the boundary instead of trusting the string —
-// same idea as items.ts's parseOneOf. An unexpected value fails loud here
-// rather than silently flowing through as a bogus role.
+// The DB types `role` as plain `text`, but the app only ever expects a Role.
+// Narrow it at the boundary rather than trusting the string — an unexpected
+// value fails loud here instead of flowing through as a bogus role, which is
+// the one narrowing that decides what a DM can do.
 function toProfile(row: ProfileRow): Profile {
-  if (row.role !== "dm" && row.role !== "player") {
-    throw new Error(`Profile ${row.id}: invalid role "${row.role}"`);
-  }
   return {
     id: row.id,
     display_name: row.display_name,
     created_at: row.created_at,
-    role: row.role,
+    role: parseOneOf(row.role, roles, "role", `Profile ${row.id}`),
   };
 }
 
