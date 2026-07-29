@@ -10,6 +10,10 @@ const DWELL = 600; // ms of hover before the peek appears
 // Vertical room the peek needs above a marker (panel height + tether gap).
 // Below this, the peek flips to render underneath the marker instead.
 const PEEK_CLEARANCE = 150;
+// Half the peek's width (230px in maps.css) plus a small edge margin. The
+// inline `left` is a CENTRE, not an edge — .loc-panel--popover translates
+// itself -50% — so this is how far the centre must stay from either side.
+const PEEK_HALF_WIDTH = 140;
 
 type Peek = { loc: Location; left: number; top: number; below: boolean };
 
@@ -54,10 +58,18 @@ export function Maps() {
       if (!stage) return;
       const s = stage.getBoundingClientRect();
       const m = el.getBoundingClientRect();
-      const left = Math.min(
-        Math.max(m.left + m.width / 2 - s.left, 140),
-        s.width - 140,
-      );
+      // Keep the panel inside the stage by clamping its centre. Guard the
+      // narrow-stage case first: below twice the margin the bounds cross
+      // (min > max) and a bare min/max would pin the peek hard left — or
+      // negative — instead of clipping evenly. Centring is the graceful answer.
+      const centre = m.left + m.width / 2 - s.left;
+      const left =
+        s.width < PEEK_HALF_WIDTH * 2
+          ? s.width / 2
+          : Math.min(
+              Math.max(centre, PEEK_HALF_WIDTH),
+              s.width - PEEK_HALF_WIDTH,
+            );
       // The peek renders above the marker by default. For markers near the top
       // of the stage there isn't room — it would be clipped by the stage's
       // overflow:hidden — so flip it below the marker instead.
