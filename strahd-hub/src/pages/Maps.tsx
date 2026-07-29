@@ -107,7 +107,7 @@ export function Maps() {
       <div className="map-stage" ref={stageRef}>
         <TransformWrapper
           minScale={1}
-          maxScale={6}
+          maxScale={3}
           doubleClick={{ disabled: true }}
           onPanningStart={clearPeek}
           onZoomStart={clearPeek}
