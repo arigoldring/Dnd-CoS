@@ -126,6 +126,8 @@ alter table public.items    enable row level security;
 alter table public.profiles enable row level security;
 alter table public.dm_invites enable row level security;
 
+-- Superseded by 009: this checks only the row's owner, so it let a first-time
+-- user insert themselves with role = 'dm'.
 create policy "insert own profile" on public.profiles for INSERT to public with check ((auth.uid() = id));
 
 create policy "select own profile" on public.profiles for SELECT to public using ((auth.uid() = id));
