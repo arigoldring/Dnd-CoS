@@ -93,7 +93,7 @@
 }
 
 /* selected — gold-ringed, glow held open */
-.maps .map-hotspot.is-active::before {         /* » add className={loc.id === selected?.id ? "map-hotspot is-active" : "map-hotspot"} */
+.maps .map-hotspot.is-active::before {         
   width: calc(var(--dot) + 4px);
   height: calc(var(--dot) + 4px);
   border-color: var(--tarnish);
@@ -424,8 +424,9 @@
   font-size: 14px;
   line-height: 1.45;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
   overflow: hidden;
 }
 .maps .loc-panel__more {
