@@ -94,6 +94,10 @@ export function Shop() {
     <>
       <p className="shop-eyebrow">— Village of Barovia —</p>
       <h1 className="shop-title">Bildrath's Mercantile</h1>
+      {/* shop.css styles these children positionally, not by class:
+          .shop > div:nth-of-type(1) is the filter row, (2) the detail overlay,
+          (3) the item list, and .shop > input is the search box. Reordering,
+          wrapping, or inserting a sibling div silently restyles the page. */}
       <div className="shop">
         <div>
           <p>Filters</p>
@@ -127,6 +131,10 @@ export function Shop() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search for an item"
         ></input>
+        {/* Click-outside backdrop. shop.css only promotes this to a fixed
+            full-screen overlay while it actually has a child (:has(> div)), so
+            with no item selected it stays an inert empty div. The card below
+            stops propagation so clicking inside it doesn't dismiss itself. */}
         <div onClick={() => setPanelId(null)}>
           {panel && (
             <div

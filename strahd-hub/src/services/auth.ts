@@ -7,7 +7,6 @@ export async function signInWithGoogle() {
     options: { redirectTo: window.location.origin },
   });
 
-  // Error handling
   if (AuthError) {
     console.error("Problem authenticating with Google:", AuthError.message);
   }

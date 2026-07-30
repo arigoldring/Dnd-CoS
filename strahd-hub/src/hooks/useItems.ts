@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Item, getItems } from "../services/items";
 
 export function useItems() {
-  const [items, setItems] = useState<Item[]>([]); // success: the rows
-  const [loading, setLoading] = useState(true); // waiting
-  const [error, setError] = useState<string | null>(null); // failure
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;

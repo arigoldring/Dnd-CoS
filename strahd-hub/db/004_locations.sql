@@ -1,6 +1,7 @@
 -- Map locations and their DM-only notes.
--- Mirrors the reveal gate the UI enforces (Maps.tsx): players see only
+-- The reveal gate lives here, in RLS, not in the UI: players see only
 -- revealed locations; DMs see everything, plus a private notes block.
+-- Maps.tsx therefore renders whatever comes back without re-filtering.
 
 create table locations (
   id          uuid primary key default gen_random_uuid(),

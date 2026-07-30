@@ -358,7 +358,9 @@
 
 /* ---------------------------------------------------------
    VARIANT C — popover tethered to the marker
-   Position is set inline (left/top in %) from the location's coords.
+   Position is set inline (left/top in px) from the marker's live
+   screen rect, measured in Maps.tsx — not from the location's
+   percentage coords, so it holds at any zoom level.
    --------------------------------------------------------- */
 
 .maps .loc-panel--popover {

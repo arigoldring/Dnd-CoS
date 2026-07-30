@@ -1,13 +1,13 @@
 import { supabase } from "../lib/supabase";
 import { parseOneOf, requireField } from "../lib/parse";
 /**
- * The DB row shape ("what the items table returns") now comes from the
- * generated Database types via the typed supabase client, so getItems maps
- * that row directly into Item ("how the rest of the app sees an item") with
- * no hand-written interface and no `as ItemRow[]` cast to keep in sync.
+ * Item is how the rest of the app sees an item; the DB row shape comes from the
+ * generated Database types via the typed supabase client, and getItems maps one
+ * into the other.
+ *
  * Prices are stored in copper (price_cp) and exposed as gold — hence the /100.
- * Note the generated row marks description as nullable (the DB column is), so
- * it's routed through requireField (lib/parse) like every other required field.
+ * The generated row marks description as nullable (the DB column is), so it's
+ * routed through requireField (lib/parse) like every other required field.
  */
 export interface ItemBase {
   id: string;
@@ -79,8 +79,6 @@ export interface Armor extends ItemBase {
 
 export type Item = GeneralItem | Weapon | Armor;
 
-// Rows come back typed from the generated schema now (the client is
-// createClient<Database>), so no cast — `items` is already ItemRow[].
 // Explicit fields (vs `...row`) intentionally drop price_cp and created_at.
 export async function getItems(): Promise<Item[]> {
   const { data: items, error: retrievalError } = await supabase
@@ -91,7 +89,6 @@ export async function getItems(): Promise<Item[]> {
     throw retrievalError;
   }
 
-  //Returns the row in supabase as an item used in the UI
   // NOTE: a throw here aborts the whole map, so one malformed row hides all
   // the good ones. That's the right tradeoff while seeding (fail loud, fix the
   // row) but revisit once the data is stable.
@@ -151,8 +148,9 @@ export async function getItems(): Promise<Item[]> {
             subject,
           ),
           strengthRequirement: row.strength_requirement ?? undefined,
-          // Was `?? false`, which quietly turned missing data into a confident
-          // "no" while every other field here treated null as an error.
+          // Not defaulted with `?? false`: that would quietly turn missing data
+          // into a confident "no" while every other field here treats null as
+          // an error.
           // Safe to require: armor_fields_required (001) guarantees non-null
           // whenever kind = 'armor'. The column itself stays nullable — it has
           // to, since armor_fields_absent needs it null on every other row.

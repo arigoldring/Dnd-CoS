@@ -17,8 +17,7 @@ export interface AuthContextType {
   loading: boolean;
   error: string | null;
   refetchProfile: () => Promise<void>;
-  //refetchProfile is a property that contains a function *(its value is a function)
-  //Will be used to force a re-read of the profile after mutating it
+  //Used to force a re-read of the profile after mutating it
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -39,7 +38,6 @@ function useSession() {
   // is the moment null becomes a real answer.
   const [resolved, setResolved] = useState(false);
   useEffect(() => {
-    // Listen for changes to the user's authentication state
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_, session) => {

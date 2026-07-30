@@ -8,9 +8,9 @@ import {
 } from "../services/recaps";
 
 export function useRecaps() {
-  const [recaps, setRecaps] = useState<Recap[]>([]); // success: the rows
-  const [loading, setLoading] = useState(true); // waiting
-  const [error, setError] = useState<string | null>(null); // failure
+  const [recaps, setRecaps] = useState<Recap[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;

@@ -1,6 +1,6 @@
 create table session_recaps (
   id             uuid primary key default gen_random_uuid(),
-  session_number int not null unique,   -- assigned explicitly by the DM now
+  session_number int not null unique,   -- assigned explicitly by the DM, never generated
   title          text,
   body           text not null default '',
   created_at     timestamptz not null default now(),
@@ -46,7 +46,7 @@ alter table public.session_recaps enable row level security;
 create policy "authenticated read recaps" on public.session_recaps
   for SELECT to authenticated using (true);
 
--- Creation is now the DM's alone.
+-- Creation is the DM's alone.
 create policy "dms create recaps" on public.session_recaps
   for INSERT to authenticated with check (public.is_dm());
 

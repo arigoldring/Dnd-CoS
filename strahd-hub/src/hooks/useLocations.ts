@@ -6,9 +6,9 @@ import {
 } from "../services/locations";
 
 export function useLocations() {
-  const [locations, setLocations] = useState<Location[]>([]); // success: the rows
-  const [loading, setLoading] = useState(true); // waiting
-  const [error, setError] = useState<string | null>(null); // failure
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;

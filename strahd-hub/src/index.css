@@ -1,8 +1,7 @@
 /* =========================================================
    strahd-hub — global gothic theme
-   Drop-in replacement for src/index.css.
-   No .tsx changes needed. Works alongside shop.css (which is
-   more specific and scoped under .shop).
+   Works alongside shop.css (which is more specific and scoped
+   under .shop).
 
    Fonts already loaded in your index.html:
    Cinzel · Cormorant Garamond · JetBrains Mono
@@ -92,7 +91,8 @@ p { margin: 0 0 12px; }
 
 /* =========================================================
    Navigation (Layout.tsx)
-   <div><Link/>×4<Outlet/></div>  →  the 4 direct <a> children
+   Layout renders its nav Links as direct <a> children of one
+   wrapper div, above the <Outlet/> — that's what this matches.
    ========================================================= */
 #root > div > a {
   display: inline-block;

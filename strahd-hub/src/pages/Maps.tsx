@@ -96,8 +96,8 @@ export function Maps() {
   if (authLoading || locationsLoading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
 
-  // No reveal filter here anymore: RLS already dropped hidden rows from a
-  // player's response, so `locations` is exactly what this user may see.
+  // No reveal filter here: RLS already dropped hidden rows from a player's
+  // response, so `locations` is exactly what this user may see.
   // isDm has one job left: showing the edit button. The hidden-pin styling
   // reads loc.isRevealed, not the role, and dmNotes needs no check at all —
   // RLS already left that key absent for players.

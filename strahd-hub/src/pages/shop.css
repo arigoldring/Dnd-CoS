@@ -1,9 +1,6 @@
 /* =========================================================
    Bildrath's Mercantile — Barovia theme (Shop page only)
    Overlay/modal detail panel + capped, scrollable item list.
-
-   REQUIRES 3 small JSX additions in Shop.tsx (marked below with »).
-   Everything else in Shop.tsx is untouched.
    ========================================================= */
 
 html { overflow-y: scroll; }
