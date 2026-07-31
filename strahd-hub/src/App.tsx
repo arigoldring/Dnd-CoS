@@ -7,6 +7,7 @@ import { Spells } from "./pages/Spells";
 import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/NPC";
 import { Recaps } from "./pages/Recaps";
+import { Combat } from "./pages/Combat";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
               <Route path="/Spells" element={<Spells />} />
               <Route path="/NPC" element={<Npcs />} />
               <Route path="/Recaps" element={<Recaps />} />
+              <Route path="/Combat" element={<Combat />} />
             </Route>
           </Routes>
         </AuthGate>

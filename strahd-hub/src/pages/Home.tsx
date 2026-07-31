@@ -22,6 +22,9 @@ export function Home() {
       <Link className="btn" to="/Recaps">
         Recaps
       </Link>
+      <Link className="btn" to="/Combat">
+        Combat
+      </Link>
     </div>
   );
 }
