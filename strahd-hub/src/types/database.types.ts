@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_players: {
+        Row: {
+          campaign_id: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_players_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           created_at: string
@@ -186,6 +216,54 @@ export type Database = {
         }
         Relationships: []
       }
+      player_invites: {
+        Row: {
+          campaign_id: string
+          code: string
+          created_at: string
+          id: string
+          label: string | null
+          used: boolean
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          campaign_id: string
+          code: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_invites_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_invites_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -251,7 +329,12 @@ export type Database = {
     }
     Functions: {
       claim_dm_invite: { Args: { invite_code: string }; Returns: undefined }
+      claim_player_invite: { Args: { invite_code: string }; Returns: undefined }
       generate_dm_invite: { Args: { invite_label?: string }; Returns: string }
+      generate_player_invite: {
+        Args: { invite_label?: string; target_campaign: string }
+        Returns: string
+      }
       is_dm: { Args: never; Returns: boolean }
       set_display_name: {
         Args: { new_display_name: string }

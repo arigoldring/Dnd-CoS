@@ -3,6 +3,9 @@ import type { Tables } from "../types/database.types";
 
 type CampaignRow = Tables<"campaigns">;
 
+// camelCase like Profile and Item, so a consumer can tell from the shape which
+// side of the boundary it's holding. created_at is dropped rather than carried:
+// nothing renders it — it exists to order the list, and that happens in SQL.
 export interface Campaign {
   id: string;
   name: string;
@@ -12,12 +15,33 @@ function toCampaign(row: CampaignRow): Campaign {
   return { id: row.id, name: row.name };
 }
 
+/**
+ * Every campaign the signed-in user can see — which is already the membership
+ * list, not something filtered here. "read campaigns you can see" (010) answers
+ * this per user: a DM gets every campaign, a player gets only the ones
+ * campaign_players joins them to. Hence no .eq() below; adding one would
+ * restate the policy in the one place that can't enforce it.
+ *
+ * Ordered so the picker's list doesn't reshuffle between loads — Postgres makes
+ * no promise about row order without it.
+ */
 export async function getCampaigns(): Promise<Campaign[]> {
-  const { data, error } = await supabase.from("campaigns").select("*");
+  const { data, error } = await supabase
+    .from("campaigns")
+    .select("*")
+    .order("created_at");
   if (error) throw error;
   return data.map(toCampaign);
 }
 
+/**
+ * DM only, enforced by "dm inserts campaigns" (010) rather than by a role check
+ * here — the UI hides the button, but this is what actually stops a player.
+ *
+ * .select().single() is what makes the insert hand back the row it wrote, and
+ * that row is the whole point: the caller navigates straight into the campaign
+ * it just created, which it can't do without the id Postgres generated.
+ */
 export async function createCampaign(name: string): Promise<Campaign> {
   const { data, error } = await supabase
     .from("campaigns")
@@ -27,5 +51,3 @@ export async function createCampaign(name: string): Promise<Campaign> {
   if (error) throw error;
   return toCampaign(data);
 }
-
-export function Campaigns() {}
