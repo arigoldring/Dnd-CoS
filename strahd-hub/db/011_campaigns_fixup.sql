@@ -1,41 +1,72 @@
+-- Reconciles a database where 010 was only partially applied: the campaigns and
+-- campaign_players tables plus four policies landed, the invite half never did.
+--
+-- Every statement here is idempotent, so this is safe to run against a database
+-- that got all of 010, none of it, or the partial state described above. 010
+-- stays the clean from-scratch definition; this file is the catch-up.
+--
+-- Policies are dropped and recreated rather than altered because CREATE POLICY
+-- has no IF NOT EXISTS form. The transaction is what keeps that swap from
+-- leaving a table briefly unguarded -- run this as one batch, not statement by
+-- statement. (Supabase's SQL editor already opens its own transaction and will
+-- warn about the nested BEGIN; the warning is harmless.)
+
+begin;
+
 -- ---------------------------------------------------------------------------
--- campaigns
+-- tables
 -- ---------------------------------------------------------------------------
 
-create table campaigns (
+create table if not exists campaigns (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   created_at timestamptz not null default now()
 );
 
-alter table campaigns enable row level security;
-
-create policy "dm inserts campaigns"
-on campaigns for insert to authenticated
-with check (public.is_dm());
-
-
-
--- ---------------------------------------------------------------------------
--- campaign_players -- who belongs to which campaign
--- ---------------------------------------------------------------------------
-
-create table campaign_players (
+create table if not exists campaign_players (
   campaign_id uuid not null references campaigns(id) on delete cascade,
   user_id uuid not null references profiles(id) on delete cascade,
   primary key (campaign_id, user_id)
 );
 
+create table if not exists player_invites (
+  id          uuid primary key default gen_random_uuid(),
+  code        text unique not null,
+  campaign_id uuid not null references campaigns(id) on delete cascade,
+  label       text,
+  used        boolean not null default false,
+  used_by     uuid references profiles(id),
+  created_at  timestamptz not null default now(),
+  used_at     timestamptz
+);
+
+-- ---------------------------------------------------------------------------
+-- row level security
+--
+-- Re-asserted unconditionally: policies can exist on a table that never had RLS
+-- switched on, in which case they are inert and the table is wide open. Enabling
+-- an already-enabled table is a no-op, so there is no reason to check first.
+-- ---------------------------------------------------------------------------
+
+alter table campaigns        enable row level security;
 alter table campaign_players enable row level security;
+alter table player_invites   enable row level security;
 
-create policy "players read own memberships" on campaign_players
-  for select to authenticated
-  using (user_id = auth.uid());
+-- ---------------------------------------------------------------------------
+-- campaigns policies
+-- ---------------------------------------------------------------------------
 
-create policy "dm manages memberships"
-on campaign_players for all to authenticated
-using (public.is_dm())
+drop policy if exists "dm inserts campaigns" on campaigns;
+
+create policy "dm inserts campaigns"
+on campaigns for insert to authenticated
 with check (public.is_dm());
+
+-- Subsumed by "read campaigns you can see", whose first branch is the same DM
+-- check. Dropping it changes no one's access.
+drop policy if exists "dm reads all campaigns" on campaigns;
+
+drop policy if exists "read campaigns you can see" on campaigns;
 
 -- The DM sees every campaign; a player sees only the ones they're a member of.
 create policy "read campaigns you can see"
@@ -48,21 +79,32 @@ using (
 );
 
 -- ---------------------------------------------------------------------------
--- player_invites -- one-shot codes that grant membership in a single campaign
+-- campaign_players policies
 -- ---------------------------------------------------------------------------
 
-create table player_invites (
-  id          uuid primary key default gen_random_uuid(),
-  code        text unique not null,
-  campaign_id uuid not null references campaigns(id) on delete cascade,  -- the only structural difference
-  label       text,
-  used        boolean not null default false,
-  used_by     uuid references profiles(id),
-  created_at  timestamptz not null default now(),
-  used_at     timestamptz
-);
+-- This is the one 010 missed on its first run, and it is load-bearing: the
+-- membership subquery in "read campaigns you can see" runs as the invoking
+-- user, so it answers through campaign_players' own RLS. With only the DM
+-- policy present that subquery returns zero rows for a player, and a player
+-- sees no campaigns at all.
+drop policy if exists "players read own memberships" on campaign_players;
 
-alter table player_invites enable row level security;
+create policy "players read own memberships" on campaign_players
+  for select to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "dm manages memberships" on campaign_players;
+
+create policy "dm manages memberships"
+on campaign_players for all to authenticated
+using (public.is_dm())
+with check (public.is_dm());
+
+-- ---------------------------------------------------------------------------
+-- player_invites policies
+-- ---------------------------------------------------------------------------
+
+drop policy if exists "dms can view invites" on player_invites;
 
 create policy "dms can view invites" on player_invites
   for select to authenticated using (public.is_dm());
@@ -135,3 +177,5 @@ revoke execute on function public.claim_player_invite(text)          from public
 
 grant  execute on function public.generate_player_invite(uuid, text) to authenticated;
 grant  execute on function public.claim_player_invite(text)          to authenticated;
+
+commit;
