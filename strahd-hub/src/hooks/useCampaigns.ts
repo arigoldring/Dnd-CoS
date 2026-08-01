@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Campaign, createCampaign, getCampaigns } from "../services/campaigns";
+import {
+  Campaign,
+  createCampaign,
+  getCampaigns,
+  updateCampaignName,
+} from "../services/campaigns";
 
 // Two very different callers share this: the picker, which lists what you can
 // open, and CampaignLayout, which checks a URL param against the same list.
@@ -48,5 +53,15 @@ export function useCampaigns() {
     return created;
   }, []);
 
-  return { campaigns, loading, error, addCampaign };
+  // Rejects on failure for the same reason addCampaign does: a rename that
+  // fails leaves a page full of good campaigns behind it, so the form that
+  // called it is what should say so.
+  const renameCampaign = useCallback(async (id: string, name: string) => {
+    const saved = await updateCampaignName(id, name);
+    // Replaced in place rather than re-sorted or refetched: the list is ordered
+    // by created_at, and a rename doesn't move a row.
+    setCampaigns((cur) => cur.map((c) => (c.id === id ? saved : c)));
+  }, []);
+
+  return { campaigns, loading, error, addCampaign, renameCampaign };
 }

@@ -51,3 +51,36 @@ export async function createCampaign(name: string): Promise<Campaign> {
   if (error) throw error;
   return toCampaign(data);
 }
+
+/**
+ * DM only, enforced by "dms update campaigns" (012). Like every other mutation
+ * here, no role check in this file — the hidden button is a courtesy, the
+ * policy is the rule.
+ *
+ * Returns the saved row so the caller updates from what the database actually
+ * stored rather than from its own draft.
+ */
+export async function updateCampaignName(
+  id: string,
+  name: string,
+): Promise<Campaign> {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .update({ name: name.trim() })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw error;
+  // maybeSingle, not single: an update RLS blocked is not an error — it matches
+  // no rows and comes back clean, and single() would report that as a confusing
+  // "0 rows" failure. Both causes end here — a player who called this anyway,
+  // or a campaign deleted while the DM had the form open — because from the
+  // client they are the same empty response.
+  if (!data) {
+    throw new Error(
+      "That campaign could not be renamed — it may have been deleted, or you may not have permission",
+    );
+  }
+  return toCampaign(data);
+}
