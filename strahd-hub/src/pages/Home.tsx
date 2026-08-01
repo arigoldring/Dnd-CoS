@@ -8,8 +8,10 @@ export function Home() {
           inside an <a> is invalid HTML, and nesting two focusable controls
           gives keyboard users two stops for one destination.
 
-          Relative, like the nav: this page is the campaign index, so "Shop"
-          resolves to /campaign/:campaignId/Shop. */}
+          Relative, like the nav, and safe for the neighbouring reason: an index
+          route adds no path segment of its own, so these resolve from
+          /campaign/:campaignId too. A page that does own a segment — Shop,
+          Maps — would resolve from its own URL and can't copy this form. */}
       <Link className="btn" to="Shop">
         Shop
       </Link>

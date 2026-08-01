@@ -17,9 +17,18 @@ export function Layout() {
   return (
     <div>
       {/* Relative targets, so the nav stays inside whatever campaign is in the
-          URL without a single link spelling the id out. They resolve against
-          this route's place in the tree (/campaign/:campaignId), not against
-          the current URL — so "Shop" means the same thing from every page. */}
+          URL without a single link spelling the id out.
+
+          They resolve against the route that RENDERS them, not the page
+          showing beneath it — a Link only sees the match chain down to its own
+          component. This one is pathless, so it contributes no segment and
+          every link below resolves from /campaign/:campaignId: "." is the
+          campaign index from anywhere, and "Shop" can't stack onto /Maps.
+
+          That's a property of living in the layout, not of the strings. The
+          same "Maps" inside Shop.tsx resolves from /campaign/abc/Shop and
+          gives you /campaign/abc/Shop/Maps, which matches nothing. A page that
+          owns a path segment has to link absolutely. */}
       <Link to=".">Home</Link>
       <Link to="Shop">Shop</Link>
       <Link to="Maps">Maps</Link>
