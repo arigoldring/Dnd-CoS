@@ -1,3 +1,8 @@
+-- Superseded in part by 013: campaign_players is replaced there by
+-- campaign_members. Running this file after 013 would recreate the old table and
+-- repoint the campaigns SELECT policy back at it — so this is history now, not
+-- something to re-run.
+--
 -- Reconciles a database where 010 was only partially applied: the campaigns and
 -- campaign_players tables plus four policies landed, the invite half never did.
 --

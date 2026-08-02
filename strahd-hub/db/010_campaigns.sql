@@ -18,6 +18,10 @@ with check (public.is_dm());
 
 -- ---------------------------------------------------------------------------
 -- campaign_players -- who belongs to which campaign
+--
+-- Replaced by campaign_members in 013, which adds a per-campaign role. This
+-- table, its two policies, and the membership subquery below are all gone from
+-- a database that has run 013.
 -- ---------------------------------------------------------------------------
 
 create table campaign_players (

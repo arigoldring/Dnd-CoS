@@ -14,29 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
-      campaign_players: {
+      campaign_members: {
         Row: {
           campaign_id: string
+          role: string
           user_id: string
         }
         Insert: {
           campaign_id: string
+          role?: string
           user_id: string
         }
         Update: {
           campaign_id?: string
+          role?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "campaign_players_campaign_id_fkey"
+            foreignKeyName: "campaign_members_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "campaign_players_user_id_fkey"
+            foreignKeyName: "campaign_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -329,7 +332,7 @@ export type Database = {
     }
     Functions: {
       claim_dm_invite: { Args: { invite_code: string }; Returns: undefined }
-      claim_player_invite: { Args: { invite_code: string }; Returns: undefined }
+      claim_player_invite: { Args: { invite_code: string }; Returns: boolean }
       generate_dm_invite: { Args: { invite_label?: string }; Returns: string }
       generate_player_invite: {
         Args: { invite_label?: string; target_campaign: string }

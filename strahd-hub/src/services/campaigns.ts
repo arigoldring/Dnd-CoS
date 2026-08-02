@@ -17,9 +17,9 @@ function toCampaign(row: CampaignRow): Campaign {
 
 /**
  * Every campaign the signed-in user can see — which is already the membership
- * list, not something filtered here. "read campaigns you can see" (010) answers
+ * list, not something filtered here. "read campaigns you can see" (013) answers
  * this per user: a DM gets every campaign, a player gets only the ones
- * campaign_players joins them to. Hence no .eq() below; adding one would
+ * campaign_members joins them to. Hence no .eq() below; adding one would
  * restate the policy in the one place that can't enforce it.
  *
  * Ordered so the picker's list doesn't reshuffle between loads — Postgres makes
