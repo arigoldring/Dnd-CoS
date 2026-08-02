@@ -319,7 +319,8 @@ commit;
 --   "dms can view invites" on player_invites (010/011) and on dm_invites (000).
 --   Invite tables, not content tables, so they fall outside the check above --
 --   but the player_invites one does let any global DM read every campaign's
---   outstanding codes.
+--   outstanding codes. Narrowed by 019; the dm_invites one stays global, and
+--   correctly so -- a DM invite grants the flag, so the flag is what gates it.
 --
 -- The real remaining hole is generate_player_invite (010/011): it is security
 -- definer, its gate is `if not public.is_dm()`, and it takes target_campaign as
@@ -328,6 +329,7 @@ commit;
 -- kind this file closed everywhere else, and it survives only because it lives
 -- in a function body rather than a policy -- swapping that line for
 -- `is_campaign_dm(target_campaign)` is the next migration, and a small one.
+--   Closed by 019, which is that swap.
 --
 -- Two smaller things, both carried over from 016 and neither made worse here:
 --
