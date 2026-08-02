@@ -43,14 +43,16 @@ export function useCampaigns() {
   // fails still has a page full of good campaigns behind it, and the form that
   // called it is the thing that should say what went wrong.
   const addCampaign = useCallback(async (name: string) => {
-    const created = await createCampaign(name);
-    // Appended rather than sorted in: getCampaigns orders by created_at, and
-    // the row that was just inserted is by definition the newest one.
-    setCampaigns((cur) => [...cur, created]);
+    const id = await createCampaign(name);
+    // Assembled here rather than refetched: create_campaign hands back an id and
+    // nothing else, and the only other field this list shows is the name that
+    // was just sent to it. Appended rather than sorted in, because getCampaigns
+    // orders by created_at and this row is by definition the newest one.
+    setCampaigns((cur) => [...cur, { id, name: name.trim() }]);
     // Returned as well as stored. Local state is for the list behind you; the
     // return value is what lets the caller navigate into the campaign it just
-    // made, which needs an id that didn't exist until the insert came back.
-    return created;
+    // made, which needs an id that didn't exist until the call came back.
+    return id;
   }, []);
 
   // Rejects on failure for the same reason addCampaign does: a rename that

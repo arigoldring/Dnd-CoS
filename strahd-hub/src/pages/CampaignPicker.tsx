@@ -29,10 +29,10 @@ export function CampaignPicker() {
 
   async function handleCreate(name: string) {
     // Failures propagate to the form, which keeps the draft and shows them.
-    const created = await addCampaign(name);
-    // The payoff of createCampaign returning its row: one click makes the
+    const id = await addCampaign(name);
+    // The payoff of createCampaign returning the new id: one click makes the
     // campaign and drops you into it, with no trip back through the list.
-    navigate(`/campaign/${created.id}`);
+    navigate(`/campaign/${id}`);
   }
 
   async function handleRename(id: string, name: string) {

@@ -333,6 +333,7 @@ export type Database = {
     Functions: {
       claim_dm_invite: { Args: { invite_code: string }; Returns: undefined }
       claim_player_invite: { Args: { invite_code: string }; Returns: boolean }
+      create_campaign: { Args: { campaign_name: string }; Returns: string }
       generate_dm_invite: { Args: { invite_label?: string }; Returns: string }
       generate_player_invite: {
         Args: { invite_label?: string; target_campaign: string }

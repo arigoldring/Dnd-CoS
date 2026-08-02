@@ -35,21 +35,29 @@ export async function getCampaigns(): Promise<Campaign[]> {
 }
 
 /**
- * DM only, enforced by "dm inserts campaigns" (010) rather than by a role check
- * here — the UI hides the button, but this is what actually stops a player.
+ * A function call rather than an insert because two rows have to land together:
+ * the campaign, and the campaign_members row that makes its creator the DM of
+ * it. From the client those are two round trips, and the second one can fail —
+ * leaving a campaign nobody is a member of, which nothing in the app can then
+ * open. Inside create_campaign (014) they share one transaction.
  *
- * .select().single() is what makes the insert hand back the row it wrote, and
- * that row is the whole point: the caller navigates straight into the campaign
- * it just created, which it can't do without the id Postgres generated.
+ * DM only, but not by the insert policy: the function is security definer, so
+ * it runs past RLS. Its own `if not is_dm()` gate is what stops a player.
+ *
+ * The key below is spelled the way 014 spells its parameter, campaign_name, and
+ * has to be — these object keys become named SQL arguments, so a mismatch isn't
+ * a type error, it's "function does not exist" at runtime.
  */
-export async function createCampaign(name: string): Promise<Campaign> {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .insert({ name: name.trim() })
-    .select("*")
-    .single();
+export async function createCampaign(name: string): Promise<string> {
+  const { data, error } = await supabase.rpc("create_campaign", {
+    campaign_name: name.trim(),
+  });
+  // Where the is_dm() gate arrives: a raise exception comes back as an ordinary
+  // Postgres error carrying 014's message, not as a separate refused branch.
   if (error) throw error;
-  return toCampaign(data);
+  // The bare id, not a row and not a row array — the function returns uuid, so
+  // this is already the string. A caller wanting the rest re-reads the table.
+  return data;
 }
 
 /**
