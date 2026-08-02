@@ -5,39 +5,9 @@
 
 html { overflow-y: scroll; }
 
-body:has(.shop) {
-  margin: 0;
-  background:
-    radial-gradient(1100px 620px at 50% 0%, rgba(140,110,60,.10), transparent 60%),
-    radial-gradient(900px 500px at 88% 15%, rgba(138,13,13,.16), transparent 55%),
-    radial-gradient(800px 460px at 8% 85%, rgba(90,70,40,.14), transparent 55%),
-    radial-gradient(1400px 900px at 50% 100%, rgba(30,22,14,.5), transparent 70%),
-    #0a0810;
-  background-attachment: fixed;
-  color: #d6cab2;
-  font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
-  min-height: 100vh;
-  position: relative;
-}
-/* drifting mist behind the card, purely atmospheric */
-body:has(.shop)::before {
-  content: "";
-  position: fixed; inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(700px 280px at 22% 28%, rgba(200,190,170,.05), transparent 70%),
-    radial-gradient(620px 240px at 78% 68%, rgba(200,190,170,.045), transparent 70%);
-  mix-blend-mode: screen;
-  z-index: 0;
-}
-/* vignette so edges recede instead of reading as flat black */
-body:has(.shop)::after {
-  content: "";
-  position: fixed; inset: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 240px 60px rgba(0,0,0,.7);
-  z-index: 0;
-}
+/* No page background here on purpose. The Shop used to override body with its
+   own lighter gradients plus a mist layer and vignette; it now inherits the
+   site-wide background from index.css so the route matches every other page. */
 
 #root:has(.shop) {
   width: 100%;
