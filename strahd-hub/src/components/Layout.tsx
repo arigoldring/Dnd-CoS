@@ -35,6 +35,15 @@ export function Layout() {
       <Link to="Spells">Spells</Link>
       <Link to="NPC">NPCs</Link>
       <Link to="Recaps">Recaps</Link>
+      {/* campaign.isDm, not profile.role — the per-campaign question 018 made
+          this, and the same gate CampaignInvites redirects on. A global DM who
+          plays in someone else's campaign is not the DM here, and the page
+          behind this link would give them an empty list and a refused mint.
+
+          Relative like its neighbours, which is safe for the reason above: this
+          layout is pathless, so "Invites" resolves from /campaign/:campaignId
+          rather than stacking onto whatever page is showing. */}
+      {campaign.isDm && <Link to="Invites">Invites</Link>}
       {/* Absolute: the one link that's meant to leave the campaign. */}
       <Link to="/">Campaigns</Link>
       <span>{campaign.name}</span>

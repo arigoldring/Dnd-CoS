@@ -2,6 +2,7 @@ import { SubmitEvent, useId, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
 import { useCampaigns } from "../hooks/useCampaigns";
+import { peekPendingClaim } from "../lib/claimLink";
 
 export function CampaignPicker() {
   const { profile } = useAuth();
@@ -13,6 +14,18 @@ export function CampaignPicker() {
   // Which row is in edit mode, by id rather than a boolean per campaign — one
   // open editor at a time, and clicking Rename on another row moves it there.
   const [renamingId, setRenamingId] = useState<string | null>(null);
+
+  // Where an invitee lands after signing in: signInWithGoogle sends them back to
+  // the bare origin, so a claim link they followed cold arrives here instead of
+  // at /claim, minus its fragment. If main.tsx caught a code on the way past,
+  // this is what finishes the trip. Ahead of the loading check on purpose —
+  // whether they can claim has nothing to do with which campaigns they can
+  // already see, and the wait would be for a list they are not staying for.
+  //
+  // Cannot loop: /claim clears the stash on mount, so coming back here finds
+  // nothing. Peeked rather than taken for that same reason — consuming it in
+  // passing would land them on an empty form.
+  if (peekPendingClaim()) return <Navigate to="/claim" replace />;
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
@@ -89,9 +102,13 @@ export function CampaignPicker() {
                   <Link className="btn" to={`/campaign/${campaign.id}`}>
                     {campaign.name}
                   </Link>
-                  {/* DM only here, and refused by "dms update campaigns" (012)
-                      if a player reaches updateCampaignName another way. */}
-                  {isDm && (
+                  {/* campaign.isDm, not the global isDm above. "dms update
+                      campaigns" (012) was repointed at is_campaign_dm by 018,
+                      so a global DM renaming someone else's campaign now
+                      matches no rows and gets updateCampaignName's "may have
+                      been deleted, or you may not have permission" — a message
+                      about a button that should not have been there. */}
+                  {campaign.isDm && (
                     <button onClick={() => setRenamingId(campaign.id)}>
                       Rename
                     </button>
@@ -102,6 +119,20 @@ export function CampaignPicker() {
           ))}
         </ul>
       )}
+
+      {/* The two invite doors that aren't a campaign's to open.
+
+          /invites is the global flag — permission to create campaigns — so it
+          hangs off this page rather than off any one campaign, and stays gated
+          on profiles.role, which after 018 means exactly that and only that.
+          Player invites are deliberately NOT here: they belong to a campaign,
+          and their page lives inside one.
+
+          /claim is open to everyone, including the DM the button above it is
+          for — a DM can be handed a player code for somebody else's table. */}
+      <hr />
+      {isDm && <Link to="/invites">Invite a DM</Link>}
+      <Link to="/claim">Have an invite code?</Link>
     </div>
   );
 }

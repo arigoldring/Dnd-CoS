@@ -1,7 +1,19 @@
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/database.types";
 
-type CampaignRow = Tables<"campaigns">;
+// The caller's own membership row, embedded, so every campaign arrives knowing
+// what this user is in it. RLS is what makes that the *caller's* role rather
+// than the roster: "members read own memberships" (013) is `user_id =
+// auth.uid()`, and it applies to an embedded select the same way it applies to a
+// direct one — the same property 007 leans on for recap bylines.
+const CAMPAIGN_SELECT = "*, membership:campaign_members(role)";
+
+// An array, not an object, and that is PostgREST's call rather than a choice
+// here: campaigns → campaign_members is one-to-many, so the embed is shaped
+// to-many even though the policy above narrows it to at most one row.
+type CampaignRow = Tables<"campaigns"> & {
+  membership: Pick<Tables<"campaign_members">, "role">[];
+};
 
 // camelCase like Profile and Item, so a consumer can tell from the shape which
 // side of the boundary it's holding. created_at is dropped rather than carried:
@@ -9,10 +21,29 @@ type CampaignRow = Tables<"campaigns">;
 export interface Campaign {
   id: string;
   name: string;
+  // Is this user the DM *of this campaign* — 018's question, and deliberately
+  // not profiles.role. Since 018 that global flag means one thing only, "may
+  // create campaigns", and every policy that used to ask it now asks
+  // is_campaign_dm instead. A UI that keeps gating on the global flag shows
+  // DM controls to a global DM sitting in someone else's campaign as a player,
+  // where every one of those controls is refused by the database.
+  //
+  // This is that same predicate answered client-side, from the row the policy
+  // already lets the caller read, rather than by calling is_campaign_dm over
+  // RPC — one query serves the whole list, and the picker needs it per row.
+  isDm: boolean;
 }
 
 function toCampaign(row: CampaignRow): Campaign {
-  return { id: row.id, name: row.name };
+  return {
+    id: row.id,
+    name: row.name,
+    // Empty for a campaign the caller has no membership row in, which a global
+    // DM has plenty of — "read campaigns you can see" (013) still hands them
+    // every campaign in the database. false is the right answer there, and the
+    // same one is_campaign_dm gives.
+    isDm: row.membership[0]?.role === "dm",
+  };
 }
 
 /**
@@ -28,7 +59,7 @@ function toCampaign(row: CampaignRow): Campaign {
 export async function getCampaigns(): Promise<Campaign[]> {
   const { data, error } = await supabase
     .from("campaigns")
-    .select("*")
+    .select(CAMPAIGN_SELECT)
     .order("created_at");
   if (error) throw error;
   return data.map(toCampaign);
@@ -76,7 +107,7 @@ export async function updateCampaignName(
     .from("campaigns")
     .update({ name: name.trim() })
     .eq("id", id)
-    .select("*")
+    .select(CAMPAIGN_SELECT)
     .maybeSingle();
 
   if (error) throw error;

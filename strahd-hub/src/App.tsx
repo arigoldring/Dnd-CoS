@@ -10,6 +10,9 @@ import { Recaps } from "./pages/Recaps";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
 import { CampaignPicker } from "./pages/CampaignPicker";
+import { Claim } from "./pages/Claim";
+import { DmInvites } from "./pages/DmInvites";
+import { CampaignInvites } from "./pages/CampaignInvites";
 
 function App() {
   return (
@@ -21,9 +24,14 @@ function App() {
                 you do before you have one — pick a campaign, claim a code, hand
                 one out — so none of it can sit under :campaignId.
 
-                /claim and /invites belong here, beside "/", once those pages
-                exist; the invite RPCs (010) are already in place. */}
+                /claim takes a code and has no idea which campaign it is for
+                until the server resolves one; /invites hands out the DM flag,
+                which is not a campaign's to grant. Player invites are the
+                exception and live below, at /campaign/:campaignId/Invites,
+                because they are scoped to exactly one campaign. */}
             <Route path="/" element={<CampaignPicker />} />
+            <Route path="/claim" element={<Claim />} />
+            <Route path="/invites" element={<DmInvites />} />
 
             {/* One param carries the campaign for every page below it.
                 CampaignLayout validates it and puts the campaign on the outlet;
@@ -38,6 +46,11 @@ function App() {
                 <Route path="Spells" element={<Spells />} />
                 <Route path="NPC" element={<Npcs />} />
                 <Route path="Recaps" element={<Recaps />} />
+                {/* DM of THIS campaign only, enforced by the page itself and
+                    by 019 behind it. Down here rather than beside /invites
+                    because generate_player_invite takes the campaign as its
+                    argument, and the URL is where that comes from. */}
+                <Route path="Invites" element={<CampaignInvites />} />
               </Route>
             </Route>
 

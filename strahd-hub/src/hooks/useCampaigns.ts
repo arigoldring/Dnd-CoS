@@ -48,7 +48,12 @@ export function useCampaigns() {
     // nothing else, and the only other field this list shows is the name that
     // was just sent to it. Appended rather than sorted in, because getCampaigns
     // orders by created_at and this row is by definition the newest one.
-    setCampaigns((cur) => [...cur, { id, name: name.trim() }]);
+    //
+    // isDm: true is a fact rather than an optimistic guess — create_campaign
+    // (014) writes the campaign_members row naming its caller the DM in the same
+    // transaction as the campaign, so a create that returned an id created that
+    // row too. This is the one place the field can be known without reading it.
+    setCampaigns((cur) => [...cur, { id, name: name.trim(), isDm: true }]);
     // Returned as well as stored. Local state is for the list behind you; the
     // return value is what lets the caller navigate into the campaign it just
     // made, which needs an id that didn't exist until the call came back.
