@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Invite,
   claimDmInvite,
@@ -28,7 +28,18 @@ export function useInvites(campaignId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Which campaign the list in state currently belongs to. The load below has
+  // `ignore` for this job, but a closure flag only covers the call that created
+  // it — addInvite is created once per campaignId and awaits two round trips, so
+  // it needs to ask what is true *now* rather than what was true when it was
+  // built. A ref is the only thing that reads forward like that.
+  const shownCampaignId = useRef(campaignId);
+
   useEffect(() => {
+    // Updated here rather than in its own effect so it moves in lockstep with
+    // the fetch that repopulates the list — the ref and the state it describes
+    // change for the same reason at the same moment.
+    shownCampaignId.current = campaignId;
     let ignore = false;
     async function load() {
       // Reset on every campaign change, not just on mount: without this a DM
@@ -64,12 +75,24 @@ export function useInvites(campaignId: string) {
   const addInvite = useCallback(
     async (label: string) => {
       const created = await createInvite(campaignId, label);
-      // Prepended, not sorted in: the list is newest-first by created_at and
-      // this row is by definition the newest. Nothing can backfill an invite the
-      // way a DM can backfill an older recap.
-      setInvites((cur) => [created, ...cur]);
-      // Returned as well as stored, because the code is the entire point of the
-      // call — the caller has to show it to the DM to copy.
+      // The same guard the load has, and needed for the same reason: a DM can
+      // switch campaigns while the mint is in flight, and by the time it lands
+      // `cur` is the other campaign's list. Without this check the updater
+      // prepends campaign A's code onto campaign B's screen — display-only and
+      // gone on the next load, but wrong in the one way this table must not be.
+      //
+      // What it deliberately does NOT cover is a same-campaign reload landing
+      // between the mint's two round trips, which can duplicate the row. That is
+      // accepted debt, not an oversight: see KNOWN_ISSUES.md.
+      if (shownCampaignId.current === campaignId) {
+        // Prepended, not sorted in: the list is newest-first by created_at and
+        // this row is by definition the newest. Nothing can backfill an invite
+        // the way a DM can backfill an older recap.
+        setInvites((cur) => [created, ...cur]);
+      }
+      // Returned either way, and outside the guard on purpose: the code was
+      // minted and is real whether or not its campaign is still on screen.
+      // Swallowing it here would lose the one thing the caller needs to show.
       return created;
     },
     [campaignId],
@@ -145,6 +168,22 @@ export function useDmInvites() {
  * Awaited, not fired and forgotten: the caller's next line is usually a navigate
  * or a success message, and both want to run against a profile that already
  * says 'dm'.
+ *
+ * The obvious hazard in this pairing is that a claim which commits and then
+ * fails to refresh would report itself as a failed claim — telling a new DM they
+ * are not one. That cannot happen, and it is worth writing down why rather than
+ * guarding against it: refetchProfile does not reject. It catches its own
+ * failure and reports it through AuthContext's own error state, so nothing from
+ * the second await can reach the form that called this. A try/catch around it
+ * here would be a branch that can never run.
+ *
+ * What DOES happen, and what a claim form has to be built for: refetchProfile
+ * sets AuthContext loading, and AuthGate renders "Loading..." instead of its
+ * children while that is true. The form calling this is one of those children,
+ * so it unmounts and remounts around the refresh, losing whatever local state it
+ * was holding. A success message set after this resolves will not survive.
+ * Navigate on success instead — the redirect is the confirmation, and it is the
+ * one outcome the remount cannot swallow.
  */
 export function useClaimDmInvite() {
   const { refetchProfile } = useAuth();
@@ -154,6 +193,9 @@ export function useClaimDmInvite() {
   // and memoising on it would return a new callback anyway. This is only ever
   // called from an event handler, where identity does not matter.
   return async function claim(code: string) {
+    // Order matters and is the whole point of the hook: the claim is the thing
+    // that can fail, and it fails before anything has been written. Only once it
+    // has committed is there a new role to go and read.
     await claimDmInvite(code);
     await refetchProfile();
   };
