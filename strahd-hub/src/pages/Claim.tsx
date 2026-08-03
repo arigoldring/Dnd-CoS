@@ -8,6 +8,7 @@ import {
   peekPendingClaim,
   takePendingClaim,
 } from "../lib/claimLink";
+import { errorMessage } from "../lib/errors";
 
 /**
  * The other end of every invite link: paste a code, burn it, get what it grants.
@@ -104,7 +105,7 @@ export function Claim() {
       // the usual cause is a mis-paste or the wrong kind selected above, and
       // both are fixed in place.
       console.error("Problem claiming invite:", err);
-      setError(err instanceof Error ? err.message : "Problem claiming invite");
+      setError(errorMessage(err, "Problem claiming invite"));
       setSubmitting(false);
     }
   }

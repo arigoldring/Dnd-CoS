@@ -4,6 +4,7 @@ import {
   getLocations,
   updateLocationDescription,
 } from "../services/locations";
+import { errorMessage } from "../lib/errors";
 
 export function useLocations() {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -19,9 +20,7 @@ export function useLocations() {
       } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError(
-            err instanceof Error ? err.message : "Failed to load locations",
-          );
+          setError(errorMessage(err, "Failed to load locations"));
         }
       } finally {
         if (!ignore) setLoading(false);

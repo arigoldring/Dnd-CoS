@@ -5,6 +5,7 @@ import {
   getCampaigns,
   updateCampaignName,
 } from "../services/campaigns";
+import { errorMessage } from "../lib/errors";
 
 // Two very different callers share this: the picker, which lists what you can
 // open, and CampaignLayout, which checks a URL param against the same list.
@@ -24,9 +25,7 @@ export function useCampaigns() {
       } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError(
-            err instanceof Error ? err.message : "Failed to load campaigns",
-          );
+          setError(errorMessage(err, "Failed to load campaigns"));
         }
       } finally {
         if (!ignore) setLoading(false);

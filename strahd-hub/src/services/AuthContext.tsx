@@ -10,6 +10,7 @@ import { supabase } from "../lib/supabase";
 import { Profile, getOrCreateProfile } from "./profiles";
 import { NamePrompt } from "../components/NamePrompt";
 import { signInWithGoogle } from "./auth";
+import { errorMessage } from "../lib/errors";
 
 export interface AuthContextType {
   user: User | null;
@@ -78,9 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch((err) => {
         if (ignore) return;
         console.error("Problem loading profile:", err);
-        setError(
-          err instanceof Error ? err.message : "Problem loading profile",
-        );
+        setError(errorMessage(err, "Problem loading profile"));
         setLoading(false);
       });
     return () => {
@@ -97,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(p);
     } catch (err) {
       console.error("Problem loading profile:", err);
-      setError(err instanceof Error ? err.message : "Problem loading profile");
+      setError(errorMessage(err, "Problem loading profile"));
     } finally {
       setLoading(false);
     }

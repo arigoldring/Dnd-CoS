@@ -1,6 +1,7 @@
 import { SubmitEvent, useEffect, useId, useState } from "react";
 import { Invite } from "../services/invites";
 import { InviteKind, claimUrl } from "../lib/claimLink";
+import { errorMessage } from "../lib/errors";
 
 /**
  * Mint a code, then hand it over: the screen shared by both invite pages.
@@ -83,7 +84,7 @@ function MintForm({
       // can generate invites" (019) arrives, and it is the message that explains
       // the whole page.
       console.error("Problem creating invite:", err);
-      setError(err instanceof Error ? err.message : "Problem creating invite");
+      setError(errorMessage(err, "Problem creating invite"));
     } finally {
       // Safe in a finally here, unlike the forms that close on success: nothing
       // in this component unmounts on a successful mint.

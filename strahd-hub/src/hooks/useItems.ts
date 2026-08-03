@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Item, getItems } from "../services/items";
+import { errorMessage } from "../lib/errors";
 
 export function useItems() {
   const [items, setItems] = useState<Item[]>([]);
@@ -15,7 +16,7 @@ export function useItems() {
       } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError(err instanceof Error ? err.message : "Failed to load items");
+          setError(errorMessage(err, "Failed to load items"));
         }
       } finally {
         if (!ignore) setLoading(false);

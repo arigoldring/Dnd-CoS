@@ -1,6 +1,7 @@
 import { SubmitEvent, useState } from "react";
 import { setDisplayName } from "../services/profiles";
 import { useAuth } from "../services/AuthContext";
+import { errorMessage } from "../lib/errors";
 
 interface NamePromptProps {
   initialName?: string;
@@ -31,9 +32,7 @@ export function NamePrompt({
       onSuccess?.();
     } catch (err) {
       console.error("Problem setting display name:", err);
-      setError(
-        err instanceof Error ? err.message : "Problem setting display name",
-      );
+      setError(errorMessage(err, "Problem setting display name"));
     } finally {
       setSubmitting(false);
     }

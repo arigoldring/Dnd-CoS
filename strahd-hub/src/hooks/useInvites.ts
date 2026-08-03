@@ -8,6 +8,7 @@ import {
   getInvites,
 } from "../services/invites";
 import { useAuth } from "../services/AuthContext";
+import { errorMessage } from "../lib/errors";
 
 /**
  * One campaign's invite list plus the mint, in the same shape as useRecaps: this
@@ -53,7 +54,7 @@ export function useInvites(campaignId: string) {
       } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError(err instanceof Error ? err.message : "Failed to load invites");
+          setError(errorMessage(err, "Failed to load invites"));
         }
       } finally {
         if (!ignore) setLoading(false);
@@ -125,9 +126,7 @@ export function useDmInvites() {
       } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError(
-            err instanceof Error ? err.message : "Failed to load DM invites",
-          );
+          setError(errorMessage(err, "Failed to load DM invites"));
         }
       } finally {
         if (!ignore) setLoading(false);

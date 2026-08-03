@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
 import { useCampaigns } from "../hooks/useCampaigns";
 import { peekPendingClaim } from "../lib/claimLink";
+import { errorMessage } from "../lib/errors";
 
 export function CampaignPicker() {
   const { profile } = useAuth();
@@ -181,9 +182,7 @@ function CampaignNameForm({
       // Stay open holding the draft — closing would throw away a typed name
       // over something the DM can just retry.
       console.error("Problem saving campaign name:", err);
-      setError(
-        err instanceof Error ? err.message : "Problem saving campaign name",
-      );
+      setError(errorMessage(err, "Problem saving campaign name"));
       setSaving(false);
     }
   }

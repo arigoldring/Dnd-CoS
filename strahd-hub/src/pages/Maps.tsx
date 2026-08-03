@@ -4,6 +4,7 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useAuth } from "../services/AuthContext";
 import { useLocations } from "../hooks/useLocations";
 import { Location } from "../services/locations";
+import { errorMessage } from "../lib/errors";
 import "./maps.css";
 
 const DWELL = 600; // ms of hover before the peek appears
@@ -280,9 +281,7 @@ function DescriptionEditor({
       // Stay open on failure, holding the draft: closing here would throw away
       // text the DM just wrote and that the database never took.
       console.error("Problem saving description:", err);
-      setError(
-        err instanceof Error ? err.message : "Problem saving description",
-      );
+      setError(errorMessage(err, "Problem saving description"));
     } finally {
       setSaving(false);
     }

@@ -2,6 +2,7 @@ import { SubmitEvent, useState } from "react";
 import { useAuth } from "../services/AuthContext";
 import { useRecaps } from "../hooks/useRecaps";
 import { Recap } from "../services/recaps";
+import { errorMessage } from "../lib/errors";
 import "./recaps.css";
 
 // What the header says under the title. Note this reads lastEditedAt, not
@@ -122,9 +123,7 @@ function RecapCard({
       // No setState after this point: a successful delete unmounts this card.
     } catch (err) {
       console.error("Problem deleting recap:", err);
-      setDeleteError(
-        err instanceof Error ? err.message : "Problem deleting recap",
-      );
+      setDeleteError(errorMessage(err, "Problem deleting recap"));
       setDeleting(false);
     }
   }
@@ -227,7 +226,7 @@ function NewRecapForm({
       // Stay open holding the draft. This is where a duplicate session number
       // lands, and closing would throw away a write-up over a fixable typo.
       console.error("Problem creating recap:", err);
-      setError(err instanceof Error ? err.message : "Problem creating recap");
+      setError(errorMessage(err, "Problem creating recap"));
       setSaving(false);
     }
   }
@@ -328,7 +327,7 @@ function RecapEditor({
       // Stay open on failure, holding the draft: closing here would discard
       // text the player just wrote and that the database never took.
       console.error("Problem saving recap:", err);
-      setError(err instanceof Error ? err.message : "Problem saving recap");
+      setError(errorMessage(err, "Problem saving recap"));
       setSaving(false);
     }
   }

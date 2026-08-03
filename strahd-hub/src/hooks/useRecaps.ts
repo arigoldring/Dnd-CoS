@@ -6,6 +6,7 @@ import {
   getRecaps,
   updateRecap,
 } from "../services/recaps";
+import { errorMessage } from "../lib/errors";
 
 export function useRecaps() {
   const [recaps, setRecaps] = useState<Recap[]>([]);
@@ -21,9 +22,7 @@ export function useRecaps() {
       } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError(
-            err instanceof Error ? err.message : "Failed to load recaps",
-          );
+          setError(errorMessage(err, "Failed to load recaps"));
         }
       } finally {
         if (!ignore) setLoading(false);
