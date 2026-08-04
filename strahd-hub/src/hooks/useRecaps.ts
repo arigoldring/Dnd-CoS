@@ -8,7 +8,7 @@ import {
 } from "../services/recaps";
 import { errorMessage } from "../lib/errors";
 
-export function useRecaps() {
+export function useRecaps(campaignId: string) {
   const [recaps, setRecaps] = useState<Recap[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,8 +16,14 @@ export function useRecaps() {
   useEffect(() => {
     let ignore = false;
     async function load() {
+      // Reset on every campaign change, not just on mount: this component stays
+      // mounted when a DM navigates between campaigns (same <Recaps> route, only
+      // the param changes), so without this the previous campaign's log lingers
+      // until the new fetch lands.
+      setLoading(true);
+      setError(null);
       try {
-        const data = await getRecaps();
+        const data = await getRecaps(campaignId);
         if (!ignore) setRecaps(data);
       } catch (err) {
         if (!ignore) {
@@ -29,10 +35,13 @@ export function useRecaps() {
       }
     }
     load();
+    // `ignore` keeps a switch race safe: an in-flight fetch for the old campaign
+    // can resolve after the new one was requested, and this drops it rather than
+    // letting it paint the wrong campaign's recaps.
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [campaignId]);
 
   // The three mutations live beside the fetch so this hook stays the one owner
   // of the list: each patches local state from the row the server sent back,
@@ -43,9 +52,14 @@ export function useRecaps() {
   // page full of good recaps behind it, and the form that called it is the
   // thing that should say what went wrong.
 
+  // campaignId is closed over from the hook argument rather than passed per
+  // call: now that the read above is scoped, this hook has a "current campaign"
+  // and a new recap files against the same one the list is showing. This is the
+  // migration the old comment here promised — the read got scoped the way
+  // getInvites is, so campaignId came back out of this signature.
   const addRecap = useCallback(
     async (sessionNumber: number, title: string, body: string) => {
-      const created = await createRecap(sessionNumber, title, body);
+      const created = await createRecap(campaignId, sessionNumber, title, body);
       // Sorted in, not prepended. The list is ordered by session number
       // descending, and the DM can backfill an older session — a new Session 2
       // written after Session 5 belongs between 3 and 1, not at the top.
@@ -53,7 +67,7 @@ export function useRecaps() {
         [...cur, created].sort((a, b) => b.sessionNumber - a.sessionNumber),
       );
     },
-    [],
+    [campaignId],
   );
 
   const saveRecap = useCallback(

@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -107,6 +132,7 @@ export type Database = {
         Row: {
           armor_category: string | null
           base_armor_class: number | null
+          campaign_id: string | null
           created_at: string | null
           damage_dice: string | null
           damage_type: string | null
@@ -127,6 +153,7 @@ export type Database = {
         Insert: {
           armor_category?: string | null
           base_armor_class?: number | null
+          campaign_id?: string | null
           created_at?: string | null
           damage_dice?: string | null
           damage_type?: string | null
@@ -147,6 +174,7 @@ export type Database = {
         Update: {
           armor_category?: string | null
           base_armor_class?: number | null
+          campaign_id?: string | null
           created_at?: string | null
           damage_dice?: string | null
           damage_type?: string | null
@@ -164,7 +192,15 @@ export type Database = {
           versatile_dice?: string | null
           weapon_category?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       location_dm_notes: {
         Row: {
@@ -191,6 +227,7 @@ export type Database = {
       }
       locations: {
         Row: {
+          campaign_id: string
           created_at: string
           description: string | null
           id: string
@@ -200,6 +237,7 @@ export type Database = {
           y: number
         }
         Insert: {
+          campaign_id: string
           created_at?: string
           description?: string | null
           id?: string
@@ -209,6 +247,7 @@ export type Database = {
           y: number
         }
         Update: {
+          campaign_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -217,7 +256,15 @@ export type Database = {
           x?: number
           y?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "locations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_invites: {
         Row: {
@@ -291,6 +338,7 @@ export type Database = {
       session_recaps: {
         Row: {
           body: string
+          campaign_id: string
           created_at: string
           id: string
           last_edited_at: string | null
@@ -300,6 +348,7 @@ export type Database = {
         }
         Insert: {
           body?: string
+          campaign_id: string
           created_at?: string
           id?: string
           last_edited_at?: string | null
@@ -309,6 +358,7 @@ export type Database = {
         }
         Update: {
           body?: string
+          campaign_id?: string
           created_at?: string
           id?: string
           last_edited_at?: string | null
@@ -317,6 +367,13 @@ export type Database = {
           title?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "session_recaps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "session_recaps_last_edited_by_fkey"
             columns: ["last_edited_by"]
@@ -338,6 +395,11 @@ export type Database = {
       generate_player_invite: {
         Args: { invite_label?: string; target_campaign: string }
         Returns: string
+      }
+      is_campaign_dm: { Args: { target_campaign: string }; Returns: boolean }
+      is_campaign_member: {
+        Args: { target_campaign: string }
+        Returns: boolean
       }
       is_dm: { Args: never; Returns: boolean }
       set_display_name: {
@@ -472,6 +534,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

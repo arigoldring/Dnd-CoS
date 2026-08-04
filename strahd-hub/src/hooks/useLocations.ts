@@ -6,7 +6,7 @@ import {
 } from "../services/locations";
 import { errorMessage } from "../lib/errors";
 
-export function useLocations() {
+export function useLocations(campaignId: string) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,8 +14,14 @@ export function useLocations() {
   useEffect(() => {
     let ignore = false;
     async function load() {
+      // Reset on every campaign change, not just on mount: this component stays
+      // mounted when a DM navigates between campaigns (same <Maps> route, only
+      // the param changes), so without this the previous campaign's pins linger
+      // on the map until the new fetch lands.
+      setLoading(true);
+      setError(null);
       try {
-        const data = await getLocations();
+        const data = await getLocations(campaignId);
         if (!ignore) setLocations(data);
       } catch (err) {
         if (!ignore) {
@@ -27,10 +33,13 @@ export function useLocations() {
       }
     }
     load();
+    // `ignore` keeps a switch race safe: an in-flight fetch for the old campaign
+    // can resolve after the new one was requested, and this drops it rather than
+    // letting it paint the wrong campaign's pins.
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [campaignId]);
 
   // The mutation lives beside the fetch so this hook stays the one owner of
   // the list: on success we patch the single edited row instead of refetching

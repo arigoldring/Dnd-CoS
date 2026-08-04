@@ -1,5 +1,6 @@
 import { SubmitEvent, useState } from "react";
 import { useAuth } from "../services/AuthContext";
+import { useCampaign } from "../components/CampaignLayout";
 import { useRecaps } from "../hooks/useRecaps";
 import { Recap } from "../services/recaps";
 import { errorMessage } from "../lib/errors";
@@ -17,10 +18,18 @@ function byline(recap: Recap): string {
 }
 
 export function Recaps() {
-  const { profile, loading: authLoading } = useAuth();
-  const isDm = profile?.role === "dm";
+  const { loading: authLoading } = useAuth();
+  // Non-null by construction — this route sits under CampaignLayout, which has
+  // already resolved the :campaignId param against the campaigns this user can
+  // see. A new recap is filed against this one.
+  const campaign = useCampaign();
+  // campaign.isDm, not profile.role — after 019 the "dms create recaps" and
+  // "dms delete recaps" policies check is_campaign_dm(campaign_id), so a global
+  // DM who's only a player in this campaign must not see the New-recap form or
+  // Delete button the database would then refuse. This gate and the RLS agree.
+  const isDm = campaign.isDm;
   const { recaps, loading, error, addRecap, saveRecap, removeRecap } =
-    useRecaps();
+    useRecaps(campaign.id);
 
   // One id, not a flag per card — that's what makes this an accordion rather
   // than a pile of independently open panels. editingId is tracked separately
@@ -45,6 +54,9 @@ export function Recaps() {
         (creating ? (
           <NewRecapForm
             suggestedNumber={suggestedNumber}
+            // The form's business is a number, a title and a write-up; which
+            // campaign they land in is the hook's to know now that it is scoped
+            // to one. Same reason the form doesn't take the DM check either.
             onCreate={addRecap}
             onClose={() => setCreating(false)}
           />

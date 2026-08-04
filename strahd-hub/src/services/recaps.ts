@@ -19,8 +19,9 @@ import type { Tables } from "../types/database.types";
 // except yourself, with no error to explain why.
 const RECAP_SELECT = "*, editor:last_edited_by(display_name)";
 
-// Postgres SQLSTATE for a unique violation — here, two recaps claiming the
-// same session number.
+// Postgres SQLSTATE for a unique violation — here, two recaps in one campaign
+// claiming the same session number. Per campaign since 015: the constraint is
+// on the pair, so every campaign gets its own Session 1.
 const UNIQUE_VIOLATION = "23505";
 
 // The row as RECAP_SELECT returns it: the table's own columns plus the
@@ -71,10 +72,18 @@ function blankToNull(value: string): string | null {
 // Newest session first. Ordering by session_number rather than created_at so a
 // backfilled older session sorts by which session it *was*, not when it was
 // typed up.
-export async function getRecaps(): Promise<Recap[]> {
+//
+// Scoped by campaignId, the getInvites case rather than the getCampaigns one:
+// 016's is_campaign_member policy answers "may this viewer see this row", and a
+// DM in two campaigns passes it for both — so an unfiltered read would merge two
+// session logs onto one page. The filter is what narrows "every campaign I'm in"
+// down to "the one I'm looking at". RLS is still the security boundary; this is
+// only about which campaign's rows the page wants.
+export async function getRecaps(campaignId: string): Promise<Recap[]> {
   const { data, error } = await supabase
     .from("session_recaps")
     .select(RECAP_SELECT)
+    .eq("campaign_id", campaignId)
     .order("session_number", { ascending: false });
 
   if (error) {
@@ -88,7 +97,20 @@ export async function getRecaps(): Promise<Recap[]> {
 // DM only, enforced by the "dms create recaps" policy. session_number is the
 // DM's to choose; last_edited_by/at are deliberately not sent — they stay null
 // until someone actually edits, which is what makes "no edits yet" meaningful.
+//
+// campaignId leads, like the id on updateRecap and deleteRecap: it says which
+// row this is about before it says what the row contains. It is a parameter
+// rather than something derived here because this file has no idea which
+// campaign the DM is looking at — only the page under /campaign/:campaignId
+// does, and it is the one that passes it.
+//
+// It has to be sent explicitly, and there is no fallback if it isn't. 015 added
+// campaign_id as NOT NULL and nothing fills it in: the stamp_session_recap
+// trigger (007, rewritten by 016) is BEFORE UPDATE, so it pins campaign_id
+// against an edit but never sees an insert. An insert without this column is a
+// null violation, not a row landing in some default campaign.
 export async function createRecap(
+  campaignId: string,
   sessionNumber: number,
   title: string,
   body: string,
@@ -96,6 +118,7 @@ export async function createRecap(
   const { data, error } = await supabase
     .from("session_recaps")
     .insert({
+      campaign_id: campaignId,
       session_number: sessionNumber,
       title: blankToNull(title),
       body: body.trim(),
@@ -105,8 +128,9 @@ export async function createRecap(
 
   if (error) {
     console.error(error);
-    // The unique constraint on session_number is doing its job here; it just
-    // says so as 'duplicate key value violates unique constraint "..."'.
+    // The unique constraint on (campaign_id, session_number) is doing its job
+    // here; it just says so as 'duplicate key value violates unique
+    // constraint "..."'.
     if (error.code === UNIQUE_VIOLATION) {
       throw new Error(`Session ${sessionNumber} already exists`);
     }

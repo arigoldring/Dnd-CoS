@@ -33,11 +33,19 @@ export interface Location {
 // caller can see:
 //   - locations: players get revealed rows only; DMs get all rows.
 //   - location_dm_notes: players get zero rows; DMs get all of them.
-// So we can query both unconditionally and merge whatever comes back. The
+// So we can query both without a role check and merge whatever comes back. The
 // database is the single source of "who's allowed"; the client stays dumb.
-export async function getLocations(): Promise<Location[]> {
+//
+// We DO scope by campaignId, though — the getInvites case, not the getCampaigns
+// one. is_campaign_member answers "may this viewer see this row", and a DM in
+// two campaigns passes it for both, so an unfiltered read merges both campaigns'
+// pins onto one Barovia map. Only the locations query carries the filter:
+// location_dm_notes has no campaign_id column, and it doesn't need one — the
+// notes map below is keyed by location_id and only ever looked up for the
+// campaign-filtered locations, so notes from other campaigns fall out unused.
+export async function getLocations(campaignId: string): Promise<Location[]> {
   const [locationsResult, notesResult] = await Promise.all([
-    supabase.from("locations").select("*"),
+    supabase.from("locations").select("*").eq("campaign_id", campaignId),
     supabase.from("location_dm_notes").select("*"),
   ]);
 

@@ -2,6 +2,7 @@ import { SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
 import barovia_map from "../assets/Maps/barovia.webp";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useAuth } from "../services/AuthContext";
+import { useCampaign } from "../components/CampaignLayout";
 import { useLocations } from "../hooks/useLocations";
 import { Location } from "../services/locations";
 import { errorMessage } from "../lib/errors";
@@ -19,14 +20,22 @@ const PEEK_HALF_WIDTH = 140;
 type Peek = { loc: Location; left: number; top: number; below: boolean };
 
 export function Maps() {
-  const { profile, loading: authLoading } = useAuth();
-  const isDm = profile?.role === "dm";
+  const { loading: authLoading } = useAuth();
+  // Non-null by construction — this route sits under CampaignLayout. Scopes the
+  // pin fetch to this campaign so a DM in two of them doesn't get both maps'
+  // pins merged onto one Barovia.
+  const campaign = useCampaign();
+  // campaign.isDm, not profile.role — after 018 "dms update locations" checks
+  // is_campaign_dm(campaign_id), so a global DM who's only a player in this
+  // campaign must not see the Edit button the update behind it would then
+  // refuse. This gate and the RLS agree.
+  const isDm = campaign.isDm;
   const {
     locations,
     loading: locationsLoading,
     error,
     saveDescription,
-  } = useLocations();
+  } = useLocations(campaign.id);
   // The open location is held by id, not as a copied Location object: the
   // drawer then re-renders straight from the list, so a saved edit shows up
   // instead of a stale snapshot taken at click time.
