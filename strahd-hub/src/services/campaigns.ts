@@ -123,3 +123,34 @@ export async function updateCampaignName(
   }
   return toCampaign(data);
 }
+
+/**
+ * DM of this campaign only, enforced by "dms delete campaigns" (020) — which,
+ * given how is_campaign_dm is granted, means the DM who created it.
+ *
+ * Same shape and same reason as deleteRecap: a delete RLS forbids is not an
+ * error. It matches no rows and comes back clean, so a player (or a global DM
+ * sitting in someone else's campaign) who reached this anyway would otherwise
+ * watch the row vanish from the page while it stayed in the database. Hence
+ * .select() and the empty check — the returned id is the proof a row was really
+ * removed.
+ *
+ * The cascade is the database's, not ours: every child table references
+ * campaigns with on delete cascade (see 020's note), so this one delete takes
+ * the roster, invites, locations, notes, recaps and homebrew with it.
+ */
+export async function deleteCampaign(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) {
+    throw new Error(
+      "That campaign could not be deleted — it may already be gone, or you may not have permission",
+    );
+  }
+}

@@ -2,13 +2,14 @@ import { SubmitEvent, useId, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
 import { useCampaigns } from "../hooks/useCampaigns";
+import { Campaign } from "../services/campaigns";
 import { peekPendingClaim } from "../lib/claimLink";
 import { errorMessage } from "../lib/errors";
 
 export function CampaignPicker() {
   const { profile } = useAuth();
   const isDm = profile?.role === "dm";
-  const { campaigns, loading, error, addCampaign, renameCampaign } =
+  const { campaigns, loading, error, addCampaign, renameCampaign, removeCampaign } =
     useCampaigns();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
@@ -81,42 +82,15 @@ export function CampaignPicker() {
       ) : (
         <ul>
           {campaigns.map((campaign) => (
-            <li key={campaign.id}>
-              {renamingId === campaign.id ? (
-                // initialName only seeds state on mount, which is enough
-                // because the form lives inside this row: opening a different
-                // one mounts that row's own form rather than reusing this one
-                // with a stale draft.
-                <CampaignNameForm
-                  initialName={campaign.name}
-                  submitLabel="Save name"
-                  savingLabel="Saving..."
-                  onSubmit={(name) => handleRename(campaign.id, name)}
-                  onCancel={() => setRenamingId(null)}
-                />
-              ) : (
-                <>
-                  {/* A link, not a button with navigate(): this is a
-                      destination, so it should open in a new tab and show its
-                      URL on hover like any other. Same reasoning as the .btn
-                      anchors on Home. */}
-                  <Link className="btn" to={`/campaign/${campaign.id}`}>
-                    {campaign.name}
-                  </Link>
-                  {/* campaign.isDm, not the global isDm above. "dms update
-                      campaigns" (012) was repointed at is_campaign_dm by 018,
-                      so a global DM renaming someone else's campaign now
-                      matches no rows and gets updateCampaignName's "may have
-                      been deleted, or you may not have permission" — a message
-                      about a button that should not have been there. */}
-                  {campaign.isDm && (
-                    <button onClick={() => setRenamingId(campaign.id)}>
-                      Rename
-                    </button>
-                  )}
-                </>
-              )}
-            </li>
+            <CampaignRow
+              key={campaign.id}
+              campaign={campaign}
+              isRenaming={renamingId === campaign.id}
+              onStartRename={() => setRenamingId(campaign.id)}
+              onRename={(name) => handleRename(campaign.id, name)}
+              onCancelRename={() => setRenamingId(null)}
+              onDelete={removeCampaign}
+            />
           ))}
         </ul>
       )}
@@ -135,6 +109,103 @@ export function CampaignPicker() {
       {isDm && <Link to="/invites">Invite a DM</Link>}
       <Link to="/claim">Have an invite code?</Link>
     </div>
+  );
+}
+
+// One campaign in the list: the link to open it, and — for its DM — the rename
+// and delete controls. A component rather than an inline <li> for the same
+// reason RecapCard is one: the delete carries its own in-flight and error state,
+// and that state belongs next to the row that owns it so a failure reports
+// against the campaign that failed, not as one message for the whole list. The
+// rename editor is still opened from the page (renamingId is one-at-a-time
+// across all rows), so that stays a set of props rather than local state here.
+function CampaignRow({
+  campaign,
+  isRenaming,
+  onStartRename,
+  onRename,
+  onCancelRename,
+  onDelete,
+}: {
+  campaign: Campaign;
+  isRenaming: boolean;
+  onStartRename: () => void;
+  onRename: (name: string) => Promise<void>;
+  onCancelRename: () => void;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    // The warning names the campaign and is explicit that the delete cascades:
+    // a campaign is not just a name, and removing it takes its whole table with
+    // it. window.confirm, matching the recap delete — a real "cannot be undone"
+    // gate rather than a bespoke dialog.
+    if (
+      !window.confirm(
+        `Delete "${campaign.name}"? This permanently removes the campaign and ` +
+          `everything in it — recaps, map notes, invites and members. This ` +
+          `cannot be undone.`,
+      )
+    )
+      return;
+
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDelete(campaign.id);
+      // No setState after this: a successful delete unmounts this row.
+    } catch (err) {
+      console.error("Problem deleting campaign:", err);
+      setDeleteError(errorMessage(err, "Problem deleting campaign"));
+      setDeleting(false);
+    }
+  }
+
+  if (isRenaming) {
+    return (
+      <li>
+        {/* initialName only seeds state on mount, which is enough because the
+            form lives inside this row: opening a different one mounts that
+            row's own form rather than reusing this one with a stale draft. */}
+        <CampaignNameForm
+          initialName={campaign.name}
+          submitLabel="Save name"
+          savingLabel="Saving..."
+          onSubmit={onRename}
+          onCancel={onCancelRename}
+        />
+      </li>
+    );
+  }
+
+  return (
+    <li>
+      {/* A link, not a button with navigate(): this is a destination, so it
+          should open in a new tab and show its URL on hover like any other.
+          Same reasoning as the .btn anchors on Home. */}
+      <Link className="btn" to={`/campaign/${campaign.id}`}>
+        {campaign.name}
+      </Link>
+      {/* campaign.isDm, not the global isDm on the page. "dms update campaigns"
+          (012) and "dms delete campaigns" (020) are both scoped to
+          is_campaign_dm, so a global DM acting on someone else's campaign
+          matches no rows — Rename would surface updateCampaignName's "may not
+          have permission", and Delete would silently no-op — both messages
+          about buttons that should not have been there. Since the only DM of a
+          campaign is its creator (014), this gate is also exactly "the DM who
+          created it may delete it". */}
+      {campaign.isDm && (
+        <>
+          <button onClick={onStartRename}>Rename</button>
+          <button onClick={handleDelete} disabled={deleting}>
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </>
+      )}
+      {deleteError && <p>{deleteError}</p>}
+    </li>
   );
 }
 

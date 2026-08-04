@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Campaign,
   createCampaign,
+  deleteCampaign,
   getCampaigns,
   updateCampaignName,
 } from "../services/campaigns";
@@ -69,5 +70,22 @@ export function useCampaigns() {
     setCampaigns((cur) => cur.map((c) => (c.id === id ? saved : c)));
   }, []);
 
-  return { campaigns, loading, error, addCampaign, renameCampaign };
+  // Rejects on failure like the other two, and for the same reason: a delete
+  // that fails leaves the list intact behind it, so the row that asked is what
+  // should say so. On success the row is dropped from state rather than
+  // refetched — the server confirmed that one id is gone, and the cascade it
+  // took with it was never in this list to begin with.
+  const removeCampaign = useCallback(async (id: string) => {
+    await deleteCampaign(id);
+    setCampaigns((cur) => cur.filter((c) => c.id !== id));
+  }, []);
+
+  return {
+    campaigns,
+    loading,
+    error,
+    addCampaign,
+    renameCampaign,
+    removeCampaign,
+  };
 }
