@@ -10,7 +10,11 @@ function capitalize(value: string): string {
 
 // One row per fact worth showing in the detail panel. Kind-specific so a
 // GeneralItem just renders an empty list instead of "N/A" filler.
-function itemStats(item: Item): { label: string; value: string }[] {
+//
+// Exported because PartyInventory renders the same detail card over the same
+// items (a PartyInventoryEntry IS an Item), so it reuses this rather than
+// re-deriving the stat rows.
+export function itemStats(item: Item): { label: string; value: string }[] {
   switch (item.kind) {
     case "weapon": {
       const stats = [

@@ -19,7 +19,7 @@ correct in every case below.
 `addInvite` guards its `setInvites` on `shownCampaignId.current === campaignId`,
 which closes the cross-campaign case: a code minted for campaign A can never be
 prepended onto campaign B's list. It does not close the case where the list
-reloads for the *same* campaign while the mint is still in flight.
+reloads for the _same_ campaign while the mint is still in flight.
 
 1. Viewing campaign A, the DM clicks mint. `createInvite(A, label)` starts — two
    round trips: the `generate_player_invite` RPC, then the read-back select.
@@ -67,3 +67,5 @@ The same `addInvite` shape is there without the hazard: that hook takes no
 argument, loads once per mount, and has no refetch for an in-flight mint to race
 with. A remount starts from a fresh empty list, and the old closure's
 `setInvites` targets a component that no longer exists, which React ignores.
+
+removeFromPartyInventory - if a permission split ever happens needs to be changed

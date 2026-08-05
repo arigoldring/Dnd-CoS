@@ -7,6 +7,7 @@ import { Spells } from "./pages/Spells";
 import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/NPC";
 import { Recaps } from "./pages/Recaps";
+import { PartyInventory } from "./pages/PartyInventory";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
 import { CampaignPicker } from "./pages/CampaignPicker";
@@ -42,6 +43,7 @@ function App() {
                     bare /campaign/:campaignId URL. */}
                 <Route index element={<Home />} />
                 <Route path="Shop" element={<Shop />} />
+                <Route path="Inventory" element={<PartyInventory />} />
                 <Route path="Maps" element={<Maps />} />
                 <Route path="Spells" element={<Spells />} />
                 <Route path="NPC" element={<Npcs />} />

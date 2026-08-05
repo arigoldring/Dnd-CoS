@@ -15,6 +15,9 @@ export function Home() {
       <Link className="btn" to="Shop">
         Shop
       </Link>
+      <Link className="btn" to="Inventory">
+        Inventory
+      </Link>
       <Link className="btn" to="Maps">
         Maps
       </Link>

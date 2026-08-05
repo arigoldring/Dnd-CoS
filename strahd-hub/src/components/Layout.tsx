@@ -31,6 +31,7 @@ export function Layout() {
           owns a path segment has to link absolutely. */}
       <Link to=".">Home</Link>
       <Link to="Shop">Shop</Link>
+      <Link to="Inventory">Inventory</Link>
       <Link to="Maps">Maps</Link>
       <Link to="Spells">Spells</Link>
       <Link to="NPC">NPCs</Link>
