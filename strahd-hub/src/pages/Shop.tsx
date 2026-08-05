@@ -1,68 +1,19 @@
 import { useState } from "react";
 import { useItems } from "../hooks/useItems";
 import { Item } from "../services/items";
-import "./shop.css";
+import { useCampaign } from "../components/CampaignLayout";
+import { addToPartyInventory } from "../services/partyInventory";
+import { errorMessage } from "../lib/errors";
+import { ItemDetailCard } from "../components/ItemDetailCard";
 import { useSearchBar } from "../hooks/useSearchBar";
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-// One row per fact worth showing in the detail panel. Kind-specific so a
-// GeneralItem just renders an empty list instead of "N/A" filler.
-//
-// Exported because PartyInventory renders the same detail card over the same
-// items (a PartyInventoryEntry IS an Item), so it reuses this rather than
-// re-deriving the stat rows.
-export function itemStats(item: Item): { label: string; value: string }[] {
-  switch (item.kind) {
-    case "weapon": {
-      const stats = [
-        { label: "Type", value: `${capitalize(item.category)} weapon` },
-        { label: "Damage", value: `${item.damageDice} ${item.damageType}` },
-      ];
-      if (item.properties.length > 0) {
-        stats.push({
-          label: "Properties",
-          value: item.properties.map(capitalize).join(", "),
-        });
-      }
-      if (item.versatileDice) {
-        stats.push({ label: "Versatile", value: item.versatileDice });
-      }
-      if (item.rangeNormal) {
-        stats.push({
-          label: "Range",
-          value: item.rangeLong
-            ? `${item.rangeNormal}/${item.rangeLong} ft.`
-            : `${item.rangeNormal} ft.`,
-        });
-      }
-      return stats;
-    }
-    case "armor": {
-      const stats = [
-        { label: "Type", value: `${capitalize(item.category)} armor` },
-        { label: "Armor Class", value: `${item.baseArmorClass}` },
-      ];
-      if (item.strengthRequirement) {
-        stats.push({
-          label: "Strength Required",
-          value: `${item.strengthRequirement}`,
-        });
-      }
-      if (item.stealthDisadvantage) {
-        stats.push({ label: "Stealth", value: "Disadvantage" });
-      }
-      return stats;
-    }
-    case "general":
-      return [];
-  }
-}
+import "./shop.css";
 
 export function Shop() {
   const { items, loading, error } = useItems();
+  // The campaign in the URL, resolved by CampaignLayout above this route. The
+  // catalog itself is global (useItems), but adding to a party's inventory is
+  // scoped to one campaign — this is where that scope comes from.
+  const campaign = useCampaign();
   // The open item is held by id, not as the Item itself — same as Maps holds a
   // location id. Storing the object would leave `panel` pointing at whichever
   // object was in the list at click time, so a later edit or refetch (which
@@ -76,7 +27,6 @@ export function Shop() {
   if (loading) return <p>Loading Items...</p>;
   if (error) return <p>Couldn't load items: {error}</p>;
   const panel = items.find((item) => item.id === panelId) ?? null;
-  const stats = panel ? itemStats(panel) : [];
 
   function createTable() {
     return (
@@ -137,45 +87,20 @@ export function Shop() {
         ></input>
         {/* Click-outside backdrop. shop.css only promotes this to a fixed
             full-screen overlay while it actually has a child (:has(> div)), so
-            with no item selected it stays an inert empty div. The card below
+            with no item selected it stays an inert empty div. The card itself
             stops propagation so clicking inside it doesn't dismiss itself. */}
         <div onClick={() => setPanelId(null)}>
           {panel && (
-            <div
-              className="item-detail-card"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="item-detail-close"
-                onClick={() => setPanelId(null)}
-              >
-                ×
-              </button>
-              <div className="item-detail-header">
-                <span className="item-detail-name">{panel.name}</span>
-                <span className="item-detail-price">{panel.price} gold</span>
-              </div>
-              {stats.length > 0 && (
-                <dl className="item-detail-stats">
-                  {stats.map((stat) => (
-                    <div className="item-detail-stat" key={stat.label}>
-                      <dt>{stat.label}</dt>
-                      <dd>{stat.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-              <p>{panel.description}</p>
-              {panel.tags.length > 0 && (
-                <div className="item-detail-tags">
-                  {panel.tags.map((tag) => (
-                    <span className="item-tag" key={tag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ItemDetailCard
+              // key by id so switching items remounts the card, which resets the
+              // Add button's per-item state instead of carrying "Added" across.
+              key={panel.id}
+              item={panel}
+              onClose={() => setPanelId(null)}
+              footer={
+                <AddToPartyInventory campaignId={campaign.id} itemId={panel.id} />
+              }
+            />
           )}
         </div>
         {!panel && (
@@ -187,5 +112,58 @@ export function Shop() {
         <div>{createTable()}</div>
       </div>
     </>
+  );
+}
+
+// The one place a Shop item crosses into a campaign's shared loot. Calls the
+// service directly rather than usePartyInventory: Shop neither owns nor shows
+// that list, so mounting the list hook here would fetch it — and refetch it
+// after every add — for nobody. This is the Claim.tsx pattern: a one-shot
+// mutation holding its own state, with no list in sight.
+function AddToPartyInventory({
+  campaignId,
+  itemId,
+}: {
+  campaignId: string;
+  itemId: string;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAdd() {
+    setAdding(true);
+    setError(null);
+    try {
+      await addToPartyInventory(campaignId, itemId);
+      setAdded(true);
+    } catch (err) {
+      console.error("Problem adding to party inventory:", err);
+      setError(errorMessage(err, "Couldn't add this to the party's inventory"));
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <div className="item-detail-add-row">
+      <button
+        className="item-detail-add"
+        onClick={handleAdd}
+        disabled={adding}
+      >
+        {adding ? "Adding..." : added ? "Add another" : "Add to party inventory"}
+      </button>
+      {/* "Add another" and a note, rather than a disabled button, because a
+          second add is a real if uncommon action: there's no unique constraint
+          on (campaign, item), so each click files another stack. This label is
+          honest about what the service does today — see addToPartyInventory. */}
+      {added && !error && (
+        <span className="item-detail-add-note">
+          Added to the party's inventory.
+        </span>
+      )}
+      {error && <span className="item-detail-add-error">{error}</span>}
+    </div>
   );
 }

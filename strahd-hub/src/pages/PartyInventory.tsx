@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useCampaign } from "../components/CampaignLayout";
 import { usePartyInventory } from "../hooks/usePartyInventory";
 import { PartyInventoryEntry } from "../services/partyInventory";
-import { itemStats } from "./Shop";
+import { ItemDetailCard } from "../components/ItemDetailCard";
 import { useSearchBar } from "../hooks/useSearchBar";
 import { errorMessage } from "../lib/errors";
 import "./shop.css";
@@ -32,7 +32,6 @@ export function PartyInventory() {
   if (error) return <p>Couldn't load party inventory: {error}</p>;
 
   const panel = entries.find((entry) => entry.entryId === panelId) ?? null;
-  const stats = panel ? itemStats(panel) : [];
 
   return (
     <>
@@ -82,41 +81,14 @@ export function PartyInventory() {
             doesn't dismiss itself. */}
         <div onClick={() => setPanelId(null)}>
           {panel && (
-            <div
-              className="item-detail-card"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="item-detail-close"
-                onClick={() => setPanelId(null)}
-              >
-                ×
-              </button>
-              <div className="item-detail-header">
-                <span className="item-detail-name">{panel.name}</span>
-                <span className="item-detail-price">{panel.price} gold</span>
-              </div>
-              {stats.length > 0 && (
-                <dl className="item-detail-stats">
-                  {stats.map((stat) => (
-                    <div className="item-detail-stat" key={stat.label}>
-                      <dt>{stat.label}</dt>
-                      <dd>{stat.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-              <p>{panel.description}</p>
-              {panel.tags.length > 0 && (
-                <div className="item-detail-tags">
-                  {panel.tags.map((tag) => (
-                    <span className="item-tag" key={tag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            // No footer: an item already in the party's inventory has nothing to
+            // add. Shop is the page that passes the Add button; here the card is
+            // read-only and the decrement/remove controls live on the rows.
+            <ItemDetailCard
+              key={panel.entryId}
+              item={panel}
+              onClose={() => setPanelId(null)}
+            />
           )}
         </div>
         {!panel && (
