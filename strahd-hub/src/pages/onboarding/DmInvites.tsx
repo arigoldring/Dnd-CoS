@@ -2,6 +2,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../../services/AuthContext";
 import { useDmInvites } from "../../hooks/useInvites";
 import { InvitePanel } from "../../components/InvitePanel";
+import "../onboarding/onboarding.css";
 
 /**
  * DM invites — codes that set profiles.role = 'dm', which since 018 means
@@ -34,23 +35,27 @@ function DmInviteList() {
   if (error) return <p>{error}</p>;
 
   return (
-    <div>
-      <h1>Invite a DM</h1>
-      <p>
-        A DM code works once and lets whoever claims it create campaigns of their
-        own. It does not add them to any of yours — for that, use the Invites
-        page inside the campaign.
-      </p>
+    <div className="threshold">
+      <div className="threshold__inner">
+        <h1>Invite a DM</h1>
+        <p className="threshold__blurb">
+          A DM code works once and lets whoever claims it create campaigns of their
+          own. It does not add them to any of yours — for that, use the Invites
+          page inside the campaign.
+        </p>
 
-      <InvitePanel
-        kind="dm"
-        invites={invites}
-        onMint={(label) => addInvite(label)}
-        mintLabel="Generate DM invite"
-        emptyText="No DM invites yet."
-      />
+        <InvitePanel
+          kind="dm"
+          invites={invites}
+          onMint={(label) => addInvite(label)}
+          mintLabel="Generate DM invite"
+          emptyText="No DM invites yet."
+        />
 
-      <Link to="/">Back to campaigns</Link>
+        <Link className="threshold__back" to="/">
+          Back to campaigns
+        </Link>
+      </div>
     </div>
   );
 }

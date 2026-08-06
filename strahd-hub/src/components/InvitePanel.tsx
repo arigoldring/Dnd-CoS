@@ -2,6 +2,7 @@ import { SubmitEvent, useEffect, useId, useState } from "react";
 import { Invite } from "../services/invites";
 import { InviteKind, claimUrl } from "../lib/claimLink";
 import { errorMessage } from "../lib/errors";
+import "./invitePanel.css";
 
 /**
  * Mint a code, then hand it over: the screen shared by both invite pages.
@@ -35,9 +36,9 @@ export function InvitePanel({
       <MintForm onMint={onMint} mintLabel={mintLabel} />
 
       {invites.length === 0 ? (
-        <p>{emptyText}</p>
+        <p className="invite-empty">{emptyText}</p>
       ) : (
-        <ul>
+        <ul className="invite-list">
           {invites.map((invite) => (
             <InviteRow key={invite.id} invite={invite} kind={kind} />
           ))}
@@ -93,8 +94,8 @@ function MintForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor={inputId}>
+    <form className="invite-mint" onSubmit={handleSubmit}>
+      <label className="invite-mint__label" htmlFor={inputId}>
         Label <span>(optional — a note about who this is for)</span>
       </label>
       <input
@@ -108,7 +109,7 @@ function MintForm({
       <button type="submit" disabled={minting}>
         {minting ? "Generating..." : mintLabel}
       </button>
-      {error && <p>{error}</p>}
+      {error && <p className="invite-mint__error">{error}</p>}
     </form>
   );
 }
@@ -124,26 +125,27 @@ function InviteRow({ invite, kind }: { invite: Invite; kind: InviteKind }) {
       ? new Date(invite.usedAt).toLocaleDateString()
       : "unknown date";
     return (
-      <li>
-        <span>{invite.label ?? "Unlabelled"}</span>
-        {/* No code and no copy buttons on a spent row. The code is dead — codes
-            are one-shot — so offering it would be offering a link that fails. */}
-        <span>
-          claimed by {who} · {when}
-        </span>
+      <li className="invite invite--used">
+        <div className="invite__head">
+          <span className="invite__label">{invite.label ?? "Unlabelled"}</span>
+          <span className="invite__claim">claimed by {who} · {when}</span>
+          <span className="invite__seal" aria-hidden="true" />
+        </div>
       </li>
     );
   }
 
   return (
-    <li>
-      <span>{invite.label ?? "Unlabelled"}</span>
-      {/* The code itself, on screen and selectable, not hidden behind the copy
-          button. Both buttons below can fail for reasons the DM cannot fix, and
-          this is what makes that a nuisance rather than a dead end. */}
-      <code>{invite.code}</code>
-      <CopyButton what="code" value={invite.code} />
-      <CopyButton what="link" value={claimUrl(invite.code, kind)} />
+    <li className="invite">
+      <div className="invite__head">
+        <span className="invite__label">{invite.label ?? "Unlabelled"}</span>
+        <span className="invite__status">Unclaimed</span>
+      </div>
+      <div className="invite__row">
+        <code className="invite__code">{invite.code}</code>
+        <CopyButton what="code" value={invite.code} />
+        <CopyButton what="link" value={claimUrl(invite.code, kind)} />
+      </div>
     </li>
   );
 }

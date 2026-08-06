@@ -1,0 +1,220 @@
+/* ============================================================================
+   spells.css – new file, direction 3b ("ink on dark").
+   Import from pages/campaign/Spells.tsx.  Needs the classNames and the three
+   markup adds in HANDOFF.md (level gutter, conc/ritual tags, result count).
+   ========================================================================== */
+
+.spells__head {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(160, 140, 110, 0.2);
+}
+
+.spells__eyebrow {
+  margin: 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+.spells__head h1 {
+  margin: 11px 0 0;
+}
+
+.spells__search {
+  width: 320px;
+  margin-left: auto;
+  padding: 11px 14px;
+  font-size: 16px;
+}
+
+/* --- level filters ------------------------------------------------------ */
+
+.spells__filters {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 22px 0 0;
+}
+
+.spells__filters-label {
+  margin: 0 10px 0 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+}
+
+.spells__filters button {
+  padding: 8px 13px;
+  font: 400 14px/1 var(--sh-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sh-mute);
+  border: 1px solid rgba(160, 140, 110, 0.28);
+}
+
+/* the two word-buttons – All and Cantrips – are small caps, not digits */
+.spells__filters button:nth-of-type(1),
+.spells__filters button:nth-of-type(2) {
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 9px 15px 8px;
+}
+
+.spells__filters button.active {
+  color: var(--sh-candle);
+  background: linear-gradient(180deg, rgba(106, 10, 10, 0.9), rgba(58, 6, 6, 0.9));
+  border-color: rgba(255, 210, 180, 0.36);
+}
+
+.spells__count {
+  margin-left: auto;
+  font: 400 13px/1 var(--sh-mono);
+  color: var(--sh-dim);
+}
+
+/* --- the table ---------------------------------------------------------- */
+
+.spells table {
+  width: 100%;
+  margin: 22px 0 0;
+  border-collapse: collapse;
+  border: 1px solid var(--sh-rule);
+  background: var(--sh-panel);
+  table-layout: fixed;
+}
+
+.spells thead tr {
+  background: rgba(106, 10, 10, 0.1);
+}
+
+.spells th {
+  padding: 14px 0 13px;
+  text-align: left;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border-bottom: 1px solid rgba(160, 140, 110, 0.3);
+}
+
+/* Column widths, in the order Spells.tsx renders them:
+   Name · Level · School · Casting Time · Duration · Description.
+   Name is wide enough for "Protection from Evil and Good" plus its tag on one
+   line; Description takes the rest and clamps to two. */
+.spells th:nth-child(1),
+.spells td:nth-child(1) {
+  width: 302px;
+  padding-left: 26px;
+}
+
+.spells th:nth-child(2),
+.spells td:nth-child(2) {
+  width: 56px;
+}
+
+.spells th:nth-child(3),
+.spells td:nth-child(3) {
+  width: 132px;
+}
+
+.spells th:nth-child(4),
+.spells td:nth-child(4) {
+  width: 112px;
+}
+
+.spells th:nth-child(5),
+.spells td:nth-child(5) {
+  width: 132px;
+}
+
+.spells th:nth-child(6),
+.spells td:nth-child(6) {
+  padding-right: 26px;
+}
+
+.spells tbody tr {
+  border-bottom: 1px solid var(--sh-rule-faint);
+}
+
+.spells tbody tr:last-child {
+  border-bottom: 0;
+}
+
+.spells tbody tr:hover {
+  background: rgba(154, 122, 58, 0.08);
+  box-shadow: inset 3px 0 0 var(--sh-gold-deep);
+}
+
+.spells td {
+  padding: 15px 18px 15px 0;
+  vertical-align: baseline;
+}
+
+/* name */
+.spells td:nth-child(1) {
+  font-size: 18px;
+  color: var(--sh-bone-bright);
+}
+
+/* level – the gold gutter. Cantrips print as an em dash; see HANDOFF.md */
+.spell-level {
+  font: 400 15px/1 var(--sh-mono);
+  color: var(--sh-gold);
+}
+
+/* school */
+.spells td:nth-child(3) {
+  font: 400 15px/1 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--sh-mute);
+  text-transform: capitalize;
+}
+
+/* casting time + duration */
+.spells td:nth-child(4),
+.spells td:nth-child(5) {
+  font: 400 13px/1.3 var(--sh-mono);
+  color: var(--sh-mute);
+}
+
+/* description – two lines, so a row is a row */
+.spells td:nth-child(6) {
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--sh-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* conc / ritual tags beside the name */
+.spell-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 5px 2px;
+  font: 500 8px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border: 1px solid rgba(199, 154, 90, 0.4);
+  vertical-align: 2px;
+}
+
+.spells__empty {
+  margin: 22px 0 0;
+  padding: 20px 24px;
+  text-align: center;
+  font: 400 19px/1.4 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-mute);
+  background: rgba(160, 140, 110, 0.05);
+  border: 1px solid rgba(160, 140, 110, 0.18);
+}

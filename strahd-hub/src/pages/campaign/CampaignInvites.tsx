@@ -44,8 +44,9 @@ function CampaignInviteList({ campaign }: { campaign: Campaign }) {
 
   return (
     <div>
+      <p className="page-head__eyebrow">🔏 Sealed Letters 🔏</p>
       <h1>Invite players to {campaign.name}</h1>
-      <p>
+      <p className="page-head__sub">
         Each code works once and adds whoever claims it to this campaign only.
         Send the link and they can sign in and claim it themselves.
       </p>
@@ -61,7 +62,9 @@ function CampaignInviteList({ campaign }: { campaign: Campaign }) {
       {/* Absolute, unlike the nav's relative links. This route owns a path
           segment, so a relative target would resolve from
           /campaign/:campaignId/Invites — the trap Layout.tsx documents. */}
-      <Link to={`/campaign/${campaign.id}`}>Back to {campaign.name}</Link>
+      <Link className="threshold__back" to={`/campaign/${campaign.id}`}>
+        Back to {campaign.name}
+      </Link>
     </div>
   );
 }

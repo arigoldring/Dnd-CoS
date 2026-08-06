@@ -5,6 +5,7 @@ import { useCampaigns } from "../../hooks/useCampaigns";
 import { Campaign } from "../../services/campaigns";
 import { peekPendingClaim } from "../../lib/claimLink";
 import { errorMessage } from "../../lib/errors";
+import "../onboarding/onboarding.css";
 
 export function CampaignPicker() {
   const { profile } = useAuth();
@@ -58,56 +59,71 @@ export function CampaignPicker() {
   }
 
   return (
-    <div>
-      <h1>Campaigns</h1>
+    <div className="threshold">
+      <div className="threshold__inner">
+        <p className="threshold__brand">Strahd Hub</p>
+        <h1>Campaigns</h1>
 
-      {isDm &&
-        (creating ? (
-          <CampaignNameForm
-            submitLabel="Create campaign"
-            savingLabel="Creating..."
-            onSubmit={handleCreate}
-            onCancel={() => setCreating(false)}
-          />
+        {campaigns.length === 0 ? (
+          <>
+            <p className="campaigns__empty">
+              {isDm
+                ? "No campaigns yet. Start one above."
+                : "You're not in a campaign yet. Ask your DM for an invite."}
+            </p>
+            {isDm && !creating && (
+              <button className="campaigns__new" onClick={() => setCreating(true)}>
+                New campaign
+              </button>
+            )}
+            {isDm && creating && (
+              <CampaignNameForm
+                submitLabel="Create campaign"
+                savingLabel="Creating..."
+                onSubmit={handleCreate}
+                onCancel={() => setCreating(false)}
+              />
+            )}
+          </>
         ) : (
-          <button onClick={() => setCreating(true)}>New campaign</button>
-        ))}
+          <ul className="campaigns">
+            {isDm && !creating && (
+              <li>
+                <button className="campaigns__new" onClick={() => setCreating(true)}>
+                  New campaign
+                </button>
+              </li>
+            )}
+            {isDm && creating && (
+              <li>
+                <CampaignNameForm
+                  submitLabel="Create campaign"
+                  savingLabel="Creating..."
+                  onSubmit={handleCreate}
+                  onCancel={() => setCreating(false)}
+                />
+              </li>
+            )}
+            {campaigns.map((campaign) => (
+              <CampaignRow
+                key={campaign.id}
+                campaign={campaign}
+                isRenaming={renamingId === campaign.id}
+                onStartRename={() => setRenamingId(campaign.id)}
+                onRename={(name) => handleRename(campaign.id, name)}
+                onCancelRename={() => setRenamingId(null)}
+                onDelete={removeCampaign}
+              />
+            ))}
+          </ul>
+        )}
 
-      {campaigns.length === 0 ? (
-        <p>
-          {isDm
-            ? "No campaigns yet. Start one above."
-            : "You're not in a campaign yet. Ask your DM for an invite."}
-        </p>
-      ) : (
-        <ul>
-          {campaigns.map((campaign) => (
-            <CampaignRow
-              key={campaign.id}
-              campaign={campaign}
-              isRenaming={renamingId === campaign.id}
-              onStartRename={() => setRenamingId(campaign.id)}
-              onRename={(name) => handleRename(campaign.id, name)}
-              onCancelRename={() => setRenamingId(null)}
-              onDelete={removeCampaign}
-            />
-          ))}
-        </ul>
-      )}
-
-      {/* The two invite doors that aren't a campaign's to open.
-
-          /invites is the global flag — permission to create campaigns — so it
-          hangs off this page rather than off any one campaign, and stays gated
-          on profiles.role, which after 018 means exactly that and only that.
-          Player invites are deliberately NOT here: they belong to a campaign,
-          and their page lives inside one.
-
-          /claim is open to everyone, including the DM the button above it is
-          for — a DM can be handed a player code for somebody else's table. */}
-      <hr />
-      {isDm && <Link to="/invites">Invite a DM</Link>}
-      <Link to="/claim">Have an invite code?</Link>
+        <hr />
+        <div className="threshold__doors">
+          {isDm && <Link to="/invites">Invite a DM</Link>}
+          <Link to="/claim">Have an invite code?</Link>
+        </div>
+      </div>
     </div>
   );
 }
@@ -165,7 +181,7 @@ function CampaignRow({
 
   if (isRenaming) {
     return (
-      <li>
+      <li className="campaign-row">
         {/* initialName only seeds state on mount, which is enough because the
             form lives inside this row: opening a different one mounts that
             row's own form rather than reusing this one with a stale draft. */}
@@ -181,11 +197,11 @@ function CampaignRow({
   }
 
   return (
-    <li>
+    <li className="campaign-row">
       {/* A link, not a button with navigate(): this is a destination, so it
           should open in a new tab and show its URL on hover like any other.
           Same reasoning as the .btn anchors on Home. */}
-      <Link className="btn" to={`/campaign/${campaign.id}`}>
+      <Link className="campaign-row__open" to={`/campaign/${campaign.id}`}>
         {campaign.name}
       </Link>
       {/* campaign.isDm, not the global isDm on the page. "dms update campaigns"
@@ -197,14 +213,14 @@ function CampaignRow({
           campaign is its creator (014), this gate is also exactly "the DM who
           created it may delete it". */}
       {campaign.isDm && (
-        <>
+        <div className="campaign-row__actions">
           <button onClick={onStartRename}>Rename</button>
           <button onClick={handleDelete} disabled={deleting}>
             {deleting ? "Deleting..." : "Delete"}
           </button>
-        </>
+        </div>
       )}
-      {deleteError && <p>{deleteError}</p>}
+      {deleteError && <p className="threshold__error">{deleteError}</p>}
     </li>
   );
 }
@@ -259,7 +275,7 @@ function CampaignNameForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="campaign-name-form" onSubmit={handleSubmit}>
       <label htmlFor={inputId}>Campaign name</label>
       <input
         id={inputId}
@@ -275,7 +291,7 @@ function CampaignNameForm({
       <button type="submit" disabled={saving || !name.trim()}>
         {saving ? savingLabel : submitLabel}
       </button>
-      {error && <p>{error}</p>}
+      {error && <p className="threshold__error">{error}</p>}
     </form>
   );
 }

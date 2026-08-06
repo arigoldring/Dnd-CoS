@@ -1,9 +1,10 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, NavLink } from "react-router-dom";
 import { signOut } from "../services/auth";
 import { NamePrompt } from "./NamePrompt";
 import { useAuth } from "../services/AuthContext";
 import { useCampaign } from "./CampaignLayout";
 import { useState } from "react";
+import "./layout.css";
 
 export function Layout() {
   const { profile } = useAuth();
@@ -15,54 +16,58 @@ export function Layout() {
   const [isEditing, setIsEditing] = useState(false);
 
   return (
-    <div>
-      {/* Relative targets, so the nav stays inside whatever campaign is in the
-          URL without a single link spelling the id out.
+    <div className="app-shell">
+      <nav className="app-rail">
+        <div className="app-rail__campaign">
+          <p className="app-rail__eyebrow">Campaign</p>
+          <p className="app-rail__name">{campaign.name}</p>
+          <span
+            className={`app-rail__role${campaign.isDm ? " app-rail__role--dm" : ""}`}
+          >
+            {campaign.isDm ? "Dungeon Master" : "Player"}
+          </span>
+        </div>
 
-          They resolve against the route that RENDERS them, not the page
-          showing beneath it — a Link only sees the match chain down to its own
-          component. This one is pathless, so it contributes no segment and
-          every link below resolves from /campaign/:campaignId: "." is the
-          campaign index from anywhere, and "Shop" can't stack onto /Maps.
+        <div className="app-nav">
+          <NavLink to="." end>Home</NavLink>
+          <NavLink to="Shop">Shop</NavLink>
+          <NavLink to="Inventory">Inventory</NavLink>
+          {campaign.isDm && (
+            <NavLink to="CreateItem" className="app-nav__dm">New Item</NavLink>
+          )}
+          <NavLink to="Maps">Maps</NavLink>
+          <NavLink to="Spells">Spells</NavLink>
+          <NavLink to="NPC">NPCs</NavLink>
+          <NavLink to="Recaps">Recaps</NavLink>
+          <div className="app-nav__rule" />
+          {campaign.isDm && (
+            <NavLink to="Invites" className="app-nav__dm">Invites</NavLink>
+          )}
+          <NavLink to="/">Campaigns</NavLink>
+        </div>
 
-          That's a property of living in the layout, not of the strings. The
-          same "Maps" inside Shop.tsx resolves from /campaign/abc/Shop and
-          gives you /campaign/abc/Shop/Maps, which matches nothing. A page that
-          owns a path segment has to link absolutely. */}
-      <Link to=".">Home</Link>
-      <Link to="Shop">Shop</Link>
-      <Link to="Inventory">Inventory</Link>
-      {campaign.isDm && <Link to="CreateItem">New Item</Link>}
-      <Link to="Maps">Maps</Link>
-      <Link to="Spells">Spells</Link>
-      <Link to="NPC">NPCs</Link>
-      <Link to="Recaps">Recaps</Link>
-      {/* campaign.isDm, not profile.role — the per-campaign question 018 made
-          this, and the same gate CampaignInvites redirects on. A global DM who
-          plays in someone else's campaign is not the DM here, and the page
-          behind this link would give them an empty list and a refused mint.
+        <div className="app-rail__you">
+          {!isEditing ? (
+            <p>
+              {profile?.displayName}
+              <button onClick={() => setIsEditing(true)}>Edit</button>
+            </p>
+          ) : (
+            <NamePrompt
+              initialName={profile?.displayName ?? ""}
+              heading="Name:"
+              onSuccess={() => setIsEditing(false)}
+            />
+          )}
+          <p className="app-rail__signout">
+            <button onClick={() => signOut()}>Sign out</button>
+          </p>
+        </div>
+      </nav>
 
-          Relative like its neighbours, which is safe for the reason above: this
-          layout is pathless, so "Invites" resolves from /campaign/:campaignId
-          rather than stacking onto whatever page is showing. */}
-      {campaign.isDm && <Link to="Invites">Invites</Link>}
-      {/* Absolute: the one link that's meant to leave the campaign. */}
-      <Link to="/">Campaigns</Link>
-      <span>{campaign.name}</span>
-      <button onClick={() => signOut()}>Sign out</button>
-      {!isEditing ? (
-        <span>
-          {profile?.displayName} Role: {profile?.role}
-          <button onClick={() => setIsEditing(true)}>Edit</button>
-        </span>
-      ) : (
-        <NamePrompt
-          initialName={profile?.displayName ?? ""}
-          heading="Name:"
-          onSuccess={() => setIsEditing(false)}
-        />
-      )}
-      <Outlet context={campaign} />
+      <main className="app-main">
+        <Outlet context={campaign} />
+      </main>
     </div>
   );
 }

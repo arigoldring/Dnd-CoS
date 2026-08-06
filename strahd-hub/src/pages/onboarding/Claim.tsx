@@ -9,6 +9,7 @@ import {
   takePendingClaim,
 } from "../../lib/claimLink";
 import { errorMessage } from "../../lib/errors";
+import "../onboarding/onboarding.css";
 
 /**
  * The other end of every invite link: paste a code, burn it, get what it grants.
@@ -112,70 +113,78 @@ export function Claim() {
 
   if (joinedNew !== null) {
     return (
-      <div>
-        <h1>Code claimed</h1>
-        <p>
-          {joinedNew
-            ? "You've joined the campaign."
-            : "You were already in that campaign, so nothing changed — but the code has been used up."}
-        </p>
-        <Link to="/">Go to your campaigns</Link>
+      <div className="threshold">
+        <div className="threshold__inner">
+          <h1>Code claimed</h1>
+          <p className="claim-done">
+            {joinedNew
+              ? "You've joined the campaign."
+              : "You were already in that campaign, so nothing changed — but the code has been used up."}
+          </p>
+          <Link className="threshold__back" to="/">
+            Go to your campaigns
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1>Claim an invite</h1>
+    <div className="threshold threshold--narrow">
+      <div className="threshold__inner">
+        <h1>Claim an invite</h1>
 
-      <form onSubmit={handleSubmit}>
-        <label htmlFor={codeId}>Invite code</label>
-        <input
-          id={codeId}
-          type="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Paste the code you were sent"
-          disabled={submitting}
-          autoFocus
-        />
+        <form className="claim-form" onSubmit={handleSubmit}>
+          <label htmlFor={codeId}>Invite code</label>
+          <input
+            id={codeId}
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Paste the code you were sent"
+            disabled={submitting}
+            autoFocus
+          />
 
-        {/* Always shown, even when the link already answered it. The kind is not
-            a detail the app can check for itself — a player code and a DM code
-            are both bare uuids — so if a link arrives truncated, or somebody
-            forwards the wrong one, this is the only place it can be corrected.
-            Radios rather than a select: two options, both worth reading. */}
-        <fieldset disabled={submitting}>
-          <legend>What is this code for?</legend>
-          <label>
-            <input
-              type="radio"
-              name="kind"
-              value="player"
-              checked={kind === "player"}
-              onChange={() => setKind("player")}
-            />
-            Joining a campaign
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="kind"
-              value="dm"
-              checked={kind === "dm"}
-              onChange={() => setKind("dm")}
-            />
-            Becoming a DM (lets you create your own campaigns)
-          </label>
-        </fieldset>
+          {/* Always shown, even when the link already answered it. The kind is not
+              a detail the app can check for itself — a player code and a DM code
+              are both bare uuids — so if a link arrives truncated, or somebody
+              forwards the wrong one, this is the only place it can be corrected.
+              Radios rather than a select: two options, both worth reading. */}
+          <fieldset className="claim-kind" disabled={submitting}>
+            <legend>What is this code for?</legend>
+            <label>
+              <input
+                type="radio"
+                name="kind"
+                value="player"
+                checked={kind === "player"}
+                onChange={() => setKind("player")}
+              />
+              Joining a campaign
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="kind"
+                value="dm"
+                checked={kind === "dm"}
+                onChange={() => setKind("dm")}
+              />
+              Becoming a DM (lets you create your own campaigns)
+            </label>
+          </fieldset>
 
-        <button type="submit" disabled={submitting || !code.trim()}>
-          {submitting ? "Claiming..." : "Claim"}
-        </button>
-        {error && <p>{error}</p>}
-      </form>
+          <button type="submit" disabled={submitting || !code.trim()}>
+            {submitting ? "Claiming..." : "Claim"}
+          </button>
+          {error && <p className="threshold__error">{error}</p>}
+        </form>
 
-      <Link to="/">Back to campaigns</Link>
+        <Link className="threshold__back" to="/">
+          Back to campaigns
+        </Link>
+      </div>
     </div>
   );
 }

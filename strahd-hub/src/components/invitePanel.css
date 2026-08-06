@@ -1,0 +1,204 @@
+/* ============================================================================
+   invitePanel.css – new file. Sealed letters: the code IS the page.
+   Import from components/InvitePanel.tsx so it travels with the component (the
+   same reasoning ItemDetailCard.tsx imports shop.css).  Serves both invite
+   pages; the threshold framing for DmInvites lives in onboarding.css.
+   ========================================================================== */
+
+/* --- mint form ---------------------------------------------------------- */
+
+.invite-mint {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin: 26px 0 0;
+  max-width: 820px;
+}
+
+.invite-mint__label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font: 500 9.5px/1 var(--sh-display);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+}
+
+.invite-mint__label span {
+  font: 400 13px/1 var(--sh-body);
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sh-dim);
+}
+
+.invite-mint input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.invite-mint button {
+  flex: none;
+  padding: 14px 20px 13px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--sh-candle);
+  background: linear-gradient(180deg, var(--sh-blood), var(--sh-blood-dark));
+  border-color: rgba(255, 210, 180, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 210, 180, 0.2);
+}
+
+.invite-mint button:hover:not(:disabled) {
+  background: linear-gradient(180deg, #7d1010, #4a0808);
+  border-color: rgba(255, 210, 180, 0.7);
+}
+
+.invite-mint__error {
+  flex-basis: 100%;
+  margin: 0;
+  font: 400 16px/1.4 var(--sh-body);
+  color: #e6b3ad;
+}
+
+/* --- the list ----------------------------------------------------------- */
+
+.invite-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 30px 0 0;
+  padding: 0;
+  max-width: 1040px;
+}
+
+.invite-empty {
+  margin: 26px 0 0;
+  font: 400 18px/1.5 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+/* live code: raised, bordered, lit */
+.invite {
+  padding: 24px 28px 26px;
+  background: var(--sh-panel-raised);
+  border: 1px solid var(--sh-rule-strong);
+  box-shadow: var(--sh-lift);
+}
+
+.invite__head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.invite__label {
+  font: 500 20px/1.2 var(--sh-display);
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+  color: var(--sh-bone);
+}
+
+/* the dotted leader between label and status */
+.invite__head::after {
+  content: "";
+  order: 1;
+  flex: 1;
+  border-bottom: 1px dotted rgba(160, 140, 110, 0.22);
+}
+
+.invite__status {
+  order: 2;
+  padding: 5px 9px 4px;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border: 1px solid rgba(199, 154, 90, 0.4);
+}
+
+.invite__row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 18px 0 0;
+}
+
+/* The code: big, monospaced, selectable. A dashed gold edge says "cut here". */
+.invite__code {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 20px;
+  font: 500 25px/1 var(--sh-mono);
+  letter-spacing: 0.02em;
+  color: var(--sh-bone-bright);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px dashed rgba(199, 154, 90, 0.45);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.7);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.invite__row button {
+  flex: none;
+  padding: 13px 17px 12px;
+  border-color: rgba(160, 140, 110, 0.4);
+}
+
+/* Copy link is the one you're most likely to want, so it's the wax one */
+.invite__row button:last-of-type {
+  color: var(--sh-candle);
+  background: linear-gradient(180deg, var(--sh-blood), var(--sh-blood-dark));
+  border-color: rgba(255, 210, 180, 0.5);
+}
+
+.invite__row button:last-of-type:hover:not(:disabled) {
+  background: linear-gradient(180deg, #7d1010, #4a0808);
+}
+
+/* --- spent codes -------------------------------------------------------- */
+
+/* A used invite keeps its label and loses its code – one-shot, so showing one
+   would be offering a dead link. Sunk, unlit, sealed. */
+.invite--used {
+  padding: 20px 28px 22px;
+  background: linear-gradient(180deg, rgba(20, 15, 16, 0.7), rgba(11, 8, 10, 0.8));
+  border: 1px solid rgba(160, 140, 110, 0.18);
+  box-shadow: none;
+}
+
+.invite--used .invite__label {
+  font-size: 19px;
+  color: var(--sh-mute);
+}
+
+.invite--used .invite__head::after {
+  border-bottom-color: rgba(160, 140, 110, 0.16);
+}
+
+.invite__claim {
+  order: 2;
+  font: 400 15px/1 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+/* the wax blot that marks a burned code */
+.invite__seal {
+  order: 3;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #7a1414, var(--sh-blood-dark) 70%);
+  border: 1px solid rgba(255, 190, 160, 0.16);
+}
+
+/* Copy failure is a label on the button, never a banner: the code stays on
+   screen to be selected by hand. Nothing to style but the width jump. */
+.invite__row button {
+  white-space: nowrap;
+}

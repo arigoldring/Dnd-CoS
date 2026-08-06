@@ -1,0 +1,205 @@
+/* ============================================================================
+   layout.css – the campaign chrome: iron rail on the left, page beside it.
+   Import from components/Layout.tsx.  Requires the classNames listed in
+   HANDOFF.md (Layout.tsx currently renders bare links with no container, so
+   this is the one place a structural change is unavoidable).
+   ========================================================================== */
+
+#root:has(.app-shell) {
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  align-items: stretch;
+}
+
+/* --- rail --------------------------------------------------------------- */
+
+.app-rail {
+  flex: none;
+  width: 226px;
+  padding: 30px 0 40px;
+  background: var(--sh-rail);
+  border-right: 1px solid rgba(160, 140, 110, 0.24);
+  box-shadow: inset -8px 0 24px -18px rgba(0, 0, 0, 0.9);
+}
+
+.app-rail__campaign {
+  padding: 0 26px 26px;
+  border-bottom: 1px solid rgba(160, 140, 110, 0.16);
+}
+
+.app-rail__eyebrow {
+  margin: 0;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+}
+
+.app-rail__name {
+  margin: 11px 0 0;
+  font: 500 21px/1.2 var(--sh-display);
+  font-variant: small-caps;
+  letter-spacing: 0.02em;
+  color: var(--sh-bone);
+}
+
+/* role badge – the DM's is wax, a player's is plain iron */
+.app-rail__role {
+  display: inline-block;
+  margin: 12px 0 0;
+  padding: 5px 9px 4px;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sh-bone);
+  border: 1px solid rgba(160, 140, 110, 0.4);
+}
+
+.app-rail__role--dm {
+  color: var(--sh-candle);
+  background: linear-gradient(180deg, var(--sh-blood), var(--sh-blood-dark));
+  border-color: rgba(255, 210, 180, 0.4);
+}
+
+/* --- nav ---------------------------------------------------------------- */
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0 0;
+}
+
+.app-nav a {
+  font: 500 12px/1 var(--sh-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+  text-decoration: none;
+  padding: 13px 26px;
+  border-left: 3px solid transparent;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.app-nav a:hover {
+  color: var(--sh-bone-bright);
+  background: linear-gradient(90deg, rgba(199, 154, 90, 0.08), transparent);
+}
+
+/* NavLink's active state – candlelight and a blood edge */
+.app-nav a.active,
+.app-nav a[aria-current="page"] {
+  color: var(--sh-bone-bright);
+  border-left-color: var(--sh-blood-bright);
+  background: linear-gradient(90deg, rgba(106, 10, 10, 0.28), transparent);
+}
+
+/* DM-only doors read as gold: New Item, Invites */
+.app-nav a.app-nav__dm {
+  color: var(--sh-gold);
+}
+
+.app-nav__rule {
+  height: 1px;
+  margin: 14px 26px;
+  background: rgba(160, 140, 110, 0.16);
+}
+
+/* --- signed-in footer --------------------------------------------------- */
+
+.app-rail__you {
+  padding: 30px 26px 0;
+}
+
+.app-rail__you p {
+  margin: 0;
+  font: 400 15px/1.4 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--sh-dim);
+}
+
+/* the Edit control beside the display name, and Sign out below it – both
+   text, not buttons, so they don't compete with the nav */
+.app-rail__you button {
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+  background: none;
+  border: 0;
+  padding: 0 0 0 6px;
+}
+
+.app-rail__you button:hover:not(:disabled) {
+  color: var(--sh-gold);
+  background: none;
+}
+
+.app-rail__signout {
+  margin-top: 8px !important;
+  font: 400 13px/1 var(--sh-body) !important;
+  letter-spacing: 0.12em !important;
+  color: var(--sh-gold-deep) !important;
+}
+
+.app-rail__signout button {
+  font: 400 13px/1 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: var(--sh-gold-deep);
+  padding: 0;
+}
+
+/* --- page beside the rail ---------------------------------------------- */
+
+.app-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 36px 44px 52px;
+}
+
+/* Page title block: eyebrow, rule, title. Any page can opt in. */
+.page-head {
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(160, 140, 110, 0.2);
+}
+
+.page-head__eyebrow {
+  margin: 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+.page-head h1 {
+  margin: 12px 0 0;
+}
+
+.page-head__sub {
+  margin: 12px 0 0;
+  max-width: 760px;
+  font: 400 17px/1.5 var(--sh-body);
+  color: var(--sh-mute);
+  text-wrap: pretty;
+}
+
+/* Optional atmosphere: a vignette over the whole shell. Off unless you add
+   class="atmosphere" to .app-shell. */
+.app-shell.atmosphere::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  box-shadow: inset 0 0 200px 70px rgba(0, 0, 0, 0.66);
+}

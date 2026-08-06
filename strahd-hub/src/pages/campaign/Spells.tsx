@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchBar } from "../../hooks/useSearchBar";
 import { useSpells } from "../../hooks/useSpells";
 import type { Spell } from "../../services/spells";
+import "./spells.css";
 
 export function Spells() {
   const { spells, loading, error } = useSpells();
@@ -16,7 +17,7 @@ export function Spells() {
 
   function createSpellTable() {
     return (
-      <table>
+      <table className="spells">
         <thead>
           <tr>
             <th>Name</th>
@@ -30,8 +31,12 @@ export function Spells() {
         <tbody>
           {filtered.map((spell: Spell) => (
             <tr key={spell.id}>
-              <td>{spell.name}</td>
-              <td>{spell.level === 0 ? "Cantrip" : spell.level}</td>
+              <td>
+                {spell.name}
+                {spell.concentration && <span className="spell-tag">conc</span>}
+                {spell.ritual && <span className="spell-tag">ritual</span>}
+              </td>
+              <td className="spell-level">{spell.level === 0 ? "–" : spell.level}</td>
               <td>{spell.school}</td>
               <td>{spell.castingTime}</td>
               <td>{spell.duration}</td>
@@ -44,10 +49,22 @@ export function Spells() {
   }
 
   return (
-    <div>
-      <h1>Spells</h1>
-      <div>
-        <p>Level Filter</p>
+    <div className="spells">
+      <div className="spells__head">
+        <div>
+          <p className="spells__eyebrow">🔮 The Grimoire 🔮</p>
+          <h1>Spells</h1>
+        </div>
+        <input
+          className="spells__search"
+          type="text"
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search for a spell"
+        />
+      </div>
+
+      <div className="spells__filters">
+        <p className="spells__filters-label">Level</p>
         <button
           className={levelFilter === null ? "active" : ""}
           onClick={() => setLevelFilter(null)}
@@ -69,13 +86,16 @@ export function Spells() {
             {level}
           </button>
         ))}
+        <span className="spells__count">
+          {filtered.length} of {spells.length}
+        </span>
       </div>
-      <input
-        type="text"
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search for a spell"
-      />
-      {createSpellTable()}
+
+      {filtered.length === 0 ? (
+        <p className="spells__empty">Nothing by that name in the book.</p>
+      ) : (
+        createSpellTable()
+      )}
     </div>
   );
 }

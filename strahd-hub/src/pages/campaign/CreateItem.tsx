@@ -27,7 +27,12 @@ export function CreateItem() {
 
   return (
     <div className="create-item">
+      <p className="create-item__eyebrow">⚒ The Forge ⚒</p>
       <h1>New Homebrew Item</h1>
+      <p className="create-item__sub">
+        Saved straight into this campaign's hoard — you'll land in the Inventory
+        when it's made.
+      </p>
       <HomebrewItemForm onCreate={handleCreate} />
     </div>
   );
