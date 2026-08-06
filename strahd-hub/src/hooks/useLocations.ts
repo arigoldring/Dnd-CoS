@@ -3,6 +3,7 @@ import {
   Location,
   getLocations,
   updateLocationDescription,
+  updateLocationVisibility,
 } from "../services/locations";
 import { errorMessage } from "../lib/errors";
 
@@ -58,5 +59,15 @@ export function useLocations(campaignId: string) {
     [],
   );
 
-  return { locations, loading, error, saveDescription };
+  const toggleVisibility = useCallback(
+    async (id: string, isRevealed: boolean) => {
+      const saved = await updateLocationVisibility(id, isRevealed);
+      setLocations((cur) =>
+        cur.map((loc) => (loc.id === id ? { ...loc, isRevealed: saved } : loc)),
+      );
+    },
+    [],
+  );
+
+  return { locations, loading, error, saveDescription, toggleVisibility };
 }

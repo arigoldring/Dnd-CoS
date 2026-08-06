@@ -119,3 +119,25 @@ export async function updateLocationDescription(
 
   return data.description;
 }
+
+export async function updateLocationVisibility(
+  id: string,
+  isRevealed: boolean,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("locations")
+    .update({ is_revealed: isRevealed })
+    .eq("id", id)
+    .select("is_revealed")
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+  if (!data) {
+    throw new Error("You do not have permission to edit this location");
+  }
+
+  return data.is_revealed;
+}

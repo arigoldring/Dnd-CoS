@@ -35,6 +35,7 @@ export function Maps() {
     loading: locationsLoading,
     error,
     saveDescription,
+    toggleVisibility,
   } = useLocations(campaign.id);
   // The open location is held by id, not as a copied Location object: the
   // drawer then re-renders straight from the list, so a saved edit shows up
@@ -42,6 +43,7 @@ export function Maps() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [peek, setPeek] = useState<Peek | null>(null);
+  const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const dwell = useRef<number | undefined>(undefined);
@@ -113,7 +115,18 @@ export function Maps() {
   // RLS already left that key absent for players.
   return (
     <div className="maps has-peek">
-      <p>Maps</p>
+      <div className="maps-header">
+        <p>Maps</p>
+        {isDm && (
+          <button
+            className="maps-visibility-toggle"
+            onClick={() => setShowVisibilityPanel(!showVisibilityPanel)}
+            title={showVisibilityPanel ? "Hide visibility panel" : "Show visibility panel"}
+          >
+            👁️ Visibility
+          </button>
+        )}
+      </div>
       <div className="map-stage" ref={stageRef}>
         <TransformWrapper
           minScale={1}
@@ -256,6 +269,35 @@ export function Maps() {
             {selected.dmNotes && (
               <p className="loc-panel__dm">DM notes: {selected.dmNotes}</p>
             )}
+          </aside>
+        )}
+
+        {isDm && showVisibilityPanel && (
+          <aside className="visibility-panel">
+            <div className="visibility-panel__header">
+              <h3>Location Visibility</h3>
+              <button
+                className="visibility-panel__close"
+                aria-label="Close"
+                onClick={() => setShowVisibilityPanel(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="visibility-panel__list">
+              {locations.map((loc) => (
+                <div key={loc.id} className="visibility-panel__item">
+                  <button
+                    className="visibility-panel__toggle"
+                    onClick={() => toggleVisibility(loc.id, !loc.isRevealed)}
+                    title={loc.isRevealed ? "Hide from players" : "Show to players"}
+                  >
+                    {loc.isRevealed ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                  <span className="visibility-panel__name">{loc.name}</span>
+                </div>
+              ))}
+            </div>
           </aside>
         )}
       </div>
