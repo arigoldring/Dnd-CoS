@@ -1,11 +1,11 @@
 import { SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
-import barovia_map from "../assets/Maps/barovia.webp";
+import barovia_map from "../../assets/Maps/barovia.webp";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import { useAuth } from "../services/AuthContext";
-import { useCampaign } from "../components/CampaignLayout";
-import { useLocations } from "../hooks/useLocations";
-import { Location } from "../services/locations";
-import { errorMessage } from "../lib/errors";
+import { useAuth } from "../../services/AuthContext";
+import { useCampaign } from "../../components/CampaignLayout";
+import { useLocations } from "../../hooks/useLocations";
+import { Location } from "../../services/locations";
+import { errorMessage } from "../../lib/errors";
 import "./maps.css";
 
 const DWELL = 600; // ms of hover before the peek appears

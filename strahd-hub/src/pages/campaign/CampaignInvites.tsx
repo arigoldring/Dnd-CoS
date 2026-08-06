@@ -1,8 +1,8 @@
 import { Link, Navigate } from "react-router-dom";
-import { useCampaign } from "../components/CampaignLayout";
-import { useInvites } from "../hooks/useInvites";
-import { InvitePanel } from "../components/InvitePanel";
-import { Campaign } from "../services/campaigns";
+import { useCampaign } from "../../components/CampaignLayout";
+import { useInvites } from "../../hooks/useInvites";
+import { InvitePanel } from "../../components/InvitePanel";
+import { Campaign } from "../../services/campaigns";
 
 /**
  * Player invites for the campaign in the URL — codes that make someone a member

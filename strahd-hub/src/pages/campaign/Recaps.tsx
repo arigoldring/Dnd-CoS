@@ -1,9 +1,9 @@
 import { SubmitEvent, useState } from "react";
-import { useAuth } from "../services/AuthContext";
-import { useCampaign } from "../components/CampaignLayout";
-import { useRecaps } from "../hooks/useRecaps";
-import { Recap } from "../services/recaps";
-import { errorMessage } from "../lib/errors";
+import { useAuth } from "../../services/AuthContext";
+import { useCampaign } from "../../components/CampaignLayout";
+import { useRecaps } from "../../hooks/useRecaps";
+import { Recap } from "../../services/recaps";
+import { errorMessage } from "../../lib/errors";
 import "./recaps.css";
 
 // What the header says under the title. Note this reads lastEditedAt, not

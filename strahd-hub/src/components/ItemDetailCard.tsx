@@ -4,7 +4,7 @@ import { Item } from "../services/items";
 // so the card carries its own styling wherever it's used, rather than depending
 // on each caller to have imported that sheet first. Same file the pages import;
 // the bundler dedupes it.
-import "../pages/shop.css";
+import "../pages/campaign/shop.css";
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);

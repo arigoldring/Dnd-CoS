@@ -1,4 +1,4 @@
-import { useAuth } from "../services/AuthContext";
+import { useAuth } from "../../services/AuthContext";
 interface NPC {
   id: string;
   name: string;

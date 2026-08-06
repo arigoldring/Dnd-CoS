@@ -1,6 +1,6 @@
-import { useSearchBar } from "../hooks/useSearchBar";
-import { SPELLS } from "../services/spells";
-import { Spell } from "../services/spells";
+import { useSearchBar } from "../../hooks/useSearchBar";
+import { SPELLS } from "../../services/spells";
+import { Spell } from "../../services/spells";
 
 export function Spells() {
   const { setSearch, filtered } = useSearchBar(SPELLS);

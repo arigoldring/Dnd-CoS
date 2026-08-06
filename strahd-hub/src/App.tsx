@@ -1,18 +1,18 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Home } from "./pages/Home";
-import { Shop } from "./pages/Shop";
-import { Maps } from "./pages/Maps";
-import { Spells } from "./pages/Spells";
+import { Home } from "./pages/campaign/Home";
+import { Shop } from "./pages/campaign/Shop";
+import { Maps } from "./pages/campaign/Maps";
+import { Spells } from "./pages/campaign/Spells";
 import { Layout } from "./components/Layout";
-import { Npcs } from "./pages/NPC";
-import { Recaps } from "./pages/Recaps";
-import { PartyInventory } from "./pages/PartyInventory";
+import { Npcs } from "./pages/campaign/NPC";
+import { Recaps } from "./pages/campaign/Recaps";
+import { PartyInventory } from "./pages/campaign/PartyInventory";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
 import { CampaignPicker } from "./pages/onboarding/CampaignPicker";
 import { Claim } from "./pages/onboarding/Claim";
 import { DmInvites } from "./pages/onboarding/DmInvites";
-import { CampaignInvites } from "./pages/CampaignInvites";
+import { CampaignInvites } from "./pages/campaign/CampaignInvites";
 
 function App() {
   return (

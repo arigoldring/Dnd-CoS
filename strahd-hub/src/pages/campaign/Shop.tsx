@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useItems } from "../hooks/useItems";
-import { Item } from "../services/items";
-import { useCampaign } from "../components/CampaignLayout";
-import { addToPartyInventory } from "../services/partyInventory";
-import { errorMessage } from "../lib/errors";
-import { ItemDetailCard } from "../components/ItemDetailCard";
-import { useSearchBar } from "../hooks/useSearchBar";
+import { useItems } from "../../hooks/useItems";
+import { Item } from "../../services/items";
+import { useCampaign } from "../../components/CampaignLayout";
+import { addToPartyInventory } from "../../services/partyInventory";
+import { errorMessage } from "../../lib/errors";
+import { ItemDetailCard } from "../../components/ItemDetailCard";
+import { useSearchBar } from "../../hooks/useSearchBar";
 import "./shop.css";
 
 export function Shop() {

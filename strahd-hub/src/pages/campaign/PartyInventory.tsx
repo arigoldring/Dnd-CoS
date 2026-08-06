@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useCampaign } from "../components/CampaignLayout";
-import { usePartyInventory } from "../hooks/usePartyInventory";
-import { PartyInventoryEntry } from "../services/partyInventory";
-import { ItemDetailCard } from "../components/ItemDetailCard";
-import { useSearchBar } from "../hooks/useSearchBar";
-import { errorMessage } from "../lib/errors";
+import { useCampaign } from "../../components/CampaignLayout";
+import { usePartyInventory } from "../../hooks/usePartyInventory";
+import { PartyInventoryEntry } from "../../services/partyInventory";
+import { ItemDetailCard } from "../../components/ItemDetailCard";
+import { useSearchBar } from "../../hooks/useSearchBar";
+import { errorMessage } from "../../lib/errors";
 import "./shop.css";
 import "./partyInventory.css";
 
