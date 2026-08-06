@@ -1,14 +1,14 @@
 import { SubmitEvent, useEffect, useId, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { claimInvite } from "../services/invites";
-import { useClaimDmInvite } from "../hooks/useInvites";
+import { claimInvite } from "../../services/invites";
+import { useClaimDmInvite } from "../../hooks/useInvites";
 import {
   InviteKind,
   isInviteKind,
   peekPendingClaim,
   takePendingClaim,
-} from "../lib/claimLink";
-import { errorMessage } from "../lib/errors";
+} from "../../lib/claimLink";
+import { errorMessage } from "../../lib/errors";
 
 /**
  * The other end of every invite link: paste a code, burn it, get what it grants.

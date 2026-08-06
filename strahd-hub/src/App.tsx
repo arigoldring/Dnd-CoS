@@ -9,9 +9,9 @@ import { Recaps } from "./pages/Recaps";
 import { PartyInventory } from "./pages/PartyInventory";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
-import { CampaignPicker } from "./pages/CampaignPicker";
-import { Claim } from "./pages/Claim";
-import { DmInvites } from "./pages/DmInvites";
+import { CampaignPicker } from "./pages/onboarding/CampaignPicker";
+import { Claim } from "./pages/onboarding/Claim";
+import { DmInvites } from "./pages/onboarding/DmInvites";
 import { CampaignInvites } from "./pages/CampaignInvites";
 
 function App() {

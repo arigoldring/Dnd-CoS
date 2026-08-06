@@ -1,7 +1,7 @@
 import { Link, Navigate } from "react-router-dom";
-import { useAuth } from "../services/AuthContext";
-import { useDmInvites } from "../hooks/useInvites";
-import { InvitePanel } from "../components/InvitePanel";
+import { useAuth } from "../../services/AuthContext";
+import { useDmInvites } from "../../hooks/useInvites";
+import { InvitePanel } from "../../components/InvitePanel";
 
 /**
  * DM invites — codes that set profiles.role = 'dm', which since 018 means

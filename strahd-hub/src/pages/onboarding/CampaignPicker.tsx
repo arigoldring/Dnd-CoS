@@ -1,10 +1,10 @@
 import { SubmitEvent, useId, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../services/AuthContext";
-import { useCampaigns } from "../hooks/useCampaigns";
-import { Campaign } from "../services/campaigns";
-import { peekPendingClaim } from "../lib/claimLink";
-import { errorMessage } from "../lib/errors";
+import { useAuth } from "../../services/AuthContext";
+import { useCampaigns } from "../../hooks/useCampaigns";
+import { Campaign } from "../../services/campaigns";
+import { peekPendingClaim } from "../../lib/claimLink";
+import { errorMessage } from "../../lib/errors";
 
 export function CampaignPicker() {
   const { profile } = useAuth();
