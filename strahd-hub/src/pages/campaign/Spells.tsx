@@ -6,10 +6,9 @@ import type { Spell } from "../../services/spells";
 export function Spells() {
   const { spells, loading, error } = useSpells();
   const [levelFilter, setLevelFilter] = useState<number | null>(null);
-  const { setSearch, filtered } = useSearchBar(
-    spells,
-    (spell) =>
-      levelFilter === null || spell.level === levelFilter,
+  const { setSearch, filtered: searchFiltered } = useSearchBar(spells);
+  const filtered = searchFiltered.filter(
+    (spell) => levelFilter === null || spell.level === levelFilter,
   );
 
   if (loading) return <p>Loading spells...</p>;
