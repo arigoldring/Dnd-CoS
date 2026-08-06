@@ -7,6 +7,7 @@ import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/campaign/NPC";
 import { Recaps } from "./pages/campaign/Recaps";
 import { PartyInventory } from "./pages/campaign/PartyInventory";
+import { CreateItem } from "./pages/campaign/CreateItem";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
 import { CampaignPicker } from "./pages/onboarding/CampaignPicker";
@@ -43,6 +44,7 @@ function App() {
                 <Route index element={<Home />} />
                 <Route path="Shop" element={<Shop />} />
                 <Route path="Inventory" element={<PartyInventory />} />
+                <Route path="CreateItem" element={<CreateItem />} />
                 <Route path="Maps" element={<Maps />} />
                 <Route path="Spells" element={<Spells />} />
                 <Route path="NPC" element={<Npcs />} />

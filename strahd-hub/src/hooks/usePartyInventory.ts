@@ -5,7 +5,9 @@ import {
   decrementPartyInventoryItem,
   getPartyInventory,
   removeFromPartyInventory,
+  createHomeBrewItem as createHomeBrewItemService,
 } from "../services/partyInventory";
+import { type NewItem } from "../services/items";
 import { errorMessage } from "../lib/errors";
 
 // campaignId is a parameter, not read from a global: the page gets it from
@@ -99,5 +101,21 @@ export function usePartyInventory(campaignId: string) {
     [refresh],
   );
 
-  return { entries, loading, error, addItem, decrementItem, removeItem };
+  const createHomeBrewItem = useCallback(
+    async (input: NewItem) => {
+      await createHomeBrewItemService(campaignId, input);
+      await refresh();
+    },
+    [campaignId, refresh],
+  );
+
+  return {
+    entries,
+    loading,
+    error,
+    addItem,
+    decrementItem,
+    removeItem,
+    createHomeBrewItem,
+  };
 }

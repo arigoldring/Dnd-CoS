@@ -80,6 +80,11 @@ export interface Armor extends ItemBase {
 
 export type Item = GeneralItem | Weapon | Armor;
 
+export type NewItem =
+  | Omit<GeneralItem, "id">
+  | Omit<Weapon, "id">
+  | Omit<Armor, "id">;
+
 // Maps one items row into the app's Item. Explicit fields (vs `...row`)
 // intentionally drop price_cp and created_at.
 //
@@ -166,6 +171,44 @@ export function toItem(row: Tables<"items">): Item {
   }
 }
 
+function toInsertRow(
+  campaignId: string,
+  input: NewItem,
+): Tables<"items">["Insert"] {
+  const base: Tables<"items">["Insert"] = {
+    campaign_id: campaignId,
+    name: input.name,
+    description: input.description,
+    price_cp: Math.round(input.price * 100),
+    tags: input.tags,
+    kind: input.kind,
+  };
+
+  switch (input.kind) {
+    case "weapon":
+      return {
+        ...base,
+        weapon_category: input.category,
+        damage_dice: input.damageDice,
+        damage_type: input.damageType,
+        properties: input.properties.length > 0 ? input.properties : null,
+        versatile_dice: input.versatileDice ?? null,
+        range_normal: input.rangeNormal ?? null,
+        range_long: input.rangeLong ?? null,
+      };
+    case "armor":
+      return {
+        ...base,
+        armor_category: input.category,
+        base_armor_class: input.baseArmorClass,
+        strength_requirement: input.strengthRequirement ?? null,
+        stealth_disadvantage: input.stealthDisadvantage,
+      };
+    case "general":
+      return base;
+  }
+}
+
 export async function getItems(): Promise<Item[]> {
   const { data: items, error: retrievalError } = await supabase
     .from("items")
@@ -179,4 +222,22 @@ export async function getItems(): Promise<Item[]> {
   // all the good ones. That's the right tradeoff while seeding (fail loud, fix
   // the row) but revisit once the data is stable.
   return items.map(toItem);
+}
+
+export async function createItem(
+  campaignId: string,
+  input: NewItem,
+): Promise<Item> {
+  const { data, error } = await supabase
+    .from("items")
+    .insert(toInsertRow(campaignId, input))
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return toItem(data);
 }

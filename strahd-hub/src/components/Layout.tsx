@@ -32,6 +32,7 @@ export function Layout() {
       <Link to=".">Home</Link>
       <Link to="Shop">Shop</Link>
       <Link to="Inventory">Inventory</Link>
+      {campaign.isDm && <Link to="CreateItem">New Item</Link>}
       <Link to="Maps">Maps</Link>
       <Link to="Spells">Spells</Link>
       <Link to="NPC">NPCs</Link>

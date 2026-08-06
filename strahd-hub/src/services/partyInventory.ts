@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/database.types";
-import { toItem, type Item } from "./items";
+import { createItem, toItem, type Item, type NewItem } from "./items";
 
 /**
  * Party inventory is the campaign's shared loot pile: rows in party_inventory,
@@ -156,4 +156,21 @@ export async function removeFromPartyInventory(entryId: string): Promise<void> {
     console.error(error);
     throw error;
   }
+}
+
+// DM only (025_homebrew_items.sql gats the create via is_campaign_dm), but no
+// client-side check here — RLS is the enforcement layer, matching createRecap
+// and every other create function in this codebase.
+//
+// Composes createItem + addToPartyInventory to create a homebrew item and
+// immediately add it to the pile. If addToPartyInventory fails after createItem
+// succeeds, the item exists as a campaign-scoped catalogue row but isn't in the
+// pile yet; it won't be lost (getItems will find it via RLS, Shop can add it
+// from the catalogue) but the caller should report the partial-success error.
+export async function createHomeBrewItem(
+  campaignId: string,
+  input: NewItem,
+): Promise<PartyInventoryEntry> {
+  const item = await createItem(campaignId, input);
+  return addToPartyInventory(campaignId, item.id);
 }
