@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -407,6 +432,80 @@ export type Database = {
           },
         ]
       }
+      spells: {
+        Row: {
+          campaign_id: string | null
+          casting_time: string
+          classes: string[]
+          concentration: boolean
+          created_at: string
+          description: string
+          duration: string
+          higher_levels: string | null
+          id: string
+          level: number
+          material: boolean
+          material_component: string | null
+          name: string
+          range: string
+          ritual: boolean
+          school: string
+          somatic: boolean
+          tags: string[]
+          verbal: boolean
+        }
+        Insert: {
+          campaign_id?: string | null
+          casting_time: string
+          classes?: string[]
+          concentration?: boolean
+          created_at?: string
+          description: string
+          duration: string
+          higher_levels?: string | null
+          id?: string
+          level: number
+          material?: boolean
+          material_component?: string | null
+          name: string
+          range: string
+          ritual?: boolean
+          school: string
+          somatic?: boolean
+          tags?: string[]
+          verbal?: boolean
+        }
+        Update: {
+          campaign_id?: string | null
+          casting_time?: string
+          classes?: string[]
+          concentration?: boolean
+          created_at?: string
+          description?: string
+          duration?: string
+          higher_levels?: string | null
+          id?: string
+          level?: number
+          material?: boolean
+          material_component?: string | null
+          name?: string
+          range?: string
+          ritual?: boolean
+          school?: string
+          somatic?: boolean
+          tags?: string[]
+          verbal?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spells_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -558,6 +657,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
