@@ -14,14 +14,18 @@ import { CampaignPicker } from "./pages/onboarding/CampaignPicker";
 import { Claim } from "./pages/onboarding/Claim";
 import { DmInvites } from "./pages/onboarding/DmInvites";
 import { CampaignInvites } from "./pages/campaign/CampaignInvites";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
     <AuthProvider>
-      <HashRouter>
-        <AuthGate>
-          <Routes>
-            {/* Flat on purpose. Everything above the campaign line is something
+      <QueryClientProvider client={queryClient}>
+        <HashRouter>
+          <AuthGate>
+            <Routes>
+              {/* Flat on purpose. Everything above the campaign line is something
                 you do before you have one — pick a campaign, claim a code, hand
                 one out — so none of it can sit under :campaignId.
 
@@ -30,40 +34,41 @@ function App() {
                 which is not a campaign's to grant. Player invites are the
                 exception and live below, at /campaign/:campaignId/Invites,
                 because they are scoped to exactly one campaign. */}
-            <Route path="/" element={<CampaignPicker />} />
-            <Route path="/claim" element={<Claim />} />
-            <Route path="/invites" element={<DmInvites />} />
+              <Route path="/" element={<CampaignPicker />} />
+              <Route path="/claim" element={<Claim />} />
+              <Route path="/invites" element={<DmInvites />} />
 
-            {/* One param carries the campaign for every page below it.
+              {/* One param carries the campaign for every page below it.
                 CampaignLayout validates it and puts the campaign on the outlet;
                 Layout is the chrome, and re-provides it on the way down. */}
-            <Route path="/campaign/:campaignId" element={<CampaignLayout />}>
-              <Route element={<Layout />}>
-                {/* index, not path="/": the campaign's own landing page is the
+              <Route path="/campaign/:campaignId" element={<CampaignLayout />}>
+                <Route element={<Layout />}>
+                  {/* index, not path="/": the campaign's own landing page is the
                     bare /campaign/:campaignId URL. */}
-                <Route index element={<Home />} />
-                <Route path="Shop" element={<Shop />} />
-                <Route path="Inventory" element={<PartyInventory />} />
-                <Route path="CreateItem" element={<CreateItem />} />
-                <Route path="Maps" element={<Maps />} />
-                <Route path="Spells" element={<Spells />} />
-                <Route path="NPC" element={<Npcs />} />
-                <Route path="Recaps" element={<Recaps />} />
-                {/* DM of THIS campaign only, enforced by the page itself and
+                  <Route index element={<Home />} />
+                  <Route path="Shop" element={<Shop />} />
+                  <Route path="Inventory" element={<PartyInventory />} />
+                  <Route path="CreateItem" element={<CreateItem />} />
+                  <Route path="Maps" element={<Maps />} />
+                  <Route path="Spells" element={<Spells />} />
+                  <Route path="NPC" element={<Npcs />} />
+                  <Route path="Recaps" element={<Recaps />} />
+                  {/* DM of THIS campaign only, enforced by the page itself and
                     by 019 behind it. Down here rather than beside /invites
                     because generate_player_invite takes the campaign as its
                     argument, and the URL is where that comes from. */}
-                <Route path="Invites" element={<CampaignInvites />} />
+                  <Route path="Invites" element={<CampaignInvites />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Old bookmarks point at the pre-campaign paths (#/Shop and
+              {/* Old bookmarks point at the pre-campaign paths (#/Shop and
                 friends), which now match nothing and would render a blank page.
                 Send them to the picker, which knows where they should go. */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AuthGate>
-      </HashRouter>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AuthGate>
+        </HashRouter>
+      </QueryClientProvider>
     </AuthProvider>
   );
 }

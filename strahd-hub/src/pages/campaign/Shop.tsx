@@ -9,7 +9,7 @@ import { useSearchBar } from "../../hooks/useSearchBar";
 import "./shop.css";
 
 export function Shop() {
-  const { items, loading, error } = useItems();
+  const { data: items = [], isLoading: loading, error } = useItems();
   // The campaign in the URL, resolved by CampaignLayout above this route. The
   // catalog itself is global (useItems), but adding to a party's inventory is
   // scoped to one campaign — this is where that scope comes from.
@@ -25,7 +25,7 @@ export function Shop() {
     (item, filter) => item.kind === filter,
   );
   if (loading) return <p>Loading Items...</p>;
-  if (error) return <p>Couldn't load items: {error}</p>;
+  if (error) return <p>Couldn't load items: {error.message}</p>;
   const panel = items.find((item) => item.id === panelId) ?? null;
 
   function createTable() {
@@ -98,7 +98,10 @@ export function Shop() {
               item={panel}
               onClose={() => setPanelId(null)}
               footer={
-                <AddToPartyInventory campaignId={campaign.id} itemId={panel.id} />
+                <AddToPartyInventory
+                  campaignId={campaign.id}
+                  itemId={panel.id}
+                />
               }
             />
           )}
@@ -147,12 +150,12 @@ function AddToPartyInventory({
 
   return (
     <div className="item-detail-add-row">
-      <button
-        className="item-detail-add"
-        onClick={handleAdd}
-        disabled={adding}
-      >
-        {adding ? "Adding..." : added ? "Add another" : "Add to party inventory"}
+      <button className="item-detail-add" onClick={handleAdd} disabled={adding}>
+        {adding
+          ? "Adding..."
+          : added
+            ? "Add another"
+            : "Add to party inventory"}
       </button>
       {/* "Add another" and a note, rather than a disabled button, because a
           second add is a real if uncommon action: there's no unique constraint
