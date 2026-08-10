@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { parseOneOf, requireField } from "../lib/parse";
-import type { Tables } from "../types/database.types";
+import type { Tables, TablesInsert } from "../types/database.types";
 /**
  * Item is how the rest of the app sees an item; the DB row shape comes from the
  * generated Database types via the typed supabase client, and getItems maps one
@@ -174,8 +174,8 @@ export function toItem(row: Tables<"items">): Item {
 function toInsertRow(
   campaignId: string,
   input: NewItem,
-): Tables<"items">["Insert"] {
-  const base: Tables<"items">["Insert"] = {
+): TablesInsert<"items"> {
+  const base: TablesInsert<"items"> = {
     campaign_id: campaignId,
     name: input.name,
     description: input.description,
