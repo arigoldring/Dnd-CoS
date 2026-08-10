@@ -25,8 +25,8 @@ export function Home() {
     error: recapsError,
   } = useRecaps(campaign.id);
   const {
-    locations,
-    loading: locationsLoading,
+    data: locations = [],
+    isLoading: locationsLoading,
     error: locationsError,
   } = useLocations(campaign.id);
   const {
@@ -37,7 +37,7 @@ export function Home() {
 
   if (recapsLoading || locationsLoading || hoardLoading)
     return <p>Loading...</p>;
-  const error = recapsError ?? locationsError ?? hoardError;
+  const error = recapsError ?? locationsError?.message ?? hoardError;
   if (error) return <p>{error}</p>;
 
   // recaps arrive sorted by session number descending, so the head of the list

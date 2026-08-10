@@ -31,8 +31,8 @@ export function Maps() {
   // refuse. This gate and the RLS agree.
   const isDm = campaign.isDm;
   const {
-    locations,
-    loading: locationsLoading,
+    data: locations = [],
+    isLoading: locationsLoading,
     error,
     saveDescription,
     toggleVisibility,
@@ -106,7 +106,7 @@ export function Maps() {
   }, [clearPeek, editing]);
 
   if (authLoading || locationsLoading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (error) return <p>{error.message}</p>;
 
   // No reveal filter here: RLS already dropped hidden rows from a player's
   // response, so `locations` is exactly what this user may see.
@@ -289,7 +289,9 @@ export function Maps() {
                 <div key={loc.id} className="visibility-panel__item">
                   <button
                     className="visibility-panel__toggle"
-                    onClick={() => toggleVisibility(loc.id, !loc.isRevealed)}
+                    onClick={() =>
+                      toggleVisibility({ id: loc.id, isRevealed: !loc.isRevealed })
+                    }
                     title={loc.isRevealed ? "Hide from players" : "Show to players"}
                   >
                     {loc.isRevealed ? "👁️" : "👁️‍🗨️"}
@@ -314,7 +316,7 @@ function DescriptionEditor({
   onClose,
 }: {
   location: Location;
-  onSave: (id: string, description: string) => Promise<void>;
+  onSave: (vars: { id: string; description: string }) => Promise<unknown>;
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState(location.description ?? "");
@@ -326,7 +328,7 @@ function DescriptionEditor({
     setSaving(true);
     setError(null);
     try {
-      await onSave(location.id, draft);
+      await onSave({ id: location.id, description: draft });
       onClose();
     } catch (err) {
       // Stay open on failure, holding the draft: closing here would throw away
