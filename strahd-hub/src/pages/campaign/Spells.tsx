@@ -5,7 +5,7 @@ import type { Spell } from "../../services/spells";
 import "./spells.css";
 
 export function Spells() {
-  const { spells, loading, error } = useSpells();
+  const { data: spells = [], isLoading: loading, error } = useSpells();
   const [levelFilter, setLevelFilter] = useState<number | null>(null);
   const { setSearch, filtered: searchFiltered } = useSearchBar(spells);
   const filtered = searchFiltered.filter(
@@ -13,7 +13,7 @@ export function Spells() {
   );
 
   if (loading) return <p>Loading spells...</p>;
-  if (error) return <p>Couldn't load spells: {error}</p>;
+  if (error) return <p>Couldn't load spells: {error.message}</p>;
 
   function createSpellTable() {
     return (
