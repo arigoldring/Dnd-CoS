@@ -37,10 +37,15 @@ export function CampaignInvites() {
 }
 
 function CampaignInviteList({ campaign }: { campaign: Campaign }) {
-  const { invites, loading, error, addInvite } = useInvites(campaign.id);
+  const {
+    data: invites = [],
+    isLoading: loading,
+    error,
+    addInvite,
+  } = useInvites(campaign.id);
 
   if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (error) return <p>{error.message}</p>;
 
   return (
     <div>

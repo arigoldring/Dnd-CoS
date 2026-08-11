@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Invite,
   claimDmInvite,
   createDmInvite,
   createInvite,
@@ -12,13 +10,17 @@ import { errorMessage } from "../lib/errors";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 /**
- * One campaign's invite list plus the mint, in the same shape as useRecaps: this
- * hook is the single owner of the list, and a create patches local state from
- * the row the server sent back rather than refetching everything.
+ * One campaign's invite list plus the mint.
  *
  * Scoped by argument rather than by policy. A DM who runs two campaigns passes
  * this the one they are looking at — see getInvites for why the filter belongs
- * in the client here and not in getCampaigns.
+ * in the client here and not in getCampaigns. Each campaign is its own
+ * ["invites", campaignId] cache entry, which is what retires the two races the
+ * manual version guarded by hand: a stale fetch can't paint another campaign's
+ * codes over this one's, and a mint that lands after a navigation invalidates
+ * the entry it was minted against, not whatever is on screen. The
+ * same-campaign duplicate row this hook used to accept as debt (previously in
+ * KNOWN_ISSUES.md) is gone with the local prepend that caused it.
  *
  * Nothing about claiming lives here. That flow starts from a code and has no
  * campaign to be scoped to until the server resolves one, so it has no list to
@@ -26,81 +28,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  * and error state, the way CampaignNameForm already does.
  */
 export function useInvites(campaignId: string) {
-  const [invites, setInvites] = useState<Invite[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Which campaign the list in state currently belongs to. The load below has
-  // `ignore` for this job, but a closure flag only covers the call that created
-  // it — addInvite is created once per campaignId and awaits two round trips, so
-  // it needs to ask what is true *now* rather than what was true when it was
-  // built. A ref is the only thing that reads forward like that.
-  const shownCampaignId = useRef(campaignId);
-
-  useEffect(() => {
-    // Updated here rather than in its own effect so it moves in lockstep with
-    // the fetch that repopulates the list — the ref and the state it describes
-    // change for the same reason at the same moment.
-    shownCampaignId.current = campaignId;
-    let ignore = false;
-    async function load() {
-      // Reset on every campaign change, not just on mount: without this a DM
-      // switching campaigns shows the previous one's codes until the new fetch
-      // lands, which is the one wrong thing this screen could display.
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getInvites(campaignId);
-        if (!ignore) setInvites(data);
-      } catch (err) {
-        if (!ignore) {
-          console.error(err);
-          setError(errorMessage(err, "Failed to load invites"));
-        }
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    }
-    load();
-    // `ignore` is what makes switching campaigns safe rather than racy: an
-    // in-flight fetch for the old campaign can still resolve after the new one
-    // has been requested, and this drops it instead of letting it win.
-    return () => {
-      ignore = true;
-    };
-  }, [campaignId]);
-
-  // Rejects on failure instead of setting `error` above — same split as
-  // useRecaps and useCampaigns. `error` means "there is no list to show at all";
-  // a mint that fails still has a page full of good invites behind it, and the
-  // form that called it is what should say what went wrong.
-  const addInvite = useCallback(
-    async (label: string) => {
-      const created = await createInvite(campaignId, label);
-      // The same guard the load has, and needed for the same reason: a DM can
-      // switch campaigns while the mint is in flight, and by the time it lands
-      // `cur` is the other campaign's list. Without this check the updater
-      // prepends campaign A's code onto campaign B's screen — display-only and
-      // gone on the next load, but wrong in the one way this table must not be.
-      //
-      // What it deliberately does NOT cover is a same-campaign reload landing
-      // between the mint's two round trips, which can duplicate the row. That is
-      // accepted debt, not an oversight: see KNOWN_ISSUES.md.
-      if (shownCampaignId.current === campaignId) {
-        // Prepended, not sorted in: the list is newest-first by created_at and
-        // this row is by definition the newest. Nothing can backfill an invite
-        // the way a DM can backfill an older recap.
-        setInvites((cur) => [created, ...cur]);
-      }
-      // Returned either way, and outside the guard on purpose: the code was
-      // minted and is real whether or not its campaign is still on screen.
-      // Swallowing it here would lose the one thing the caller needs to show.
-      return created;
-    },
-    [campaignId],
-  );
-
-  return { invites, loading, error, addInvite };
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["invites", campaignId],
+    queryFn: () =>
+      getInvites(campaignId).catch((err) => {
+        throw new Error(errorMessage(err, "Failed to load invites"));
+      }),
+  });
+  const addInviteMutation = useMutation({
+    mutationFn: (label: string) => createInvite(campaignId, label),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["invites", campaignId] }),
+  });
+  return {
+    ...query,
+    // mutateAsync, not mutate: InvitePanel's mint form awaits this, shows its
+    // rejection as the form error, and needs the created Invite back. The
+    // query's own `error` still means only "the list itself is missing".
+    addInvite: addInviteMutation.mutateAsync,
+  };
 }
 
 /**
