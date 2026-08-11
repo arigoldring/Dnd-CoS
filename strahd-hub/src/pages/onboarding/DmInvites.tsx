@@ -29,10 +29,10 @@ export function DmInvites() {
 }
 
 function DmInviteList() {
-  const { invites, loading, error, addInvite } = useDmInvites();
+  const { data: invites = [], isLoading: loading, error, addInvite } = useDmInvites();
 
   if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (error) return <p>{error.message}</p>;
 
   return (
     <div className="threshold">

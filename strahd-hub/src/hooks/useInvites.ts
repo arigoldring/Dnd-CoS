@@ -9,6 +9,7 @@ import {
 } from "../services/invites";
 import { useAuth } from "../services/AuthContext";
 import { errorMessage } from "../lib/errors";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 /**
  * One campaign's invite list plus the mint, in the same shape as useRecaps: this
@@ -109,44 +110,29 @@ export function useInvites(campaignId: string) {
  * campaigns at all" — and a hook that took `campaignId | undefined` and switched
  * tables on it would make that difference look like a parameter.
  *
- * No campaign means no re-scoping, so unlike useInvites this loads once on
- * mount, the way useCampaigns and useRecaps do.
+ * No campaign means nothing in the query key to scope by: one cache entry,
+ * where useInvites keeps one per campaign.
  */
 export function useDmInvites() {
-  const [invites, setInvites] = useState<Invite[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let ignore = false;
-    async function load() {
-      try {
-        const data = await getDmInvites();
-        if (!ignore) setInvites(data);
-      } catch (err) {
-        if (!ignore) {
-          console.error(err);
-          setError(errorMessage(err, "Failed to load DM invites"));
-        }
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  // Rejects on failure rather than setting `error`, same split as everywhere
-  // else here: `error` means the list itself is missing.
-  const addInvite = useCallback(async (label: string) => {
-    const created = await createDmInvite(label);
-    setInvites((cur) => [created, ...cur]);
-    return created;
-  }, []);
-
-  return { invites, loading, error, addInvite };
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["dmInvites"],
+    queryFn: () =>
+      getDmInvites().catch((err) => {
+        throw new Error(errorMessage(err, "Failed to load DM invites"));
+      }),
+  });
+  const addInviteMutation = useMutation({
+    mutationFn: (label: string) => createDmInvite(label),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dmInvites"] }),
+  });
+  return {
+    ...query,
+    // mutateAsync, not mutate: InvitePanel's mint form awaits this, shows its
+    // rejection as the form error, and needs the created Invite back. The
+    // query's own `error` still means only "the list itself is missing".
+    addInvite: addInviteMutation.mutateAsync,
+  };
 }
 
 /**
