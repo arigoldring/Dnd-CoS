@@ -20,8 +20,8 @@ function byline(recap: Recap): string {
 export function Home() {
   const campaign = useCampaign();
   const {
-    recaps,
-    loading: recapsLoading,
+    data: recaps = [],
+    isLoading: recapsLoading,
     error: recapsError,
   } = useRecaps(campaign.id);
   const {
@@ -37,7 +37,8 @@ export function Home() {
 
   if (recapsLoading || locationsLoading || hoardLoading)
     return <p>Loading...</p>;
-  const error = recapsError ?? locationsError?.message ?? hoardError?.message;
+  const error =
+    recapsError?.message ?? locationsError?.message ?? hoardError?.message;
   if (error) return <p>{error}</p>;
 
   // recaps arrive sorted by session number descending, so the head of the list

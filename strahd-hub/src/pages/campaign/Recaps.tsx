@@ -28,8 +28,14 @@ export function Recaps() {
   // DM who's only a player in this campaign must not see the New-recap form or
   // Delete button the database would then refuse. This gate and the RLS agree.
   const isDm = campaign.isDm;
-  const { recaps, loading, error, addRecap, saveRecap, removeRecap } =
-    useRecaps(campaign.id);
+  const {
+    data: recaps = [],
+    isLoading: loading,
+    error,
+    addRecap,
+    saveRecap,
+    removeRecap,
+  } = useRecaps(campaign.id);
 
   // One id, not a flag per card — that's what makes this an accordion rather
   // than a pile of independently open panels. editingId is tracked separately
@@ -39,7 +45,7 @@ export function Recaps() {
   const [creating, setCreating] = useState(false);
 
   if (authLoading || loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (error) return <p>{error.message}</p>;
 
   // The list is sorted by session number descending, so the head of it is the
   // highest number so far. Purely a suggestion for the form — the DM can type
