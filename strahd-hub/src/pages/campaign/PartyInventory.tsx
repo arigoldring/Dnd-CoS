@@ -14,8 +14,13 @@ export function PartyInventory() {
   // loot list is scoped to it. No isDm gate: 021's policies are is_campaign_member
   // for read and every mutation, so every player at the table shares this pile.
   const campaign = useCampaign();
-  const { entries, loading, error, decrementItem, removeItem } =
-    usePartyInventory(campaign.id);
+  const {
+    data: entries = [],
+    isLoading: loading,
+    error,
+    decrementItem,
+    removeItem,
+  } = usePartyInventory(campaign.id);
 
   // Held by entryId, not the entry object — same reason Shop holds panelId, and
   // it bites harder here: the list refetches after every decrement/remove,
@@ -29,7 +34,7 @@ export function PartyInventory() {
   );
 
   if (loading) return <p>Loading inventory...</p>;
-  if (error) return <p>Couldn't load party inventory: {error}</p>;
+  if (error) return <p>Couldn't load party inventory: {error.message}</p>;
 
   const panel = entries.find((entry) => entry.entryId === panelId) ?? null;
 

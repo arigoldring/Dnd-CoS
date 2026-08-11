@@ -30,14 +30,14 @@ export function Home() {
     error: locationsError,
   } = useLocations(campaign.id);
   const {
-    entries,
-    loading: hoardLoading,
+    data: entries = [],
+    isLoading: hoardLoading,
     error: hoardError,
   } = usePartyInventory(campaign.id);
 
   if (recapsLoading || locationsLoading || hoardLoading)
     return <p>Loading...</p>;
-  const error = recapsError ?? locationsError?.message ?? hoardError;
+  const error = recapsError ?? locationsError?.message ?? hoardError?.message;
   if (error) return <p>{error}</p>;
 
   // recaps arrive sorted by session number descending, so the head of the list
