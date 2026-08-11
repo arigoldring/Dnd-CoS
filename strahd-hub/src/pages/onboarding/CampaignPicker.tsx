@@ -10,8 +10,14 @@ import "../onboarding/onboarding.css";
 export function CampaignPicker() {
   const { profile } = useAuth();
   const isDm = profile?.role === "dm";
-  const { campaigns, loading, error, addCampaign, renameCampaign, removeCampaign } =
-    useCampaigns();
+  const {
+    data: campaigns = [],
+    isLoading: loading,
+    error,
+    addCampaign,
+    renameCampaign,
+    removeCampaign,
+  } = useCampaigns();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   // Which row is in edit mode, by id rather than a boolean per campaign — one
@@ -31,7 +37,7 @@ export function CampaignPicker() {
   if (peekPendingClaim()) return <Navigate to="/claim" replace />;
 
   if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (error) return <p>{error.message}</p>;
 
   // The one rule that decides whether this page is worth showing. A player with
   // a single campaign has nothing to choose, so choosing is skipped and they

@@ -1,91 +1,66 @@
-import { useCallback, useEffect, useState } from "react";
 import {
-  Campaign,
   createCampaign,
   deleteCampaign,
   getCampaigns,
   updateCampaignName,
 } from "../services/campaigns";
 import { errorMessage } from "../lib/errors";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Two very different callers share this: the picker, which lists what you can
 // open, and CampaignLayout, which checks a URL param against the same list.
 // That's on purpose — "campaigns you can see" is one answer, so a campaign that
-// isn't pickable can't be reachable by typing its id either.
+// isn't pickable can't be reachable by typing its id either. They also share
+// the ["campaigns"] cache entry, so the answer really is one list, not two
+// fetches that usually agree.
 export function useCampaigns() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["campaigns"],
+    queryFn: () =>
+      getCampaigns().catch((err) => {
+        throw new Error(errorMessage(err, "Failed to load campaigns"));
+      }),
+  });
 
-  useEffect(() => {
-    let ignore = false;
-    async function load() {
-      try {
-        const data = await getCampaigns();
-        if (!ignore) setCampaigns(data);
-      } catch (err) {
-        if (!ignore) {
-          console.error(err);
-          setError(errorMessage(err, "Failed to load campaigns"));
-        }
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["campaigns"] });
 
-  // Rejects on failure instead of setting `error` above — same split as
-  // useRecaps. `error` means "there is no list to show at all"; a create that
-  // fails still has a page full of good campaigns behind it, and the form that
-  // called it is the thing that should say what went wrong.
-  const addCampaign = useCallback(async (name: string) => {
-    const id = await createCampaign(name);
-    // Assembled here rather than refetched: create_campaign hands back an id and
-    // nothing else, and the only other field this list shows is the name that
-    // was just sent to it. Appended rather than sorted in, because getCampaigns
-    // orders by created_at and this row is by definition the newest one.
-    //
-    // isDm: true is a fact rather than an optimistic guess — create_campaign
-    // (014) writes the campaign_members row naming its caller the DM in the same
-    // transaction as the campaign, so a create that returned an id created that
-    // row too. This is the one place the field can be known without reading it.
-    setCampaigns((cur) => [...cur, { id, name: name.trim(), isDm: true }]);
-    // Returned as well as stored. Local state is for the list behind you; the
-    // return value is what lets the caller navigate into the campaign it just
-    // made, which needs an id that didn't exist until the call came back.
-    return id;
-  }, []);
+  // All three REJECT on failure rather than surfacing through the query's
+  // `error` — same split as useRecaps: `error` means "there is no list to show
+  // at all"; a create/rename/delete that fails still has a page full of good
+  // campaigns behind it, and the form or row that called it is what should say
+  // what went wrong. Hence mutateAsync, not mutate: every caller awaits and
+  // catches.
 
-  // Rejects on failure for the same reason addCampaign does: a rename that
-  // fails leaves a page full of good campaigns behind it, so the form that
-  // called it is what should say so.
-  const renameCampaign = useCallback(async (id: string, name: string) => {
-    const saved = await updateCampaignName(id, name);
-    // Replaced in place rather than re-sorted or refetched: the list is ordered
-    // by created_at, and a rename doesn't move a row.
-    setCampaigns((cur) => cur.map((c) => (c.id === id ? saved : c)));
-  }, []);
+  // Resolves to the new id, and the await matters twice: the caller navigates
+  // into /campaign/:id with it, and mutateAsync doesn't settle until the
+  // invalidation refetch has landed — so by the time the navigate runs,
+  // CampaignLayout's copy of this list already contains the campaign it's
+  // about to look up.
+  const addCampaignMutation = useMutation({
+    mutationFn: (name: string) => createCampaign(name),
+    onSuccess: invalidate,
+  });
 
-  // Rejects on failure like the other two, and for the same reason: a delete
-  // that fails leaves the list intact behind it, so the row that asked is what
-  // should say so. On success the row is dropped from state rather than
-  // refetched — the server confirmed that one id is gone, and the cascade it
-  // took with it was never in this list to begin with.
-  const removeCampaign = useCallback(async (id: string) => {
-    await deleteCampaign(id);
-    setCampaigns((cur) => cur.filter((c) => c.id !== id));
-  }, []);
+  const renameCampaignMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      updateCampaignName(id, name),
+    onSuccess: invalidate,
+  });
+
+  const removeCampaignMutation = useMutation({
+    mutationFn: (id: string) => deleteCampaign(id),
+    onSuccess: invalidate,
+  });
 
   return {
-    campaigns,
-    loading,
-    error,
-    addCampaign,
-    renameCampaign,
-    removeCampaign,
+    ...query,
+    addCampaign: addCampaignMutation.mutateAsync,
+    // Wrapped to keep the two-argument shape the picker calls with; the
+    // mutation itself takes one variables object.
+    renameCampaign: (id: string, name: string) =>
+      renameCampaignMutation.mutateAsync({ id, name }),
+    removeCampaign: removeCampaignMutation.mutateAsync,
   };
 }

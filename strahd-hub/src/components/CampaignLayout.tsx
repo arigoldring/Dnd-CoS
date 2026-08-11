@@ -16,13 +16,13 @@ import { Campaign } from "../services/campaigns";
  */
 export function CampaignLayout() {
   const { campaignId } = useParams();
-  const { campaigns, loading, error } = useCampaigns();
+  const { data: campaigns = [], isLoading: loading, error } = useCampaigns();
 
   if (loading) return <p>Loading...</p>;
   if (error)
     return (
       <div>
-        <p>{error}</p>
+        <p>{error.message}</p>
         <Link to="/">Back to campaigns</Link>
       </div>
     );
