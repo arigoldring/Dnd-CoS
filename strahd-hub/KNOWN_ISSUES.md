@@ -7,6 +7,41 @@ be if the answer ever changes.
 
 ---
 
+## Open
+
+### Removing a player from a campaign destroys their character and all its gear (noted 2026-08-12)
+
+`characters` carries a composite FK to `campaign_members (campaign_id, user_id)`
+with `on delete cascade`, and `character_inventory.character_id` cascades from
+`characters` in turn. So deleting one `campaign_members` row silently deletes
+that player's PC and every item on it, in the same statement, with no
+intermediate state and nothing to restore from.
+
+**Trigger:** any delete against `campaign_members`. There is no kick UI today —
+the only paths are leaving a campaign yourself and a manual delete in the
+Supabase console — so this is latent rather than live. It is written down now
+because the day a "remove player" button is built, the cascade is already wired
+and does not appear anywhere near the button that fires it. A DM demoting a
+player who missed a session would not expect to be deleting their character
+sheet, and the UI would give no sign that they had.
+
+**Cost:** unrecoverable loss of one PC and its inventory. Cheap at this size
+(a character is a name plus a gear list, and reset already exists as a
+deliberate version of the same destruction), expensive in surprise, because
+nothing in the action's wording implies it.
+
+**Fix if the answer changes:** the cascade itself is right — 028 chose it so
+that leaving a campaign takes your character with you rather than stranding a
+row that fails its own FK. What is missing is at the call site, not in the
+schema: any kick UI needs to name the consequence in its confirm, the way the
+reset form already does ("Resetting deletes {name} and everything they carry"),
+and should read the character first so it can name it. If characters ever need
+to outlive membership, that is a different change — `on delete cascade` becomes
+a nullable `campaign_members` link plus a retirement flag, which 028 explicitly
+declined ("there is no retired_at, by decision").
+
+---
+
 ## Resolved
 
 ### Cross-campaign homebrew visible in every campaign's catalogue (resolved 2026-08-12)

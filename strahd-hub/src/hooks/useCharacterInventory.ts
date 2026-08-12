@@ -4,7 +4,6 @@ import {
   getCharacterInventory,
   removeFromCharacterInventory,
 } from "../services/characterInventory";
-import { useAuth } from "../services/AuthContext";
 import { errorMessage } from "../lib/errors";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -16,7 +15,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 // characterId is non-null by construction: this hook is called from the sheet,
 // which only renders once useCharacter has returned one.
 export function useCharacterInventory(characterId: string) {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
@@ -36,14 +34,13 @@ export function useCharacterInventory(characterId: string) {
       queryKey: ["characterInventory", characterId],
     });
 
-  // added_by is the current user, which is the whole point of threading it: the
-  // row records whether the player picked this up or the DM handed it over, and
-  // those are the two callers 028's can_edit_character admits.
+  // No user id passed, and no signed-in guard: 029's trigger fills added_by from
+  // auth.uid(), so the row still records whether the player picked this up or the
+  // DM handed it over -- it just isn't the client saying so. Without a session
+  // there is no auth.uid() and the insert fails on RLS, which is the same denial
+  // every other write in the app relies on.
   const addItemMutation = useMutation({
-    mutationFn: (itemId: string) => {
-      if (!user) throw new Error("Not signed in");
-      return addToCharacterInventory(characterId, itemId, user.id);
-    },
+    mutationFn: (itemId: string) => addToCharacterInventory(characterId, itemId),
     onSuccess: invalidate,
   });
 

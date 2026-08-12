@@ -78,10 +78,16 @@ export function useCharacter(campaignId: string) {
 
       const oldId = data.id;
       await deleteCharacter(oldId);
-      // removeQueries, not invalidate: that character is gone for good and its
-      // rows went with it, so there is nothing to refetch — leaving the entry
-      // in the cache would only let a stale sheet flash on the way past.
-      queryClient.removeQueries({ queryKey: ["characterInventory", oldId] });
+      // setQueryData, not removeQueries: CharacterGear is a live sibling of the
+      // reset form, so it is still mounted with oldId when this line runs, and
+      // removing a query that has an active observer makes the observer rebuild
+      // it and fetch — the opposite of "there is nothing to refetch". That GET
+      // went out for a character the previous line had just deleted; RLS answered
+      // it with zero rows rather than an error, which is why it was invisible.
+      // Writing [] settles the same entry with no round trip, and the empty list
+      // is true by then. The entry is left to fall out on its own once the new
+      // character remounts the list under a different key.
+      queryClient.setQueryData(["characterInventory", oldId], []);
 
       return createCharacterService(campaignId, userId, name);
     },

@@ -592,6 +592,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_character_inventory_item: {
+        Args: { target_character: string; target_item: string }
+        Returns: string
+      }
       can_edit_character: {
         Args: { target_character: string }
         Returns: boolean

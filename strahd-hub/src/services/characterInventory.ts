@@ -13,12 +13,19 @@ import { toItem, type Item } from "./items";
  *                   the character row itself.
  *
  *   added_by        party_inventory has the column and leaves it null. Here it
- *                   is written on every insert and read back as a name, which
- *                   is what makes DM-granted loot distinguishable from what a
- *                   player picked up themselves. That is also why the two entry
- *                   types stay separate rather than being aliased: they already
- *                   are not the same shape, before equipment slots or
- *                   attunement land.
+ *                   is stamped by 029's trigger on every insert and read back as
+ *                   a name, which is what makes DM-granted loot distinguishable
+ *                   from what a player picked up themselves. That is also why
+ *                   the two entry types stay separate rather than being aliased:
+ *                   they already are not the same shape, before equipment slots
+ *                   or attunement land.
+ *
+ *   stacking        party_inventory still makes a second row when you add an
+ *                   item it already holds. Here 030 settled it: unique
+ *                   (character_id, item_id), and an add increments. The sheet is
+ *                   where that difference is visible, because a stack of rations
+ *                   is the normal case on a character and the odd one on the
+ *                   party pile.
  */
 
 // added_by is embedded and aliased the way RECAP_SELECT does it: a uuid is
@@ -39,8 +46,10 @@ type CharacterInventoryRow = Tables<"character_inventory"> & {
 // Intersection rather than `extends`, same as PartyInventoryEntry: Item is a
 // union, so `&` distributes over it and `entry.kind === "weapon"` still narrows.
 export type CharacterInventoryEntry = Item & {
-  // The character_inventory row id — what decrement and remove key on. Distinct
-  // from the item's id, since the same item can appear as several entries.
+  // The character_inventory row id — what decrement and remove key on. Still
+  // distinct from the item's id, though since 030 the two are one-to-one for a
+  // given character: one row per (character, item), so an item appears at most
+  // once on a sheet and quantity carries the count.
   entryId: string;
   quantity: number;
   // null when nobody was recorded (an entry predating this column, or an added_by
@@ -80,33 +89,43 @@ export async function getCharacterInventory(
   return data.map(toCharacterInventoryEntry);
 }
 
-// addedById is threaded in from the caller rather than left to a default,
-// because there is no default that could be right: the DB cannot see who is
-// asking except through auth.uid(), and no trigger here reads it. Passing it
-// explicitly is what makes "the DM gave you this" recoverable later.
+// An RPC rather than an insert, because the write is "add one to the stack, or
+// start one" and PostgREST cannot say that: its upsert assigns the columns it is
+// handed, so it would pin an existing stack back to 1. 030's function does the
+// insert-or-increment in a single statement, which is also what keeps two people
+// adding at once from losing an increment.
 //
-// A plain insert, not an upsert, inheriting partyInventory's open question:
-// there is no unique constraint on (character_id, item_id), so adding an item
-// the character already carries creates a SECOND entry at quantity 1 rather
-// than bumping the stack.
+// Nothing is passed for added_by or quantity. 029's trigger owns the first and
+// ignores the client entirely; 030's `on conflict` owns the second. The only
+// facts this call supplies are which character and which item.
 export async function addToCharacterInventory(
   characterId: string,
   itemId: string,
-  addedById: string,
 ): Promise<CharacterInventoryEntry> {
-  const { data, error } = await supabase
-    .from("character_inventory")
-    .insert({
-      character_id: characterId,
-      item_id: itemId,
-      added_by: addedById,
-    })
-    .select(CHARACTER_INVENTORY_SELECT)
-    .single();
+  const { data: entryId, error } = await supabase.rpc(
+    "add_character_inventory_item",
+    { target_character: characterId, target_item: itemId },
+  );
 
   if (error) {
     console.error(error);
     throw error;
+  }
+
+  // Second round trip, because the function returns the row id and the callers
+  // of this one expect a whole entry — the RPC cannot carry the embedded item
+  // and adder the way CHARACTER_INVENTORY_SELECT does. Cheap and rarely load
+  // bearing: useCharacterInventory invalidates the list on success and refetches
+  // anyway, so the returned entry is for callers that want it, not the cache.
+  const { data, error: entryError } = await supabase
+    .from("character_inventory")
+    .select(CHARACTER_INVENTORY_SELECT)
+    .eq("id", entryId)
+    .single();
+
+  if (entryError) {
+    console.error(entryError);
+    throw entryError;
   }
 
   return toCharacterInventoryEntry(data);

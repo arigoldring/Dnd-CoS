@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { SubmitEvent, useState } from "react";
 import { useCampaign } from "../../components/CampaignLayout";
 import { useCharacter } from "../../hooks/useCharacter";
 import { useCharacterInventory } from "../../hooks/useCharacterInventory";
@@ -145,7 +145,7 @@ function CharacterGear({ characterId }: { characterId: string }) {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
-  async function handleAdd(e: FormEvent<HTMLFormElement>) {
+  async function handleAdd(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!itemId) return;
 
@@ -318,7 +318,7 @@ function CharacterNameForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
