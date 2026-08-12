@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useItems } from "../../hooks/useItems";
 import { Item } from "../../services/items";
 import { useCampaign } from "../../components/CampaignLayout";
@@ -119,10 +120,12 @@ export function Shop() {
 }
 
 // The one place a Shop item crosses into a campaign's shared loot. Calls the
-// service directly rather than usePartyInventory: Shop neither owns nor shows
-// that list, so mounting the list hook here would fetch it — and refetch it
-// after every add — for nobody. This is the Claim.tsx pattern: a one-shot
-// mutation holding its own state, with no list in sight.
+// service directly rather than usePartyInventory — Shop neither owns nor shows
+// that list, and mounting the list hook here would fetch it for nobody — but
+// it must still invalidate the list's cache entry: useQueryClient reaches the
+// cache without mounting a query, and invalidating an inactive query only
+// marks it stale (no fetch), so an add here costs nothing yet still shows up
+// in Inventory even once partyInventory gets a nonzero staleTime.
 function AddToPartyInventory({
   campaignId,
   itemId,
@@ -130,6 +133,7 @@ function AddToPartyInventory({
   campaignId: string;
   itemId: string;
 }) {
+  const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +143,9 @@ function AddToPartyInventory({
     setError(null);
     try {
       await addToPartyInventory(campaignId, itemId);
+      queryClient.invalidateQueries({
+        queryKey: ["partyInventory", campaignId],
+      });
       setAdded(true);
     } catch (err) {
       console.error("Problem adding to party inventory:", err);

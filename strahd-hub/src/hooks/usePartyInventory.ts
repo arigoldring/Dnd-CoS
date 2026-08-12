@@ -67,9 +67,17 @@ export function usePartyInventory(campaignId: string) {
     onSuccess: invalidate,
   });
 
+  // Unlike the other three, this writes two tables: createItem puts a row in
+  // the catalog, then addToPartyInventory stacks it — so the Shop's ["items"]
+  // cache goes stale along with the inventory. Both invalidations are just
+  // stale marks while those queries are unmounted; nothing fetches until a
+  // page showing them does.
   const createHomeBrewItemMutation = useMutation({
     mutationFn: (input: NewItem) => createHomeBrewItemService(campaignId, input),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+    },
   });
 
   return {
