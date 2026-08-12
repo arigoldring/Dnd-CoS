@@ -8,7 +8,10 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 export function useLocations(campaignId: string) {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  // Destructured, not spread: v5 only subscribes the component to the fields
+  // actually read, and a spread reads every one of them — including
+  // isFetching, which flips on every background refetch.
+  const { data, isLoading, error } = useQuery({
     queryKey: ["locations", campaignId],
     queryFn: () =>
       getLocations(campaignId).catch((err) => {
@@ -28,7 +31,9 @@ export function useLocations(campaignId: string) {
       queryClient.invalidateQueries({ queryKey: ["locations", campaignId] }),
   });
   return {
-    ...query,
+    data,
+    isLoading,
+    error,
     // mutateAsync, not mutate: the description editor awaits the save and
     // relies on rejection to stay open with the draft when the write fails.
     saveDescription: saveDescriptionMutation.mutateAsync,
