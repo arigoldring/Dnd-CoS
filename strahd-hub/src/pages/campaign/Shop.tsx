@@ -10,11 +10,11 @@ import { useSearchBar } from "../../hooks/useSearchBar";
 import "./shop.css";
 
 export function Shop() {
-  const { data: items = [], isLoading: loading, error } = useItems();
-  // The campaign in the URL, resolved by CampaignLayout above this route. The
-  // catalog itself is global (useItems), but adding to a party's inventory is
-  // scoped to one campaign — this is where that scope comes from.
+  // The campaign in the URL, resolved by CampaignLayout above this route. Both
+  // the catalog (shared SRD plus this campaign's homebrew — see getItems) and
+  // adding to a party's inventory are scoped to it.
   const campaign = useCampaign();
+  const { data: items = [], isLoading: loading, error } = useItems(campaign.id);
   // The open item is held by id, not as the Item itself — same as Maps holds a
   // location id. Storing the object would leave `panel` pointing at whichever
   // object was in the list at click time, so a later edit or refetch (which

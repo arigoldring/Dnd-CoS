@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { useSearchBar } from "../../hooks/useSearchBar";
 import { useSpells } from "../../hooks/useSpells";
+import { useCampaign } from "../../components/CampaignLayout";
 import type { Spell } from "../../services/spells";
 import "./spells.css";
 
 export function Spells() {
-  const { data: spells = [], isLoading: loading, error } = useSpells();
+  // Resolved by CampaignLayout above this route; scopes the grimoire to shared
+  // SRD plus this campaign's homebrew, same as the Shop's catalog.
+  const campaign = useCampaign();
+  const { data: spells = [], isLoading: loading, error } = useSpells(campaign.id);
   const [levelFilter, setLevelFilter] = useState<number | null>(null);
   const { setSearch, filtered: searchFiltered } = useSearchBar(spells);
   const filtered = searchFiltered.filter(

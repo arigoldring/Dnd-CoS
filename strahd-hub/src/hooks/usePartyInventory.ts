@@ -1,5 +1,4 @@
 import {
-  addToPartyInventory,
   decrementPartyInventoryItem,
   getPartyInventory,
   removeFromPartyInventory,
@@ -35,19 +34,11 @@ export function usePartyInventory(campaignId: string) {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["partyInventory", campaignId] });
 
-  // All four REJECT on failure rather than surfacing through the query's
+  // All three REJECT on failure rather than surfacing through the query's
   // `error`, same split as useRecaps: `error` means the page has nothing to
   // show, but a mutation fails with a full list still behind it — the button
   // that called it is what should report the problem. Hence mutateAsync, not
   // mutate: every caller awaits and catches.
-
-  // Takes the catalog item's id (item_id); the new entry's own id comes back
-  // from the DB via the refetch. campaignId is closed over from the argument,
-  // so a new item files against the same campaign the list is showing.
-  const addItemMutation = useMutation({
-    mutationFn: (itemId: string) => addToPartyInventory(campaignId, itemId),
-    onSuccess: invalidate,
-  });
 
   // currentQuantity is passed through so the service can decide
   // update-vs-delete without its own read; see decrementPartyInventoryItem for
@@ -70,15 +61,17 @@ export function usePartyInventory(campaignId: string) {
   });
 
   // Unlike the other three, this writes two tables: createItem puts a row in
-  // the catalog, then addToPartyInventory stacks it — so the Shop's ["items"]
-  // cache goes stale along with the inventory. Both invalidations are just
-  // stale marks while those queries are unmounted; nothing fetches until a
-  // page showing them does.
+  // the catalog, then addToPartyInventory stacks it — so this campaign's
+  // ["items", campaignId] cache goes stale along with the inventory. (A bare
+  // ["items"] would also work — invalidateQueries matches by key prefix — but
+  // it would dirty every other campaign's catalogue too.) Both invalidations
+  // are just stale marks while those queries are unmounted; nothing fetches
+  // until a page showing them does.
   const createHomeBrewItemMutation = useMutation({
     mutationFn: (input: NewItem) => createHomeBrewItemService(campaignId, input),
     onSuccess: () => {
       invalidate();
-      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({ queryKey: ["items", campaignId] });
     },
   });
 
@@ -86,7 +79,6 @@ export function usePartyInventory(campaignId: string) {
     data,
     isLoading,
     error,
-    addItem: addItemMutation.mutateAsync,
     // Wrapped to keep the two-argument shape InventoryRow calls with; the
     // mutation itself takes one variables object.
     decrementItem: (entryId: string, currentQuantity: number) =>

@@ -62,8 +62,16 @@ function toSpell(row: Tables<"spells">): Spell {
   };
 }
 
-export async function getSpells(): Promise<Spell[]> {
-  const { data, error } = await supabase.from("spells").select("*");
+// Same shape and reasoning as getItems (items.ts): 022 gave spells the same
+// nullable campaign_id design, so a member of two campaigns would see both
+// campaigns' homebrew spells if this stayed unfiltered. Nothing can insert a
+// homebrew spell yet (no INSERT policy) — that's the same accident that
+// protected items until 025 shipped, so the scope goes in before it matters.
+export async function getSpells(campaignId: string): Promise<Spell[]> {
+  const { data, error } = await supabase
+    .from("spells")
+    .select("*")
+    .or(`campaign_id.is.null,campaign_id.eq.${campaignId}`);
   if (error) {
     console.error(error);
     throw error;

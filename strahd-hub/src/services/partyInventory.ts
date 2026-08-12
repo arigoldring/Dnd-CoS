@@ -165,8 +165,9 @@ export async function removeFromPartyInventory(entryId: string): Promise<void> {
 // Composes createItem + addToPartyInventory to create a homebrew item and
 // immediately add it to the pile. If addToPartyInventory fails after createItem
 // succeeds, the item exists as a campaign-scoped catalogue row but isn't in the
-// pile yet; it won't be lost (getItems will find it via RLS, Shop can add it
-// from the catalogue) but the caller should report the partial-success error.
+// pile yet; it won't be lost (getItems includes this campaign's homebrew, so
+// Shop can add it from the catalogue) but the caller should report the
+// partial-success error.
 export async function createHomeBrewItem(
   campaignId: string,
   input: NewItem,

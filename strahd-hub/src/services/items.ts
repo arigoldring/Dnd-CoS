@@ -209,10 +209,20 @@ function toInsertRow(
   }
 }
 
-export async function getItems(): Promise<Item[]> {
+// Scoped to shared-or-this-campaign, not left to RLS: RLS answers "may this
+// viewer see this row", and a member of two campaigns passes that check for
+// both campaigns' homebrew — the query itself has to narrow to the campaign
+// being viewed. .or() takes a raw PostgREST filter string, so campaignId is
+// spliced into it rather than passed as a parameter (the only splice in this
+// codebase; .in() can't express "is null", so .or() is the right tool). That's
+// acceptable because CampaignLayout has already validated the id against the
+// viewer's own campaign list, and RLS remains the boundary regardless — a
+// malformed id makes a bad query, not a leak.
+export async function getItems(campaignId: string): Promise<Item[]> {
   const { data: items, error: retrievalError } = await supabase
     .from("items")
-    .select("*");
+    .select("*")
+    .or(`campaign_id.is.null,campaign_id.eq.${campaignId}`);
   if (retrievalError) {
     console.error(retrievalError);
     throw retrievalError;
