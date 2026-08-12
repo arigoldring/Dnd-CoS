@@ -15,7 +15,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 // fetches that usually agree.
 export function useCampaigns() {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  // Destructured, not spread: a spread reads every getter on the result and
+  // subscribes the component to all of them — see useLocations.
+  const { data, isLoading, error } = useQuery({
     queryKey: ["campaigns"],
     queryFn: () =>
       getCampaigns().catch((err) => {
@@ -55,7 +57,9 @@ export function useCampaigns() {
   });
 
   return {
-    ...query,
+    data,
+    isLoading,
+    error,
     addCampaign: addCampaignMutation.mutateAsync,
     // Wrapped to keep the two-argument shape the picker calls with; the
     // mutation itself takes one variables object.

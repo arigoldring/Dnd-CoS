@@ -37,6 +37,11 @@ export function useLocations(campaignId: string) {
     // mutateAsync, not mutate: the description editor awaits the save and
     // relies on rejection to stay open with the draft when the write fails.
     saveDescription: saveDescriptionMutation.mutateAsync,
+    // mutate is right for a bare onClick with no form around it — but only
+    // with the error surfaced alongside, or a refused write (RLS, network) is
+    // completely silent: onSuccess never fires, nothing invalidates, and the
+    // eye icon just doesn't flip. The next toggle attempt resets this to null.
     toggleVisibility: toggleVisibilityMutation.mutate,
+    toggleVisibilityError: toggleVisibilityMutation.error,
   };
 }

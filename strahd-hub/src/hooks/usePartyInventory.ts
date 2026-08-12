@@ -16,7 +16,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 // screen would be a trap.
 export function usePartyInventory(campaignId: string) {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  // Destructured, not spread: a spread reads every getter on the result and
+  // subscribes the component to all of them — see useLocations.
+  const { data, isLoading, error } = useQuery({
     queryKey: ["partyInventory", campaignId],
     queryFn: () =>
       getPartyInventory(campaignId).catch((err) => {
@@ -81,7 +83,9 @@ export function usePartyInventory(campaignId: string) {
   });
 
   return {
-    ...query,
+    data,
+    isLoading,
+    error,
     addItem: addItemMutation.mutateAsync,
     // Wrapped to keep the two-argument shape InventoryRow calls with; the
     // mutation itself takes one variables object.

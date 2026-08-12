@@ -29,7 +29,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  */
 export function useInvites(campaignId: string) {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  // Destructured, not spread: a spread reads every getter on the result and
+  // subscribes the component to all of them — see useLocations.
+  const { data, isLoading, error } = useQuery({
     queryKey: ["invites", campaignId],
     queryFn: () =>
       getInvites(campaignId).catch((err) => {
@@ -42,7 +44,9 @@ export function useInvites(campaignId: string) {
       queryClient.invalidateQueries({ queryKey: ["invites", campaignId] }),
   });
   return {
-    ...query,
+    data,
+    isLoading,
+    error,
     // mutateAsync, not mutate: InvitePanel's mint form awaits this, shows its
     // rejection as the form error, and needs the created Invite back. The
     // query's own `error` still means only "the list itself is missing".
@@ -62,7 +66,9 @@ export function useInvites(campaignId: string) {
  */
 export function useDmInvites() {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  // Destructured, not spread: a spread reads every getter on the result and
+  // subscribes the component to all of them — see useLocations.
+  const { data, isLoading, error } = useQuery({
     queryKey: ["dmInvites"],
     queryFn: () =>
       getDmInvites().catch((err) => {
@@ -74,7 +80,9 @@ export function useDmInvites() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dmInvites"] }),
   });
   return {
-    ...query,
+    data,
+    isLoading,
+    error,
     // mutateAsync, not mutate: InvitePanel's mint form awaits this, shows its
     // rejection as the form error, and needs the created Invite back. The
     // query's own `error` still means only "the list itself is missing".

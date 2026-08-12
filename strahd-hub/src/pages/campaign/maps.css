@@ -575,6 +575,16 @@
   outline-offset: 1px;
 }
 
+.visibility-panel__error {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #e2b4b4;
+  background: rgba(106,10,10,.18);
+  border: 1px solid rgba(138,13,13,.5);
+  border-left: 3px solid var(--blood-bright);
+}
+
 .visibility-panel__name {
   font-size: 15px;
   color: var(--bone-soft);

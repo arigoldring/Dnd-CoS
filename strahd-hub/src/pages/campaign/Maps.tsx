@@ -36,6 +36,7 @@ export function Maps() {
     error,
     saveDescription,
     toggleVisibility,
+    toggleVisibilityError,
   } = useLocations(campaign.id);
   // The open location is held by id, not as a copied Location object: the
   // drawer then re-renders straight from the list, so a saved edit shows up
@@ -300,6 +301,14 @@ export function Maps() {
                 </div>
               ))}
             </div>
+            {toggleVisibilityError && (
+              <p className="visibility-panel__error">
+                {errorMessage(
+                  toggleVisibilityError,
+                  "Problem updating visibility",
+                )}
+              </p>
+            )}
           </aside>
         )}
       </div>

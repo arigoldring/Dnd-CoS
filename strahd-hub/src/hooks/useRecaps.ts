@@ -13,7 +13,9 @@ export function useRecaps(campaignId: string) {
   // each campaign's log is its own cache entry, so the previous one's recaps
   // can never linger on screen or land from a stale in-flight fetch — the two
   // races the old manual version needed a reset and an `ignore` flag for.
-  const query = useQuery({
+  // Destructured, not spread: a spread reads every getter on the result and
+  // subscribes the component to all of them — see useLocations.
+  const { data, isLoading, error } = useQuery({
     queryKey: ["recaps", campaignId],
     queryFn: () =>
       getRecaps(campaignId).catch((err) => {
@@ -70,7 +72,9 @@ export function useRecaps(campaignId: string) {
   });
 
   return {
-    ...query,
+    data,
+    isLoading,
+    error,
     addRecap: async (sessionNumber: number, title: string, body: string) => {
       await addRecapMutation.mutateAsync({ sessionNumber, title, body });
     },
