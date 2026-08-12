@@ -7,6 +7,7 @@ import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/campaign/NPC";
 import { Recaps } from "./pages/campaign/Recaps";
 import { PartyInventory } from "./pages/campaign/PartyInventory";
+import { Character } from "./pages/campaign/Character";
 import { CreateItem } from "./pages/campaign/CreateItem";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
@@ -47,6 +48,10 @@ function App() {
                   <Route index element={<Home />} />
                   <Route path="Shop" element={<Shop />} />
                   <Route path="Inventory" element={<PartyInventory />} />
+                  {/* The viewer's own PC. No isDm branch and no :userId — the
+                    page is always "mine", and 028's policies make the owner the
+                    only one who can rename or delete it regardless. */}
+                  <Route path="Character" element={<Character />} />
                   <Route path="CreateItem" element={<CreateItem />} />
                   <Route path="Maps" element={<Maps />} />
                   <Route path="Spells" element={<Spells />} />

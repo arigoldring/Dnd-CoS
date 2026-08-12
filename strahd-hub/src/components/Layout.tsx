@@ -30,6 +30,7 @@ export function Layout() {
 
         <div className="app-nav">
           <NavLink to="." end>Home</NavLink>
+          <NavLink to="Character">Character</NavLink>
           <NavLink to="Shop">Shop</NavLink>
           <NavLink to="Inventory">Inventory</NavLink>
           {campaign.isDm && (

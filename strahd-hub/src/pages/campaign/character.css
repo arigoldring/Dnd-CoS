@@ -1,0 +1,269 @@
+/* =========================================================
+   Character sheet — Barovia theme, self-contained.
+
+   Unlike partyInventory.css, this file does NOT extend shop.css. That page
+   renders inside a .shop wrapper and inherits its nth-of-type contract, which
+   fixes the order of its children; a sheet is expected to grow sections
+   (equipment slots, attunement), so it pays for its own styles to buy the
+   freedom to reorder.
+
+   The palette below is copied from .shop rather than imported because those
+   custom properties are declared on .shop itself, not :root — there is nothing
+   to inherit from out here.
+   ========================================================= */
+
+.ch {
+  --void: #07060a;
+  --bone: #d6cab2;
+  --bone-soft: #a89c83;
+  --bone-dim: #6f6555;
+  --blood: #6a0a0a;
+  --blood-bright: #8a0d0d;
+  --blood-deep: #3a0606;
+
+  width: 90%;
+  max-width: 720px;
+  margin: 0 auto 80px;
+  font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  font-size: 17px;
+  color: var(--bone);
+  text-align: left;
+}
+
+/* Matches shop.css's rule for its own page: the campaign shell centres a
+   narrow column by default, which would squeeze the sheet. */
+#root:has(.ch) {
+  width: 100%;
+  max-width: 100%;
+  border: none;
+  text-align: left;
+}
+
+.ch-eyebrow {
+  margin-top: 32px;
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.42em;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #c79a5a;
+  text-align: center;
+}
+
+.ch-title {
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  font-size: 40px;
+  letter-spacing: 0.08em;
+  margin: 10px auto 24px;
+  text-align: center;
+  color: var(--bone);
+  text-shadow:
+    0 0 1px rgba(214, 202, 178, 0.5),
+    0 0 28px rgba(138, 13, 13, 0.35);
+}
+
+/* ---------- panels ---------- */
+
+.ch-panel {
+  position: relative;
+  margin-bottom: 22px;
+  padding: 24px 28px;
+  background:
+    linear-gradient(180deg, rgba(20, 15, 16, 0.96), rgba(12, 9, 11, 0.98)),
+    var(--void);
+  border: 1px solid rgba(160, 140, 110, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 34px 90px -28px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 240, 210, 0.04);
+}
+
+.ch-blurb {
+  margin: 0 0 16px;
+  font-style: italic;
+  color: var(--bone-soft);
+}
+
+.ch-section {
+  font-family: "Cinzel", serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #c79a5a;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(160, 140, 110, 0.18);
+}
+
+/* ---------- identity ---------- */
+
+.ch-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.ch-name {
+  flex: 1 1 auto;
+  margin: 0;
+  font-family: "Cinzel", serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--bone);
+}
+
+.ch-reset {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(138, 13, 13, 0.4);
+}
+
+.ch-warning {
+  margin: 0 0 12px;
+  font-style: italic;
+  color: #e7b7a0;
+}
+
+/* ---------- forms ---------- */
+
+.ch-form,
+.ch-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.ch-add {
+  margin-bottom: 18px;
+}
+
+.ch-form input[type="text"],
+.ch-add select {
+  flex: 0 1 260px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 16px;
+  color: var(--bone);
+  background: rgba(10, 8, 9, 0.8);
+  border: 1px solid rgba(160, 140, 110, 0.35);
+  padding: 8px 12px;
+}
+
+.ch-form input[type="text"]:focus,
+.ch-add select:focus {
+  outline: none;
+  border-color: rgba(199, 154, 90, 0.7);
+}
+
+/* ---------- buttons ---------- */
+
+.ch-button {
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ead9b6;
+  background: linear-gradient(
+    180deg,
+    rgba(48, 38, 40, 0.85),
+    rgba(28, 22, 24, 0.9)
+  );
+  border: 1px solid rgba(190, 165, 120, 0.45);
+  padding: 7px 14px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.ch-button:hover:not(:disabled) {
+  color: #fbeec9;
+  border-color: var(--blood-bright);
+  background: linear-gradient(
+    180deg,
+    rgba(106, 10, 10, 0.45),
+    rgba(58, 6, 6, 0.6)
+  );
+}
+
+.ch-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ch-button--danger {
+  color: #e7b7a0;
+  border-color: rgba(138, 13, 13, 0.5);
+}
+
+.ch-button--danger:hover:not(:disabled) {
+  color: #ffd9c4;
+  border-color: var(--blood-bright);
+  background: linear-gradient(
+    180deg,
+    rgba(106, 10, 10, 0.6),
+    rgba(58, 6, 6, 0.7)
+  );
+}
+
+/* ---------- gear table ---------- */
+
+.ch-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ch-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid rgba(160, 140, 110, 0.12);
+  vertical-align: middle;
+}
+
+.ch-byline {
+  display: block;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--bone-dim);
+}
+
+.ch-qty {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--bone-soft);
+}
+
+.ch-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ch-actions > .ch-button {
+  margin-left: 8px;
+}
+
+.ch-empty {
+  text-align: center;
+  font-style: italic;
+  color: var(--bone-soft);
+  padding: 18px 0;
+}
+
+.ch-error {
+  display: block;
+  flex-basis: 100%;
+  margin-top: 6px;
+  font-style: italic;
+  font-size: 13px;
+  color: #e08a8a;
+  white-space: normal;
+}

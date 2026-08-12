@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       campaign_members: {
@@ -64,6 +89,87 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      character_inventory: {
+        Row: {
+          added_by: string | null
+          character_id: string
+          created_at: string
+          id: string
+          item_id: string
+          quantity: number
+        }
+        Insert: {
+          added_by?: string | null
+          character_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          quantity?: number
+        }
+        Update: {
+          added_by?: string | null
+          character_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_inventory_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_inventory_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_inventory_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      characters: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "characters_campaign_id_user_id_fkey"
+            columns: ["campaign_id", "user_id"]
+            isOneToOne: true
+            referencedRelation: "campaign_members"
+            referencedColumns: ["campaign_id", "user_id"]
+          },
+        ]
       }
       dm_invites: {
         Row: {
@@ -486,6 +592,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_edit_character: {
+        Args: { target_character: string }
+        Returns: boolean
+      }
       claim_dm_invite: { Args: { invite_code: string }; Returns: undefined }
       claim_player_invite: { Args: { invite_code: string }; Returns: boolean }
       create_campaign: { Args: { campaign_name: string }; Returns: string }
@@ -632,6 +742,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
