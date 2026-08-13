@@ -136,7 +136,9 @@ export async function addToPartyInventory(
 // quantity, so two players spending the same torch both wrote the same number
 // and one spend vanished. 032 moved the read, the branch and the write inside
 // one locked function: this call now supplies only which row.
-export async function decrementPartyInventoryItem(entryId: string): Promise<void> {
+export async function decrementPartyInventoryItem(
+  entryId: string,
+): Promise<void> {
   const { error } = await supabase.rpc("decrement_party_inventory_item", {
     target_entry: entryId,
   });
