@@ -1,5 +1,6 @@
 import {
   claimDmInvite,
+  claimInvite,
   createDmInvite,
   createInvite,
   getDmInvites,
@@ -22,10 +23,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  * same-campaign duplicate row this hook used to accept as debt (previously in
  * KNOWN_ISSUES.md) is gone with the local prepend that caused it.
  *
- * Nothing about claiming lives here. That flow starts from a code and has no
- * campaign to be scoped to until the server resolves one, so it has no list to
- * own — a /claim form calls claimInvite directly and holds its own submitting
- * and error state, the way CampaignNameForm already does.
+ * Nothing about claiming lives in this hook. That flow starts from a code and
+ * has no campaign to be scoped to until the server resolves one, so it has no
+ * list to own. It gets the two hooks at the bottom of this file anyway, for a
+ * reason that is not about lists at all — see useClaimDmInvite.
  */
 export function useInvites(campaignId: string) {
   const queryClient = useQueryClient();
@@ -93,10 +94,11 @@ export function useDmInvites() {
 /**
  * Claiming a DM invite, with the profile refresh attached.
  *
- * The other claim — claimInvite for a player code — has no hook on purpose: it
- * is a form action, and a form holds its own submitting and error state the way
- * CampaignNameForm does. This one gets a hook anyway, for a reason that is not
- * about state at all.
+ * Neither claim hook owns a list, and neither owns any form state — /claim is a
+ * form action and holds its own submitting and error the way CampaignNameForm
+ * does. They exist for a reason that is not about state at all: each claim
+ * writes something cached that nothing else invalidates. This one's cache is
+ * AuthContext; useClaimInvite below has the ["campaigns"] half.
  *
  * claim_dm_invite writes profiles.role, and that row is cached in AuthContext
  * for the life of the session. Every isDm check in the app reads the cache, and
@@ -138,5 +140,51 @@ export function useClaimDmInvite() {
     // has committed is there a new role to go and read.
     await claimDmInvite(code);
     await refetchProfile();
+  };
+}
+
+/**
+ * Claiming a player invite, with the campaigns list refreshed.
+ *
+ * The same shape as useClaimDmInvite above and for the same reason, one cache
+ * down. claim_player_invite inserts a campaign_members row, and ["campaigns"]
+ * reads that table twice over — through the membership embed in getCampaigns
+ * and through the subquery in "read campaigns you can see". Nothing else in the
+ * app writes that table, so nothing else has cause to invalidate the entry, and
+ * without this pairing a claim that succeeds leaves the claimer looking at their
+ * pre-claim list. For a first-time invitee that is the empty one, immediately
+ * under a page that has just told them they joined.
+ *
+ * Worth naming the worst version, because it is not the obvious one: a non-DM
+ * whose list held exactly one campaign is redirected straight into it by
+ * CampaignPicker, so the campaign they just joined is not merely missing from
+ * the list — it is unreachable until the entry goes stale. staleTime is 60s and
+ * a window blur refetches too, so all of it repairs itself within about a
+ * minute, which is what makes it a bug that is already gone by the time anyone
+ * is asked to look at it.
+ *
+ * Returns what claimInvite returns — true if this call added the membership,
+ * false if the caller was already in that campaign. Both burn the code, and
+ * /claim says something different for each.
+ */
+export function useClaimInvite() {
+  const queryClient = useQueryClient();
+
+  // A plain function rather than a useMutation, matching useClaimDmInvite: no
+  // list to own, and no isPending anyone reads — the form tracks its own
+  // submitting. All this has to be is the two calls, kept together.
+  return async function claim(code: string): Promise<boolean> {
+    // Order matters and is the whole point of the hook: the claim is the thing
+    // that can fail, and it fails before anything has been written. Only once
+    // the membership row exists is there a new list to go and read.
+    const isNew = await claimInvite(code);
+    // Awaited, because what follows a claim is a navigation or a message about
+    // a campaign the user now has. In practice this resolves without a fetch:
+    // the picker unmounted to get to /claim, so ["campaigns"] is inactive and
+    // invalidate only marks it stale — refetchOnMount does the work when the
+    // picker comes back. The await is what keeps the ordering honest for a
+    // caller that does still have the list on screen.
+    await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    return isNew;
   };
 }

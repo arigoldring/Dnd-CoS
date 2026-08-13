@@ -1,7 +1,6 @@
 import { SubmitEvent, useEffect, useId, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { claimInvite } from "../../services/invites";
-import { useClaimDmInvite } from "../../hooks/useInvites";
+import { useClaimDmInvite, useClaimInvite } from "../../hooks/useInvites";
 import {
   InviteKind,
   isInviteKind,
@@ -17,9 +16,10 @@ import "../onboarding/onboarding.css";
  * Top-level, beside the picker, because claiming is the thing you do before you
  * have a campaign — the code is what decides which campaign you end up in, and
  * until the server resolves it there is nothing to scope this page to. That is
- * also why nothing here uses a list hook: there is no list. The two claim calls
- * are one-shot form submissions, and this form holds its own state the way
- * CampaignNameForm does.
+ * also why neither hook here is a list hook: there is no list. Each pairs its
+ * claim with the cache that claim invalidates and nothing else — the profile
+ * for a DM code, the campaigns list for a player one — and the submitting and
+ * error state below stays local, the way CampaignNameForm's does.
  *
  * It still sits inside AuthGate, which is required rather than incidental: both
  * claim functions write a row keyed on auth.uid(), so there has to be a signed-in
@@ -30,6 +30,7 @@ export function Claim() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const claimDm = useClaimDmInvite();
+  const claimPlayer = useClaimInvite();
   const codeId = useId();
 
   // Lazy initialisers, and pure: peekPendingClaim only reads. The take() that
@@ -92,13 +93,18 @@ export function Claim() {
         return;
       }
 
-      const isNew = await claimInvite(trimmed);
+      const isNew = await claimPlayer(trimmed);
       // Held and shown rather than redirected, because 013 changed
       // claim_player_invite to report whether the join was new specifically so
       // the two could be told apart. Dropping the player on the picker would
       // throw that away — and someone who was already a member deserves to hear
       // that their code did nothing rather than to watch a page change. Nothing
       // unmounts this branch, so the message survives.
+      //
+      // Held safely only because the hook has already invalidated ["campaigns"]
+      // by this point: the "Go to your campaigns" link below is a plain
+      // navigation, so whatever is in that cache entry when the picker mounts
+      // is what the invitee is shown.
       setJoinedNew(isNew);
     } catch (err) {
       // Where a bad, spent or wrong-kind code arrives, as an ordinary Postgres
