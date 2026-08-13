@@ -40,18 +40,12 @@ export function usePartyInventory(campaignId: string) {
   // that called it is what should report the problem. Hence mutateAsync, not
   // mutate: every caller awaits and catches.
 
-  // currentQuantity is passed through so the service can decide
-  // update-vs-delete without its own read; see decrementPartyInventoryItem for
-  // the delete-at-one rule. Keys on entryId (the party_inventory row), not the
-  // item id.
+  // Keys on entryId (the party_inventory row), not the item id. It used to take
+  // the row's current quantity too, so the service could pick update-vs-delete;
+  // 032 moved that branch into the database, where the number it reads can't be
+  // stale. See decrementPartyInventoryItem for the delete-at-one rule.
   const decrementItemMutation = useMutation({
-    mutationFn: ({
-      entryId,
-      currentQuantity,
-    }: {
-      entryId: string;
-      currentQuantity: number;
-    }) => decrementPartyInventoryItem(entryId, currentQuantity),
+    mutationFn: (entryId: string) => decrementPartyInventoryItem(entryId),
     onSuccess: invalidate,
   });
 
@@ -79,10 +73,7 @@ export function usePartyInventory(campaignId: string) {
     data,
     isLoading,
     error,
-    // Wrapped to keep the two-argument shape InventoryRow calls with; the
-    // mutation itself takes one variables object.
-    decrementItem: (entryId: string, currentQuantity: number) =>
-      decrementItemMutation.mutateAsync({ entryId, currentQuantity }),
+    decrementItem: decrementItemMutation.mutateAsync,
     removeItem: removeItemMutation.mutateAsync,
     createHomeBrewItem: createHomeBrewItemMutation.mutateAsync,
   };

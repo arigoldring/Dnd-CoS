@@ -596,6 +596,10 @@ export type Database = {
         Args: { target_character: string; target_item: string }
         Returns: string
       }
+      add_party_inventory_item: {
+        Args: { target_campaign: string; target_item: string }
+        Returns: string
+      }
       can_edit_character: {
         Args: { target_character: string }
         Returns: boolean
@@ -603,6 +607,14 @@ export type Database = {
       claim_dm_invite: { Args: { invite_code: string }; Returns: undefined }
       claim_player_invite: { Args: { invite_code: string }; Returns: boolean }
       create_campaign: { Args: { campaign_name: string }; Returns: string }
+      decrement_character_inventory_item: {
+        Args: { target_entry: string }
+        Returns: undefined
+      }
+      decrement_party_inventory_item: {
+        Args: { target_entry: string }
+        Returns: undefined
+      }
       generate_dm_invite: { Args: { invite_label?: string }; Returns: string }
       generate_player_invite: {
         Args: { invite_label?: string; target_campaign: string }

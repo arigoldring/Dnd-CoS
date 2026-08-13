@@ -165,9 +165,11 @@ function AddToPartyInventory({
             : "Add to party inventory"}
       </button>
       {/* "Add another" and a note, rather than a disabled button, because a
-          second add is a real if uncommon action: there's no unique constraint
-          on (campaign, item), so each click files another stack. This label is
-          honest about what the service does today — see addToPartyInventory. */}
+          second add is a real action — buying a second torch. Since 031 each
+          click raises the party's stack of this item by one instead of filing a
+          second row, so the label describes what the party gets, and the button
+          stays live because there is now a constraint keeping the list clean
+          rather than a UI rule hoping it stays that way. */}
       {added && !error && (
         <span className="item-detail-add-note">
           Added to the party's inventory.

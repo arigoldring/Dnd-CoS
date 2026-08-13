@@ -44,14 +44,11 @@ export function useCharacterInventory(characterId: string) {
     onSuccess: invalidate,
   });
 
+  // entryId alone since 032: the quantity that decides decrement-vs-delete is
+  // read inside the database function, under the lock that makes the write
+  // atomic, rather than passed down from whatever the page last rendered.
   const decrementItemMutation = useMutation({
-    mutationFn: ({
-      entryId,
-      currentQuantity,
-    }: {
-      entryId: string;
-      currentQuantity: number;
-    }) => decrementCharacterInventoryItem(entryId, currentQuantity),
+    mutationFn: (entryId: string) => decrementCharacterInventoryItem(entryId),
     onSuccess: invalidate,
   });
 
@@ -65,8 +62,7 @@ export function useCharacterInventory(characterId: string) {
     isLoading,
     error,
     addItem: addItemMutation.mutateAsync,
-    decrementItem: (entryId: string, currentQuantity: number) =>
-      decrementItemMutation.mutateAsync({ entryId, currentQuantity }),
+    decrementItem: decrementItemMutation.mutateAsync,
     removeItem: removeItemMutation.mutateAsync,
   };
 }

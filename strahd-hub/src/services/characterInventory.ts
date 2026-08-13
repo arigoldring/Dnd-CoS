@@ -20,12 +20,13 @@ import { toItem, type Item } from "./items";
  *                   they already are not the same shape, before equipment slots
  *                   or attunement land.
  *
- *   stacking        party_inventory still makes a second row when you add an
- *                   item it already holds. Here 030 settled it: unique
- *                   (character_id, item_id), and an add increments. The sheet is
- *                   where that difference is visible, because a stack of rations
- *                   is the normal case on a character and the odd one on the
- *                   party pile.
+ *   stacking        no longer a difference. 030 settled it here — unique
+ *                   (character_id, item_id), and an add increments — on the
+ *                   theory that stacks are the character's problem and unusual
+ *                   on a shared pile. 031 disagreed and gave party_inventory the
+ *                   same treatment: a pile of arrows, torches and rations is if
+ *                   anything more stack-shaped than a sheet. Both tables now
+ *                   hold one row per item with a quantity.
  */
 
 // added_by is embedded and aliased the way RECAP_SELECT does it: a uuid is
@@ -135,24 +136,18 @@ export async function addToCharacterInventory(
 // deliberate behaviour partyInventory documents, backed by the same `quantity >
 // 0` CHECK, which makes 0 unstorable rather than merely unwanted.
 //
-// currentQuantity is the caller's last-read value, so simultaneous decrements
-// can lose an update. More reachable here than on the party pile, since the DM
-// and the owner can both be editing one sheet during a session — but still a
-// two-people-at-once race on a low-traffic page, and still not worth a
-// server-side atomic decrement until it actually bites.
+// 032's function, for the reason 030 gave about the increment: the read and the
+// write have to be the same statement. This was the last read-modify-write left,
+// and the most reachable one — the DM and the owner can both be editing one
+// sheet during a session, and 030 made that worse before 032 fixed it, since
+// every copy of an item now funnels into a single contended row instead of
+// fragmenting across several.
 export async function decrementCharacterInventoryItem(
   entryId: string,
-  currentQuantity: number,
 ): Promise<void> {
-  if (currentQuantity <= 1) {
-    await removeFromCharacterInventory(entryId);
-    return;
-  }
-
-  const { error } = await supabase
-    .from("character_inventory")
-    .update({ quantity: currentQuantity - 1 })
-    .eq("id", entryId);
+  const { error } = await supabase.rpc("decrement_character_inventory_item", {
+    target_entry: entryId,
+  });
 
   if (error) {
     console.error(error);
@@ -160,6 +155,10 @@ export async function decrementCharacterInventoryItem(
   }
 }
 
+// The explicit trash-can button, not decrement's last step — since 032 that
+// delete happens inside the function, under the same lock as the read that chose
+// it.
+//
 // No zero-row check, matching removeFromPartyInventory rather than
 // deleteCharacter: everyone who can reach this call already passed
 // can_edit_character to see the sheet's controls, so a delete matching nothing

@@ -223,7 +223,7 @@ function GearRow({
   onRemove,
 }: {
   entry: CharacterInventoryEntry;
-  onDecrement: (entryId: string, currentQuantity: number) => Promise<void>;
+  onDecrement: (entryId: string) => Promise<void>;
   onRemove: (entryId: string) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
@@ -233,7 +233,7 @@ function GearRow({
     setBusy(true);
     setError(null);
     try {
-      await onDecrement(entry.entryId, entry.quantity);
+      await onDecrement(entry.entryId);
     } catch (err) {
       console.error("Problem updating character item:", err);
       setError(errorMessage(err, "Couldn't update this item"));

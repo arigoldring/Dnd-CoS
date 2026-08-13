@@ -139,7 +139,7 @@ function InventoryRow({
 }: {
   entry: PartyInventoryEntry;
   onInspect: () => void;
-  onDecrement: (entryId: string, currentQuantity: number) => Promise<void>;
+  onDecrement: (entryId: string) => Promise<void>;
   onRemove: (entryId: string) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
@@ -149,10 +149,10 @@ function InventoryRow({
     setBusy(true);
     setError(null);
     try {
-      await onDecrement(entry.entryId, entry.quantity);
+      await onDecrement(entry.entryId);
       // On success the hook refetches: this row either re-renders at
-      // quantity - 1, or — at the last one — unmounts, since the service deletes
-      // the stack at zero. setBusy in `finally` re-enables the first case; on
+      // quantity - 1, or — at the last one — unmounts, since the DB deletes the
+      // stack at zero. setBusy in `finally` re-enables the first case; on
       // the second it's a harmless no-op (React 19 doesn't warn on unmount).
     } catch (err) {
       console.error("Problem updating party item:", err);

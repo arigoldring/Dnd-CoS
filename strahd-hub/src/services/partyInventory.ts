@@ -28,9 +28,10 @@ type PartyInventoryRow = Tables<"party_inventory"> & {
 // an interface can't extend a union. `&` distributes over it, so an entry stays
 // a proper discriminated union — `entry.kind === "weapon"` still narrows.
 export type PartyInventoryEntry = Item & {
-  // party_inventory.id — the row to target on decrement/remove. Distinct from
-  // the item's own id: the same item_id can appear as several entries (see
-  // addToPartyInventory), so entryId, not id, is what those operations key on.
+  // party_inventory.id — the row to target on decrement/remove. Still distinct
+  // from the item's own id, though since 031 the two are one-to-one within a
+  // campaign: one row per (campaign, item), so an item appears at most once on
+  // the pile and quantity carries the count.
   entryId: string;
   quantity: number;
 };
@@ -71,33 +72,52 @@ export async function getPartyInventory(
   return data.map(toPartyInventoryEntry);
 }
 
-// quantity is left to its DB default of 1 (021), and added_by to its null
-// default — the current user isn't threaded through here, so "who added this"
-// stays unrecorded for now (the column exists for a future byline, the way
-// recaps carries last_edited_by).
+// An RPC rather than an insert, for addToCharacterInventory's reason: the write
+// is "add one to the stack, or start one", and PostgREST cannot say that — its
+// upsert assigns the columns it is handed, so it would pin an existing stack
+// back to 1. 031's function does the insert-or-increment in a single statement,
+// which is also what keeps two people adding at once from losing an increment.
 //
-// This is a plain insert, NOT an upsert: there's no unique constraint on
-// (campaign_id, item_id), so adding an item the party already has creates a
-// SECOND entry at quantity 1 rather than bumping the existing stack. A real
-// open question, not an oversight — if the UI wants one stack per item it
-// should disable "add" for items already in the list, or this grows into an
-// increment. Flagging it here so the choice is made on purpose.
+// This used to be a plain insert that filed a second row per add, with a comment
+// proposing the UI disable "add" for items already in the list. 031 replaced
+// that with a unique (campaign_id, item_id) — a client-side guard was never a
+// substitute for the constraint.
 //
-// Returns the created entry (like createRecap) so the caller updates its list
-// from what the DB actually stored rather than a hand-built optimistic object.
+// Nothing is passed for quantity or added_by. 031's `on conflict` owns the
+// first; the second stays null the way 021 left it (the column exists for a
+// future byline, the way recaps carries last_edited_by, and if one lands it
+// wants 029's trigger rather than an argument here).
+//
+// Returns the whole entry (like createRecap) so the caller updates its list from
+// what the DB actually stored rather than a hand-built optimistic object.
 export async function addToPartyInventory(
   campaignId: string,
   itemId: string,
 ): Promise<PartyInventoryEntry> {
-  const { data, error } = await supabase
-    .from("party_inventory")
-    .insert({ campaign_id: campaignId, item_id: itemId })
-    .select(PARTY_INVENTORY_SELECT)
-    .single();
+  const { data: entryId, error } = await supabase.rpc(
+    "add_party_inventory_item",
+    { target_campaign: campaignId, target_item: itemId },
+  );
 
   if (error) {
     console.error(error);
     throw error;
+  }
+
+  // Second round trip, because the function returns the row id and callers
+  // expect a whole entry — the RPC cannot carry the embedded item the way
+  // PARTY_INVENTORY_SELECT does. Cheap and rarely load bearing: usePartyInventory
+  // invalidates the list on success and refetches anyway, so the returned entry
+  // is for callers that want it, not the cache.
+  const { data, error: entryError } = await supabase
+    .from("party_inventory")
+    .select(PARTY_INVENTORY_SELECT)
+    .eq("id", entryId)
+    .single();
+
+  if (entryError) {
+    console.error(entryError);
+    throw entryError;
   }
 
   return toPartyInventoryEntry(data);
@@ -112,23 +132,14 @@ export async function addToPartyInventory(
 // here because "decrement" quietly meaning "sometimes delete" is a surprise
 // worth spelling out at the call site.
 //
-// currentQuantity is the caller's last-read value, so two players decrementing
-// the same stack at once can lose an update (both write from the same start).
-// Acceptable for a low-traffic party sheet; revisit with an atomic server-side
-// decrement if it ever bites.
-export async function decrementPartyInventoryItem(
-  entryId: string,
-  currentQuantity: number,
-): Promise<void> {
-  if (currentQuantity <= 1) {
-    await removeFromPartyInventory(entryId);
-    return;
-  }
-
-  const { error } = await supabase
-    .from("party_inventory")
-    .update({ quantity: currentQuantity - 1 })
-    .eq("id", entryId);
+// Which branch to take used to be decided here, from the caller's last-read
+// quantity, so two players spending the same torch both wrote the same number
+// and one spend vanished. 032 moved the read, the branch and the write inside
+// one locked function: this call now supplies only which row.
+export async function decrementPartyInventoryItem(entryId: string): Promise<void> {
+  const { error } = await supabase.rpc("decrement_party_inventory_item", {
+    target_entry: entryId,
+  });
 
   if (error) {
     console.error(error);
@@ -137,7 +148,9 @@ export async function decrementPartyInventoryItem(
 }
 
 // Straight delete, for the explicit trash-can button — removing a whole stack
-// regardless of quantity, and the path decrement takes for its last item.
+// regardless of quantity. No longer the path decrement takes for its last item:
+// since 032 that delete happens inside the function, under the same lock as the
+// read that chose it.
 //
 // Unlike deleteRecap, there's no "you don't have permission" check on a
 // zero-row result. That check exists there because deleting a recap is DM-only,
