@@ -1,0 +1,445 @@
+
+.npcs {
+  --void:         #07060a;
+  --stone:        #1a1518;
+  --bone:         #d6cab2;
+  --bone-soft:    #a89c83;
+  --bone-dim:     #6f6555;
+  --blood:        #6a0a0a;
+  --blood-bright: #8a0d0d;
+  --tarnish:      #9a7a3a;
+
+  /* the roster is the positioning context for the visibility panel, which
+     slides in over it the way it does over the map stage */
+  position: relative;
+  color: var(--bone);
+  font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+}
+
+/* header with title and visibility toggle button */
+.npcs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  margin-bottom: 14px;
+}
+
+.npcs-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: .04em;
+  color: var(--bone);
+  text-shadow: 0 1px 0 rgba(0,0,0,.8);
+}
+
+.npcs-visibility-toggle {
+  padding: 6px 12px;
+  font: 400 13px/1 "Cormorant Garamond", Georgia, serif;
+  font-variant: small-caps;
+  letter-spacing: .12em;
+  color: var(--tarnish);
+  background: none;
+  border: 1px solid rgba(154,122,58,.4);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.npcs-visibility-toggle:hover {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.75);
+  background: rgba(154,122,58,.1);
+}
+.npcs-visibility-toggle:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------
+   ROSTER
+   --------------------------------------------------------- */
+
+.npcs .npc-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 0 12px;
+}
+
+.npcs .npc-card {
+  display: flex;
+  gap: 16px;
+  padding: 18px 20px;
+  color: var(--bone);
+  background:
+    linear-gradient(180deg, rgba(20,15,16,.97), rgba(12,9,11,.99)),
+    repeating-linear-gradient(0deg, rgba(255,240,210,.012) 0 2px, transparent 2px 4px),
+    var(--void);
+  border: 1px solid rgba(160,140,110,.28);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 24px 60px -28px rgba(0,0,0,.9);
+}
+
+/* not yet revealed — only ever rendered for the DM. Dashed edge and a dimmed
+   card so it reads as "the party cannot see this one" at a glance. */
+.npcs .npc-card.is-hidden {
+  border-style: dashed;
+  border-color: rgba(154,122,58,.4);
+  opacity: .72;
+}
+
+.npcs .npc-card__portrait {
+  flex: 0 0 auto;
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border: 1px solid rgba(154,122,58,.45);
+  filter: grayscale(.35) contrast(1.05);
+  box-shadow: 0 6px 18px -8px rgba(0,0,0,.9);
+}
+
+.npcs .npc-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.npcs .npc-card__name {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: .04em;
+  color: var(--bone);
+  text-shadow: 0 1px 0 rgba(0,0,0,.8);
+}
+
+.npcs .npc-card__hidden-tag {
+  font-size: 11px;
+  font-variant: small-caps;
+  letter-spacing: .14em;
+  color: var(--tarnish);
+  border: 1px solid rgba(154,122,58,.4);
+  padding: 1px 6px 0;
+}
+
+.npcs .npc-card__rule {
+  height: 1px;
+  margin: 10px 0 11px;
+  background: linear-gradient(90deg, rgba(154,122,58,.55), transparent 85%);
+}
+
+.npcs .npc-card__location {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-variant: small-caps;
+  letter-spacing: .12em;
+  color: var(--tarnish);
+}
+
+.npcs .npc-card__desc {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--bone-soft);
+  text-wrap: pretty;
+}
+
+/* stands in for a description that hasn't been written yet — dimmer and italic
+   so it reads as absence, not as the NPC's actual blurb */
+.npcs .npc-card__empty {
+  color: var(--bone-dim);
+  font-style: italic;
+}
+
+/* DM-only notes block — set apart from the player-facing description */
+.npcs .npc-card__dm {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--bone-soft);
+  background: rgba(106,10,10,.14);
+  border: 1px solid rgba(138,13,13,.4);
+  border-left: 3px solid var(--blood-bright);
+}
+
+/* ---------------------------------------------------------
+   DM EDITING
+   Only ever rendered for a DM (NPC.tsx gates it). RLS is the
+   real gate; this is the door.
+   --------------------------------------------------------- */
+
+.npcs .npc-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.npcs .npc-card__edit {
+  padding: 5px 12px 4px;
+  font: 400 13px/1 "Cormorant Garamond", Georgia, serif;
+  font-variant: small-caps;
+  letter-spacing: .12em;
+  color: var(--tarnish);
+  background: none;
+  border: 1px solid rgba(154,122,58,.4);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.npcs .npc-card__edit:hover {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.75);
+  background: rgba(154,122,58,.1);
+}
+.npcs .npc-card__edit:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 2px;
+}
+
+.npcs .npc-edit--notes {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(160,140,110,.22);
+}
+
+.npcs .npc-edit__label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  font-variant: small-caps;
+  letter-spacing: .14em;
+  color: var(--bone-dim);
+}
+.npcs .npc-edit__label:first-child {
+  margin-top: 0;
+}
+
+.npcs .npc-edit__field {
+  display: block;
+  width: 100%;
+  padding: 8px 11px;
+  font: 400 15px/1.5 "Cormorant Garamond", Georgia, serif;
+  color: var(--bone);
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(160,140,110,.28);
+  resize: vertical;
+  /* keep the field inside the card's padding — default box-sizing would put its
+     border outside the 100% width and force a horizontal scrollbar */
+  box-sizing: border-box;
+}
+.npcs .npc-edit__field:focus {
+  outline: none;
+  border-color: rgba(154,122,58,.7);
+  box-shadow: 0 0 0 1px rgba(154,122,58,.25);
+}
+.npcs .npc-edit__field:disabled {
+  color: var(--bone-dim);
+}
+/* the select inherits the field styling but not the arrow, which the browser
+   paints in its own colour against the dark background */
+.npcs select.npc-edit__field {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--tarnish) 50%),
+                    linear-gradient(135deg, var(--tarnish) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 30px;
+}
+.npcs select.npc-edit__field option {
+  background: var(--stone);
+  color: var(--bone);
+}
+
+.npcs .npc-edit__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.npcs .npc-edit__btn {
+  padding: 6px 14px 5px;
+  font: 400 13px/1 "Cormorant Garamond", Georgia, serif;
+  font-variant: small-caps;
+  letter-spacing: .12em;
+  color: var(--bone-soft);
+  background: none;
+  border: 1px solid rgba(160,140,110,.28);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.npcs .npc-edit__btn:hover:not(:disabled) {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.6);
+  background: rgba(154,122,58,.08);
+}
+.npcs .npc-edit__btn--save {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.55);
+  background: rgba(106,10,10,.28);
+}
+.npcs .npc-edit__btn--save:hover:not(:disabled) {
+  background: rgba(138,13,13,.42);
+}
+.npcs .npc-edit__btn:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 2px;
+}
+.npcs .npc-edit__btn:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.npcs .npc-edit__error {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #e2b4b4;
+  background: rgba(106,10,10,.18);
+  border: 1px solid rgba(138,13,13,.5);
+  border-left: 3px solid var(--blood-bright);
+}
+
+/* ---------------------------------------------------------
+   VISIBILITY PANEL — the roster's reveal toggles.
+   Same panel as the map's, anchored to .npcs instead of the
+   map stage.
+
+   Every rule here is scoped under .npcs, and that is not
+   decoration: maps.css declares .visibility-panel unscoped,
+   so its rules reach this panel too. The scoped selector
+   wins on specificity, but only for properties it actually
+   names — hence height below, which would otherwise inherit
+   the map's full-height panel and stretch an eight-item list
+   down the whole roster.
+   --------------------------------------------------------- */
+
+.npcs .visibility-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  width: min(280px, 75%);
+  height: auto;
+  max-height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  background:
+    linear-gradient(180deg, rgba(20,15,16,.97), rgba(12,9,11,.99)),
+    repeating-linear-gradient(0deg, rgba(255,240,210,.012) 0 2px, transparent 2px 4px),
+    var(--void);
+  border: 1px solid rgba(160,140,110,.28);
+  box-shadow: 30px 0 70px -30px rgba(0,0,0,.95);
+  animation: npcPanelSlideRight .26s cubic-bezier(.2,.7,.3,1) both;
+}
+
+.npcs .visibility-panel__header {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+.npcs .visibility-panel__header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: .04em;
+  color: var(--bone);
+  text-shadow: 0 1px 0 rgba(0,0,0,.8);
+}
+
+.npcs .visibility-panel__close {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font: 400 20px/1 "Cormorant Garamond", Georgia, serif;
+  color: var(--bone-dim);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.npcs .visibility-panel__close:hover {
+  color: var(--bone);
+  border-color: rgba(154,122,58,.45);
+  background: rgba(154,122,58,.08);
+}
+.npcs .visibility-panel__close:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 2px;
+}
+
+.npcs .visibility-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.npcs .visibility-panel__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  transition: background .18s ease;
+}
+.npcs .visibility-panel__item:hover {
+  background: rgba(154,122,58,.08);
+}
+
+.npcs .visibility-panel__toggle {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
+  background: none;
+  border: 1px solid rgba(154,122,58,.4);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease;
+  flex-shrink: 0;
+}
+.npcs .visibility-panel__toggle:hover {
+  border-color: rgba(154,122,58,.75);
+  background: rgba(154,122,58,.1);
+}
+.npcs .visibility-panel__toggle:focus-visible {
+  outline: 1px solid var(--tarnish);
+  outline-offset: 1px;
+}
+
+.npcs .visibility-panel__name {
+  font-size: 15px;
+  color: var(--bone-soft);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.npcs .visibility-panel__error {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #e2b4b4;
+  background: rgba(106,10,10,.18);
+  border: 1px solid rgba(138,13,13,.5);
+  border-left: 3px solid var(--blood-bright);
+}
+
+@keyframes npcPanelSlideRight { from { translate: -100% 0; opacity: 0 } }
+
+@media (prefers-reduced-motion: reduce) {
+  .npcs .visibility-panel { animation: none; }
+}
