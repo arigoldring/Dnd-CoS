@@ -230,16 +230,16 @@ function NpcEditor({
     setSaving(true);
     setError(null);
     try {
-      const trimmed = description.trim();
       await onSave({
         id: npc.id,
         fields: {
           // Sent untrimmed on purpose: the database trims it, and reading the
           // result back is how the field proves what was actually stored.
           name,
-          // Null rather than "" so the card shows "No description yet" instead
-          // of a blank space that looks like a rendering fault.
-          description: trimmed === "" ? null : trimmed,
+          // Sent as typed, blank included. updateNpc is where a cleared
+          // description becomes null, so the card shows "No description yet"
+          // no matter which caller did the clearing.
+          description,
           // "" is the placeholder option, and it means no known home.
           location_id: locationId === "" ? null : locationId,
         },

@@ -5,8 +5,8 @@
 -- WRITTEN FOR THE SUPABASE SQL EDITOR, which shapes it in two ways:
 --
 --   Run ONE BLOCK AT A TIME. The editor renders only the last result set of a
---   run, so pasting the whole file would show block 8 and silently discard the
---   seven before it. Each block below is separated by a ==== rule, is complete
+--   run, so pasting the whole file would show block 9 and silently discard the
+--   nine before it. Each block below is separated by a ==== rule, is complete
 --   on its own, and ends in exactly one SELECT followed by ROLLBACK.
 --
 --   The uuids are written out in full rather than set once at the top. psql's
@@ -386,7 +386,181 @@ rollback;
 
 
 -- ===========================================================================
--- BLOCK 7 -- the constraints and policies as the database actually stored them
+-- BLOCK 7 -- the player cannot reveal an NPC, and is not told so
+-- ===========================================================================
+--
+-- The other half of block 1. That block proves a hidden NPC is unreadable; this
+-- proves it is unwritable, which is a separate policy -- SELECT and UPDATE are
+-- declared apart, and an UPDATE policy written as `true` would leave every read
+-- test in this file green.
+--
+-- The UPDATE is sent unfiltered, the way a client that forgot its .eq() would
+-- send it. Scoping the attack to campaign A would leave a policy that scopes by
+-- nothing looking exactly like one that scopes correctly.
+--
+-- Expect NO ERROR. USING excludes every row before WITH CHECK is ever consulted,
+-- so this comes back as a clean zero-row update -- the same shape PostgREST
+-- hands the browser as a 200 with an empty body, which is why updateNpc in the
+-- client treats "no row came back" as a refusal rather than as a success. A
+-- refused write that raises nothing is the reason this block exists.
+--
+-- The baseline is captured as the table owner, before the role switch: the
+-- player cannot see the hidden rows this is protecting, so a comparison made
+-- through their eyes would have nothing in it to compare. A temp table is what
+-- carries it across the impersonation, and the ROLLBACK drops it along with
+-- everything else.
+--
+-- CORRECT OUTPUT: one row. rows_changed = 0, npcs_compared = 2.
+-- hidden_before = 1 (Rahadin) and hidden_after = 1. Read hidden_before FIRST: if
+-- it is 0 there is no hidden NPC left to steal and the zero above is proving
+-- nothing, which is a broken test rather than a passing one.
+
+begin;
+
+  create temp table baseline_npcs on commit drop as
+  select id, is_revealed from npcs;
+
+  select set_config(
+           'request.jwt.claims',
+           '{"sub":"1313672b-6990-45a6-8a28-c448ca116d2d","role":"authenticated"}',
+           true
+         );
+  set local role authenticated;
+
+  update npcs set is_revealed = true;
+
+  -- Back to the owner to read the answer, for the same reason the baseline was
+  -- taken as the owner: under RLS a hidden row that stayed hidden and a hidden
+  -- row that was just revealed both have to be visible to be told apart.
+  reset role;
+
+  select 'check 8: player cannot reveal an NPC' as check,
+         jsonb_build_object(
+           'rows_changed',
+             count(*) filter (where n.is_revealed is distinct from b.is_revealed),
+           'hidden_before', count(*) filter (where not b.is_revealed),
+           'hidden_after',  count(*) filter (where not n.is_revealed),
+           'npcs_compared', count(*)
+         ) as result
+  from baseline_npcs b
+  join npcs n on n.id = b.id;
+
+rollback;
+
+
+-- ===========================================================================
+-- BLOCK 8 -- the player cannot write a DM note, not even on an NPC they see
+-- ===========================================================================
+--
+-- Block 1 proves the player reads no notes. This is the write half, and it is a
+-- different policy again: SELECT on npc_dm_notes carries USING, INSERT carries
+-- WITH CHECK, and they are declared separately -- a WITH CHECK of `true` leaves
+-- block 1 passing while any player can write into the DM's private notes.
+--
+-- Aimed at a REVEALED NPC for block 1's reason: there the player passes the
+-- outer half of the EXISTS join and only is_campaign_dm stands in the way. A
+-- hidden NPC would be refused by the outer half and prove the weaker thing.
+--
+-- Unlike block 7 this one RAISES -- a row failing WITH CHECK is an error, not a
+-- silent no-op -- so the attempt is wrapped to keep the block ending in a result
+-- row like every other.
+--
+-- THE TARGET IS RESOLVED FIRST, and that is the whole difficulty here. A 42501
+-- is not by itself evidence of anything: RLS WITH CHECK is evaluated ahead of
+-- NOT NULL and the foreign key, so an insert naming a null npc_id fails the
+-- EXISTS -- `npcs.id = null` is never true -- and is refused with exactly the
+-- same 42501, exactly the same message. "The player passed the outer gate and
+-- is_campaign_dm stopped them" and "the player could see nothing, sent a null,
+-- and never reached the interesting half" then look identical on screen, and
+-- only the first is worth writing a block about.
+--
+-- So the target is read as the player, before the attempt, and travels into it
+-- by uuid. A uuid in the output is proof the outer gate was genuinely passed;
+-- the sentinel is proof it was not. Nothing was visible to aim at means the run
+-- aborts on the cast rather than reporting a refusal it did not earn.
+--
+-- The handler catches 42501 and nothing else on purpose. 23505 aborts the run,
+-- and would mean the policy admitted the row and only a pre-existing note
+-- stopped it -- a leak, not a pass.
+--
+-- Both verdicts travel out through transaction-local settings because that is
+-- the one channel needing no grant: a temp table written by the owner is not
+-- writable by `authenticated` without one.
+--
+-- CORRECT OUTPUT: one row. target_npc a real uuid (Strahd's), notes_written = 0,
+-- and attempt reading
+--   refused: 42501 new row violates row-level security policy for table "npc_dm_notes"
+-- Read target_npc FIRST -- a refusal means nothing without a visible NPC to have
+-- been refused about. Anything starting 'ACCEPTED' is the feature leaking. If
+-- the player could see no revealed NPC there is no result row at all, just
+--   invalid input syntax for type uuid: "NONE -- block proved nothing"
+-- which is the sentinel working, not the policy failing.
+
+begin;
+
+  select set_config(
+           'request.jwt.claims',
+           '{"sub":"1313672b-6990-45a6-8a28-c448ca116d2d","role":"authenticated"}',
+           true
+         );
+  set local role authenticated;
+
+  -- Read through the player's RLS, so a target that comes back is an NPC this
+  -- player can really see -- the outer half of the EXISTS join passed before the
+  -- attempt begins. The coalesce turns "nothing visible" into a value that
+  -- cannot be mistaken for a uuid downstream.
+  select set_config(
+           'verify.target_npc',
+           coalesce(
+             (select id::text from npcs
+              where campaign_id = 'd721b412-2750-492e-bddd-7387fc464bba'
+                and is_revealed
+              order by name
+              limit 1),
+             'NONE -- block proved nothing'
+           ),
+           true
+         );
+
+  do $$
+  begin
+    -- The resolved target, not a subquery: a subquery evaluated in here could
+    -- come back null, and a null npc_id is refused with the same 42501 as a real
+    -- one. Casting the sentinel raises 22P02 instead, which no handler below
+    -- catches, so a block with nothing to aim at fails loudly rather than
+    -- reporting a refusal it did not earn.
+    insert into npc_dm_notes (npc_id, notes)
+    values (
+      current_setting('verify.target_npc', true)::uuid,
+      'breach -- rolled back'
+    );
+
+    perform set_config('verify.notes_insert',
+                       'ACCEPTED -- the INSERT policy is leaking', true);
+  exception
+    when insufficient_privilege then
+      -- Set in the handler, after the failed subtransaction has been rolled
+      -- back, so this survives to be read below.
+      perform set_config('verify.notes_insert',
+                   'refused: ' || sqlstate, true);
+  end
+  $$;
+
+  reset role;
+
+  select 'check 9: player cannot write DM notes' as check,
+         jsonb_build_object(
+           'target_npc',    current_setting('verify.target_npc', true),
+           'attempt',       current_setting('verify.notes_insert', true),
+           'notes_written', (select count(*) from npc_dm_notes
+                             where notes = 'breach -- rolled back')
+         ) as result;
+
+rollback;
+
+
+-- ===========================================================================
+-- BLOCK 9 -- the constraints and policies as the database actually stored them
 -- ===========================================================================
 --
 -- No transaction: nothing here writes.
@@ -421,7 +595,7 @@ rollback;
 select 'constraint: ' || conname as item,
        pg_get_constraintdef(oid) as value
 from pg_constraint
-where conrelid = 'public.npcs'::regclass
+where conrelid in ('public.npcs'::regclass, 'public.npc_dm_notes'::regclass)
 
 union all
 select 'policy: ' || tablename || '.' || policyname || ' [' || cmd || '] USING',

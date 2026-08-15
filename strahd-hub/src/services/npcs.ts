@@ -106,17 +106,33 @@ export type NpcEdit = Pick<
   "name" | "description" | "location_id" | "is_revealed"
 >;
 
+// Trimmed, and a description that is blank or all whitespace stored as null
+// rather than as an empty string -- the page renders null as "No description
+// yet", and "" would render as an empty paragraph with no sign anything was
+// wrong. Same absence in the row, two different things on the page, so the
+// choice is made once here instead of at each call site.
+//
+// Guarded on undefined, not on falsiness: a patch that never mentions the
+// description must not acquire one. toggleVisibility sends is_revealed alone,
+// and blanking the text on every eye click is exactly the bug this would be.
+function blankDescriptionToNull(fields: NpcEdit): NpcEdit {
+  if (fields.description === undefined) return fields;
+  const trimmed = fields.description?.trim();
+  return { ...fields, description: trimmed ? trimmed : null };
+}
+
 /**
  * Save one or more editable fields. The DM-only rule lives in RLS, not in a
  * role check here.
  *
  * Returns what the database stored rather than what was sent: the trigger trims
- * the name on the way in, so those two are not always the same string.
+ * the name on the way in, and a blank description is normalised to null just
+ * above, so those two are not always the same string.
  */
 export async function updateNpc(id: string, fields: NpcEdit): Promise<Npc> {
   const { data, error } = await supabase
     .from("npcs")
-    .update(fields)
+    .update(blankDescriptionToNull(fields))
     .eq("id", id)
     .select(NPC_SELECT)
     .maybeSingle();
@@ -133,17 +149,6 @@ export async function updateNpc(id: string, fields: NpcEdit): Promise<Npc> {
   }
 
   return toNpc(data);
-}
-
-// Trimmed, and an all-whitespace description stored as null rather than as a
-// string of spaces — the page renders null as "No description yet", and a blank
-// string would render as nothing at all with no sign anything was wrong.
-export async function updateNpcDescription(
-  id: string,
-  description: string,
-): Promise<Npc> {
-  const trimmed = description.trim();
-  return updateNpc(id, { description: trimmed === "" ? null : trimmed });
 }
 
 /**
