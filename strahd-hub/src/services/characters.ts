@@ -179,13 +179,29 @@ export async function deleteCharacter(id: string): Promise<void> {
 // The gear travels with the character rather than in a second query per row:
 // 028's SELECT policy on character_inventory is "can you see the character",
 // which every member passes, so one request carries the whole table's worth.
+// 037's SELECT policy on character_spells is the same predicate, so the spells
+// ride along on the same request for free — a third embed, not a third round
+// trip.
+// One literal, not two concatenated: supabase-js parses this string at the type
+// level to work out the row shape, and `"a" + "b"` widens to plain string, which
+// costs the whole query its type.
 const PARTY_SELECT =
-  "*, character_inventory(quantity, items(name), addedBy:added_by(display_name))";
+  "*, character_inventory(quantity, items(name), addedBy:added_by(display_name)), character_spells(spells(name, level))";
 
 export interface PartyCharacterItem {
   name: string;
   quantity: number;
   addedByName: string | null;
+}
+
+// Two columns, where the gear's embed takes one: a spell is read by level
+// everywhere in this app, so the level is not decoration here — it is what the
+// panel groups by. No entryId, deliberately: this page adds spells and never
+// removes them, so nothing here needs the character_spells row id. The sheet is
+// where a spell comes off a character, and it has CharacterSpellEntry for that.
+export interface PartyCharacterSpell {
+  name: string;
+  level: number;
 }
 
 export interface PartyCharacter extends Character {
@@ -196,6 +212,12 @@ export interface PartyCharacter extends Character {
   items: PartyCharacterItem[];
   stacks: number;
   carried: number;
+  // Already sorted by level then name, the order every caller wants — unlike
+  // items, which the page groups no further than the sort below. No `known`
+  // count beside it: stacks and carried exist because they count different
+  // things than items.length does, and a spell total would be exactly
+  // spells.length under another name.
+  spells: PartyCharacterSpell[];
 }
 
 // Typed the way the sibling files do it — a row intersection naming the embeds
@@ -206,6 +228,16 @@ type PartyCharacterRow = Tables<"characters"> & {
     quantity: number;
     items: Pick<Tables<"items">, "name">;
     addedBy: Pick<Tables<"profiles">, "display_name"> | null;
+  }[];
+  // spells is single and non-null for items' reason — a NOT NULL spell_id and
+  // 037's FK. The one way it could read back null is the caveat 037 names: a
+  // homebrew spell belonging to another campaign, filtered out by 022's SELECT
+  // policy on the embed while its character_spells row still resolves. Not
+  // reachable while spells has no INSERT policy, and typed the way
+  // CHARACTER_SPELLS_SELECT types the same embed rather than being the one
+  // place that guards against it.
+  character_spells: {
+    spells: Pick<Tables<"spells">, "name" | "level">;
   }[];
 };
 
@@ -253,10 +285,20 @@ export async function getPartyCharacters(
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    // Level first, then name — the order a spell list is read in, and the one
+    // the panel's group headers depend on being stable.
+    const spells = row.character_spells
+      .map((entry) => ({
+        name: entry.spells.name,
+        level: entry.spells.level,
+      }))
+      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+
     return {
       ...toCharacter(row),
       playerName: names.get(row.user_id) ?? null,
       items,
+      spells,
       stacks: items.length,
       // The count the dashboard band leads with: stacks is how many kinds of
       // thing, this is how many things.

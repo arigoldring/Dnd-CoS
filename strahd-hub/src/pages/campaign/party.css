@@ -159,18 +159,73 @@
   color: var(--sh-dim);
 }
 
-/* --- the DM's Give control ---------------------------------------------- */
+/* --- what they know ----------------------------------------------------- */
 
-/* Rendered only for the DM, and set off by a rule rather than a panel of its
-   own: it belongs to the sheet above it. */
+/* Rendered only when the character has spells — see Party.tsx on why this list
+   has no empty state where the gear above it does. */
+.party-sheet__label {
+  margin: 14px 0 8px;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--sh-gold-deep);
+}
+
+.party-sheet__spells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Label above names rather than beside them: at 330px a side-by-side label
+   would leave the names a column too narrow to wrap in. */
+.party-sheet__spell-group {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--sh-rule-faint);
+}
+
+.party-sheet__spell-group:last-child {
+  border-bottom: 0;
+}
+
+.party-sheet__level {
+  display: block;
+  font: 400 11px/1 var(--sh-mono);
+  color: var(--sh-gold-deep);
+}
+
+/* The names run together as one wrapped line, so a caster with twenty spells
+   costs the panel a few lines instead of twenty rows. */
+.party-sheet__spell-names {
+  display: block;
+  margin-top: 3px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--sh-bone);
+}
+
+/* --- the DM's controls --------------------------------------------------- */
+
+/* Rendered only for the DM, and set off by one rule rather than a panel of its
+   own: these belong to the sheet above them. The rule is on the group, not on
+   each form — Give and Grant are one permission spent on two tables. */
+.party-dm {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(138, 13, 13, 0.35);
+}
+
 .party-give {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(138, 13, 13, 0.35);
+}
+
+/* Closer to the form above it than the two are to the gear list, so the pair
+   reads as one control block. */
+.party-teach {
+  margin-top: 8px;
 }
 
 .party-give select {

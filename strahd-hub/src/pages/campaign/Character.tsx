@@ -9,7 +9,11 @@ import { SpellDetailCard } from "../../components/SpellDetailCard";
 import type { Character as CharacterModel } from "../../services/characters";
 import type { CharacterInventoryEntry } from "../../services/characterInventory";
 import type { CharacterSpellEntry } from "../../services/characterSpells";
-import { spellLevelGroupLabel, spellLevelLine, type Spell } from "../../services/spells";
+import {
+  spellLevelGroupLabel,
+  spellLevelLine,
+  spellsByLevel,
+} from "../../services/spells";
 import { errorMessage } from "../../lib/errors";
 import "./character.css";
 
@@ -301,38 +305,6 @@ function GearRow({
       </td>
     </tr>
   );
-}
-
-// One group per level, levels ascending and names alphabetical inside each.
-// Two callers: the picker's <optgroup>s, where a flat select over the whole
-// grimoire is a couple hundred options with nothing to navigate by, and the
-// known list below it, which is read by level at the table ("what have I got
-// at 2nd?").
-//
-// Generic rather than a second grouper for the entries: CharacterSpellEntry is
-// Spell plus an entryId, so the constraint is all this function needs, and the
-// parameter keeps that entryId on the way out — narrowing to Spell[] would
-// strand the rows without the id their key and remove call are made of.
-//
-// Builds its own arrays rather than sorting in place — both lists belong to a
-// query cache, and sorting one would mutate what every other consumer is
-// holding.
-function spellsByLevel<T extends Spell>(
-  spells: T[],
-): { level: number; spells: T[] }[] {
-  const levels = new Map<number, T[]>();
-  for (const spell of spells) {
-    const group = levels.get(spell.level);
-    if (group) group.push(spell);
-    else levels.set(spell.level, [spell]);
-  }
-
-  return [...levels.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([level, group]) => ({
-      level,
-      spells: group.sort((a, b) => a.name.localeCompare(b.name)),
-    }));
 }
 
 // The character's spell list. Writable by the owner OR the campaign's DM,

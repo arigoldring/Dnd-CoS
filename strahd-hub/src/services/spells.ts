@@ -92,6 +92,39 @@ export function spellLevelGroupLabel(level: number): string {
   return level === 0 ? "Cantrips" : `${ordinal(level)} level`;
 }
 
+// One group per level, levels ascending and names alphabetical inside each —
+// how every list of spells in this app is read, at the table and on screen.
+// Three callers now: the character sheet's picker, where a flat select over the
+// whole grimoire is a couple hundred options with nothing to navigate by; the
+// known list below it; and the Party page's per-character panels.
+//
+// Generic rather than one grouper per shape: CharacterSpellEntry is Spell plus
+// an entryId and PartyCharacterSpell is narrower still, so the constraint is all
+// this function needs, and the type parameter carries the extra fields through —
+// narrowing to Spell[] would strand the sheet's rows without the entryId their
+// key and remove call are made of.
+//
+// Builds its own arrays rather than sorting in place — these lists belong to a
+// query cache, and sorting one would mutate what every other consumer is
+// holding.
+export function spellsByLevel<T extends { name: string; level: number }>(
+  spells: T[],
+): { level: number; spells: T[] }[] {
+  const levels = new Map<number, T[]>();
+  for (const spell of spells) {
+    const group = levels.get(spell.level);
+    if (group) group.push(spell);
+    else levels.set(spell.level, [spell]);
+  }
+
+  return [...levels.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([level, group]) => ({
+      level,
+      spells: group.sort((a, b) => a.name.localeCompare(b.name)),
+    }));
+}
+
 // Same shape and reasoning as getItems (items.ts): 022 gave spells the same
 // nullable campaign_id design, so a member of two campaigns would see both
 // campaigns' homebrew spells if this stayed unfiltered. Nothing can insert a
