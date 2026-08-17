@@ -5,49 +5,35 @@ size, and written down so they stay decisions rather than becoming discoveries.
 Each entry says what it takes to trigger, what it costs, and what the fix would
 be if the answer ever changes.
 
+**Current through migration 037. Last updated 2026-08-17.**
+
+This is the single source of truth for open work. `CONTEXT.md` holds decisions
+and invariants and deliberately does not duplicate anything below.
+
 ---
 
 ## Open
 
-### Nothing records which migrations have been applied (noted 2026-08-14)
+### `locations` has no `campaign_id`-pinning trigger (noted 2026-08-12)
 
-`db/` is declared ground truth, but the database holds no record of which files
-in it have actually run. The two are compared only by accident — by someone
-regenerating `database.types.ts` and noticing the diff, or by a feature failing
-in front of a player.
+`session_recaps`, `characters` and `npcs` all carry a BEFORE-UPDATE trigger that
+pins `campaign_id` to its old value. `locations` does not. Both clauses of "dms
+update locations" pass for a DM who runs two campaigns, so that DM can move a
+location from one campaign into the other with an ordinary update.
 
-**Trigger:** any migration that is written, committed, and not run. On the
-Supabase SQL editor there is no `\i`, no transcript and nothing that fails on a
-half-pasted file, so a migration can be believed applied on no evidence at all.
+**Trigger:** being the DM of two campaigns and sending an update that names
+`campaign_id`. Nothing in the UI does this — `updateLocationDescription` and
+`updateLocationVisibility` send one column each — so it needs a hand-written
+request or a client bug.
 
-**Cost:** silent divergence between the repo and the schema, discovered late and
-by the worst available route. The 2026-08-13 episode is the illustration: three
-inventory RPCs came back `PGRST202` and were read as "030 and 032 never ran".
-Re-running them fixed it — which is also what a stale PostgREST schema cache
-would have looked like, since `create or replace function` emits a DDL event and
-forces a reload. **Which of the two it actually was is still unconfirmed**; the
-check is `select proname from pg_proc where proname like '%inventory_item'`,
-against the catalog, which does not care what PostgREST believes. The point is
-not which diagnosis was right. It is that the question could not be answered
-from anything the database stores.
+**Cost:** low, and this is not a privilege hole. Only a DM of _both_ campaigns
+can do it, and reassigning a location is a DM action either way; a
+single-campaign DM still cannot move a location out. What it costs is
+consistency — this is the one content table where the "pin the immutable facts"
+rule isn't enforced, and the exception is invisible until someone goes looking.
 
-**Fix if the answer changes:** a ledger, and it is small.
-
-```sql
-create table if not exists schema_migrations (
-  version    text primary key,
-  applied_at timestamptz not null default now()
-);
-```
-
-Every migration ends with `insert into schema_migrations values ('033');`
-inside its own transaction, so a half-run leaves no entry and a re-run fails on
-the primary key instead of quietly re-applying. Backfill 001–034 by hand once.
-After that, "did 032 land" is a select rather than an inference.
-
-Worth knowing regardless: `PGRST202` means _not found in the schema cache_, not
-_does not exist_. `notify pgrst, 'reload schema';` is the cheap first thing to
-try, and `pg_proc` is the thing to check before touching a migration file.
+**Fix if the answer changes:** the same trigger shape recaps uses. Four lines,
+plus a `create trigger`.
 
 ### The pin triggers are blocklists, so new columns are writable by default (noted 2026-08-14)
 
@@ -83,7 +69,7 @@ end;
 Identical behaviour today. This is a convention change rather than one table's
 fix — do all three together or none, so the pattern stays legible.
 
-### `npcs.description` is normalised in the client only (noted 2026-08-14)
+### `npcs.description` is normalised in the client only (noted 2026-08-14, partly addressed by 035)
 
 `name` is trimmed by `pin_npc_row` and backstopped by `npcs_name_check`, so the
 database is where that rule lives. `description` is normalised by
@@ -99,8 +85,25 @@ treats `''` as present.
 **Cost:** cosmetic. One card with a blank space where its blurb should be, and no
 sign anything went wrong.
 
+**What 035 did and did not do.** `035_npc_desc_fix.sql` is the one-time cleanup
+of existing rows and nothing else — no trigger change, no constraint. The rule
+still lives only in the client.
+
+```sql
+-- the whole of 035
+update npcs set description = null
+where description is not null and trim(description) = '';
+```
+
+⚠ **Whether 035 actually ran is unconfirmed.** 036's ledger records it, but data-
+only migrations are backfilled on the word of whoever ran the ledger file, and
+the after-the-fact check (`select count(*) ... where trim(description) = ''`)
+returns 0 both if it ran and if there was never anything to clean. The statement
+is idempotent, so the cheap resolution is to run it once more and stop wondering.
+
 **Fix if the answer changes:** mirror what `name` already does — normalise in the
-trigger, backstop with a constraint.
+trigger, backstop with a constraint. Clean first, then constrain, or the
+constraint will not validate.
 
 ```sql
 -- in pin_npc_row, beside the name trim
@@ -110,25 +113,14 @@ alter table npcs add constraint npcs_description_check
   check (description is null or (description = trim(description) and description <> ''));
 ```
 
-Block 9 of the verification confirms this constraint is **not** currently
-present. Order matters if it is ever added: clean existing rows first, or the
-constraint will not validate.
-
-```sql
-update npcs set description = null
-where description is not null and trim(description) = '';
-```
-
-**That cleanup has not been run.** Whether any stale `''` rows exist is unknown —
-no app path has ever written one (`NpcEditor` converted blank to `null` from its
-first commit, and `updateNpcDescription` was born unused), so any that exist came
-in through the console.
+Block 9 of `033_npcs_verification.sql` confirms this constraint is **not**
+currently present.
 
 ### NPCs cannot be created or deleted from the app (noted 2026-08-14)
 
 `npcs` has SELECT and UPDATE policies and deliberately no INSERT and no DELETE.
 The roster arrives through the SQL editor, which is also where portraits and
-seeded notes are prepared.
+seeded notes are prepared. `034_npc_seed.sql` is written to be copied for this.
 
 **Trigger:** wanting a new NPC mid-session. There is no button, and adding one is
 a migration.
@@ -149,13 +141,25 @@ symmetry.**
 `src/assets/portraits/` is not in the repo, so `PORTRAITS` resolves to an empty
 object and every card renders without an image. Vite handles the empty glob
 without complaint; the build confirms it. Git cannot track an empty directory, so
-the folder appears with the first file.
+the folder appears with the first file. Both seeded NPCs land with a null
+`portrait_key` for the same reason (034 says so explicitly).
 
-**Fix:** two steps in this order — drop `<uuid>.webp` into
-`src/assets/portraits/`, then a one-line migration setting that NPC's
-`portrait_key` to the same uuid. Doing it the other way round produces a key
-naming no file, which is exactly the silent failure the pinning exists to
-prevent.
+**Fix:** two steps in this order — drop `<key>.webp` into
+`src/assets/portraits/`, then a migration setting that NPC's `portrait_key` to
+the same key. Doing it the other way round produces a key naming no file, which
+is exactly the silent failure the pinning exists to prevent.
+
+Two things that will bite during that work:
+
+- `pin_npc_row` silently no-ops a direct `UPDATE` to `portrait_key`, including
+  for the table owner in the SQL editor. Scope an
+  `alter table npcs disable trigger pin_npc_row` inside the migration's
+  transaction, or the update appears to succeed and changes nothing.
+- `import.meta.glob` is eager and resolves at transform time. Restart Vite after
+  adding files or the new portrait won't appear.
+
+Prep: 256×256 WebP at ~80 quality; ImageMagick `-gravity north` for the crop.
+Human-readable slugs beat uuids as keys — the folder stays browsable.
 
 Related: `public/portraits/strahd.png` is the old hardcoded path and nothing
 references it. Delete it — an unreferenced file at a path that used to be
@@ -168,7 +172,7 @@ every foreign key pointing at a table regardless of what that key's `ON DELETE`
 action says. The FK's `on delete set null (location_id)` protects a single-row
 delete and does nothing here.
 
-**Trigger:** reseeding the map. This project has done it before.
+**Trigger:** reseeding the map. This project has done it before (015, 026).
 
 **Cost:** the entire NPC roster, silently, as a side effect of a statement about
 locations.
@@ -176,13 +180,14 @@ locations.
 **Fix:** `delete from locations where ...` instead of `truncate`, or reseed the
 roster after. Flagged at the bottom of `033_npcs.sql` as well as here.
 
-### Removing a player from a campaign destroys their character and all its gear (noted 2026-08-12)
+### Removing a player from a campaign destroys their character, gear and spells (noted 2026-08-12, widened by 037)
 
 `characters` carries a composite FK to `campaign_members (campaign_id, user_id)`
-with `on delete cascade`, and `character_inventory.character_id` cascades from
-`characters` in turn. So deleting one `campaign_members` row silently deletes
-that player's PC and every item on it, in the same statement, with no
-intermediate state and nothing to restore from.
+with `on delete cascade`, and both `character_inventory.character_id` and — since
+037 — `character_spells.character_id` cascade from `characters` in turn. So
+deleting one `campaign_members` row silently deletes that player's PC, every item
+on it and every spell on it, in the same statement, with no intermediate state
+and nothing to restore from.
 
 **Trigger:** any delete against `campaign_members`. There is no kick UI today —
 the only paths are leaving a campaign yourself and a manual delete in the
@@ -192,20 +197,19 @@ and does not appear anywhere near the button that fires it. A DM demoting a
 player who missed a session would not expect to be deleting their character
 sheet, and the UI would give no sign that they had.
 
-**Cost:** unrecoverable loss of one PC and its inventory. Cheap at this size
-(a character is a name plus a gear list, and reset already exists as a
-deliberate version of the same destruction), expensive in surprise, because
+**Cost:** unrecoverable loss of one PC and everything on it. Cheap at this size
+(a character is a name, a gear list and a spell list, and reset already exists as
+a deliberate version of the same destruction), expensive in surprise, because
 nothing in the action's wording implies it.
 
-**Fix if the answer changes:** the cascade itself is right — 028 chose it so
-that leaving a campaign takes your character with you rather than stranding a
-row that fails its own FK. What is missing is at the call site, not in the
-schema: any kick UI needs to name the consequence in its confirm, the way the
-reset form already does ("Resetting deletes {name} and everything they carry"),
-and should read the character first so it can name it. If characters ever need
-to outlive membership, that is a different change — `on delete cascade` becomes
-a nullable `campaign_members` link plus a retirement flag, which 028 explicitly
-declined ("there is no retired_at, by decision").
+**Fix if the answer changes:** the cascade itself is right — 028 chose it so that
+leaving a campaign takes your character with you rather than stranding a row that
+fails its own FK. What is missing is at the call site, not in the schema: any
+kick UI needs to name the consequence in its confirm, the way the reset form
+already does, and should read the character first so it can name it. If
+characters ever need to outlive membership, that is a different change —
+`on delete cascade` becomes a nullable `campaign_members` link plus a retirement
+flag, which 028 explicitly declined ("there is no retired_at, by decision").
 
 ### `removeFromPartyInventory` assumes party gear is common property
 
@@ -218,34 +222,219 @@ if `added_by` is ever meant to confer ownership, the DELETE policy is where that
 split goes, not the service. `added_by` is already stamped server-side from
 `auth.uid()` in a trigger, so the column is trustworthy enough to gate on.
 
+### `ignoreDuplicates: true` is load-bearing on `character_spells` (noted 2026-08-17)
+
+037 deliberately gives `character_spells` no UPDATE policy — every column is a
+key or a defaulted timestamp, so there is nothing an update could change. That
+decision is documented in the migration. What is documented nowhere is the client
+contract it creates.
+
+supabase-js renders `{ ignoreDuplicates: true }` as
+`Prefer: resolution=ignore-duplicates` → `ON CONFLICT DO NOTHING`, which needs
+only INSERT privilege. Set it to `false` and PostgREST emits
+`ON CONFLICT DO UPDATE` instead; the table-level UPDATE grant still exists, so
+the _first_ add succeeds and only the conflicting one fails with 42501.
+
+**Trigger:** anyone editing `addSpellToCharacter` who reads `ignoreDuplicates` as
+a preference rather than a requirement.
+
+**Cost:** the worst failure shape this project has — "works once per spell, then
+starts refusing mid-session." It is exactly the bug 033 wrote a whole
+verification block to catch on `npc_dm_notes`, arriving from the opposite
+direction. It will not show up in a first-run smoke test.
+
+**Fix:** one comment in `services/characterSpells.ts` naming the dependency. The
+same note belongs on `getOrCreateProfile`, where the argument is different (the
+losing insert is expected) but the mechanism is the same.
+
+### The party cache is correct only because `staleTime` is 0 (noted 2026-08-17)
+
+`useCharacterSpells` and `useCharacterInventory` invalidate only their own key.
+The Party page reads the same rows through a _second_ cache entry,
+`["party", campaignId]`, built from `getPartyCharacters`' embeds. `TeachForm` and
+`GiveForm` hand-invalidate the party key because they know this; nothing on the
+character's own sheet does.
+
+So a spell or item added from your own sheet leaves the party cache stale, and
+the Party page is right only because the default `staleTime: 0` refetches it on
+mount.
+
+**Trigger:** setting a `staleTime`. This has been on the list since NPCs
+(`useNpcs` refetches on every mount and every window focus and does not need to),
+and it looks like a pure tidiness change. It isn't — the moment a staleTime is
+set broadly, this becomes visible wrong data on a page two people are reading at
+the table.
+
+**Cost:** none today. A stale spell list in front of the party the day the
+tidiness change lands.
+
+**Fix:** decide it once, everywhere, in one sitting. Either invalidate
+`["party", campaignId]` inside both character hooks — which means those hooks
+need the campaign id they currently and deliberately do without — or leave
+staleTime at 0 and write down that mount-freshness is doing real work. Do not set
+a staleTime on one hook in isolation.
+
+### The Party page mounts two background queries per character, for the DM (noted 2026-08-17)
+
+`GiveForm` and `TeachForm` write through `useCharacterInventory` and
+`useCharacterSpells`, which are queries as well as mutations. A DM viewing a
+party of six mounts six gear fetches and six spell fetches that the page never
+renders — `useParty` already carried both, in one request.
+
+**Trigger:** the DM opening the Party page. Players don't see the forms and don't
+pay the cost.
+
+**Cost:** eleven redundant requests at a party of six, all small and all cached.
+Real but negligible at this size.
+
+**Why it's like this:** it buys the repo's rule that a mutation lives in a hook
+rather than being wired up ad hoc in a page. That is worth eleven cheap requests.
+
+**Fix if the party grows enough to matter:** `giveItem` and `teachSpell`
+mutations on `useParty` — not bare service calls from the page.
+
+### `CharacterSpellRow` asserts the embedded spell is non-null (noted 2026-08-17)
+
+`CHARACTER_SPELLS_SELECT` is `"*, spells(*)"` and the row type declares
+`spells: Tables<"spells">`. 037 names the one path that could falsify it: a spell
+belonging to another campaign's homebrew, whose `character_spells` row resolves
+while 022's SELECT policy filters the embed to null. `toCharacterSpellEntry`
+would then call `toSpell(null)` and throw a TypeError rather than a handled
+error.
+
+**Trigger:** homebrew spells existing. `spells` has no INSERT policy, so nothing
+can create one today.
+
+**Cost:** currently zero. Note that "unreachable because there's no INSERT
+policy" is exactly the shape that protected `items` until 025 shipped and made it
+reachable — see the Resolved entry below. This is the same bet, one table over.
+
+**Fix when spell homebrew lands:** either scope `character_spells`' FK the way
+`npcs` scopes its location FK (a composite key that makes the cross-campaign row
+unrepresentable), or make the embed nullable in the type and handle it. The FK is
+the better answer; the type change is the cheap one.
+
+### `getCharacterSpells` returns rows in no particular order (noted 2026-08-17)
+
+Every sibling service owns its ordering — `getNpcs` orders by name,
+`getPartyCharacters` sorts both embeds after mapping. This one has no `.order()`
+and no post-sort, and is correct only because every consumer pipes it through
+`spellsByLevel`, which sorts.
+
+**Cost:** none today; a surprise for the first consumer that renders the list
+raw.
+
+**Fix:** sort in the service after mapping (the DB can't order by the embedded
+name usefully), or state in the file that ordering is the caller's job here and
+why. Either is fine — the current silence is the problem.
+
+Related and smaller: `getPartyCharacters` sorts `spells` by level-then-name, and
+`PartyCharacter.spells` is commented as "already sorted… the order every caller
+wants" — but its only consumer immediately re-groups with `spellsByLevel`, which
+sorts again. Drop the sort or drop the claim.
+
+### `removeSpellFromCharacter` treats a refused delete as success (noted 2026-08-17)
+
+No zero-row check, matching `removeFromCharacterInventory`. The justification in
+the comment — everyone who reaches it already passed `can_edit_character` — is
+true only because the remove control renders on your own sheet and nowhere else.
+
+**Trigger:** putting a remove control anywhere a non-owner non-DM can reach it.
+The Party panel is the obvious candidate, since Give and Grant already live
+there.
+
+**Cost:** a silent success followed by the row reappearing on the next refetch.
+Compare `deleteCharacter` and `deleteRecap`, which both use
+`.select().maybeSingle()` precisely so a refused delete surfaces.
+
+**Fix:** name the condition in the comment now (one sentence), and add the check
+if the control ever moves.
+
+### `035_npc_desc_fix.sql` has no header comment (noted 2026-08-17)
+
+Two bare lines of SQL. Every other file in `db/` opens with a paragraph
+explaining what it does and why, and that convention is load-bearing for more
+than readability: a file with no prose is effectively unsearchable, which is how
+a review of migrations 034–037 managed to conclude the file wasn't committed at
+all.
+
+**Fix:** three lines at the top saying what it cleans and that it is idempotent.
+
 ---
 
 ## Minor
 
 Small, understood, not worth an entry of their own.
 
-- **`useNpcs` has no `staleTime`.** Defaults to 0, so every mount and every
-  window focus refetches. The three mutations invalidate explicitly, so
-  freshness does not depend on it. Pick a number (30s–5min) and comment why.
 - **`formatPrice` deferred.** Prices are integer copper and display as
   `price_cp / 100`, so sub-gold items render as "0.01 gold". More visible since
   the general-item seed added many sub-gold entries.
-- **Dead campaign uuid in old migrations.** `00000000-…-0001` references a
-  campaign that does not exist in this database. It misled the NPC seed work
-  once already.
+- **Dead campaign uuid in old migrations.** `00000000-…-0001` (015, 005)
+  references a campaign that does not exist in this database. It misled the NPC
+  seed work once already. 026 reseeded locations campaign-scoped; the literal
+  survives in the older files.
 - **Double `console.error` on a failed NPC save.** `updateNpc` logs the Supabase
-  error and `NpcEditor`'s catch logs again. One failure, two entries.
+  error and `NpcEditor`'s catch logs again. One failure, two entries. The same
+  pattern is now in `characterSpells.ts` and its callers.
 - **A player attempting `update npc_dm_notes` is untested.** Covered by
   inspection rather than execution: block 9 of the verification shows its USING
   and WITH CHECK are the same `is_campaign_dm` expression that block 8 proves
   refuses a player on INSERT.
 - **Comment cleanup backlog.** AI-assisted sessions left comments that narrate
-  edit history rather than explaining current code. A read-only automated pass
-  with manual review before commit is the plan.
+  edit history and cite migration numbers ("013 changed…", "007's trigger…")
+  rather than explaining the code in front of the reader. Per-file with review,
+  not one agentic sweep.
+- **`characters.ts` casts `data as PartyCharacterRow[]`.** The only hand-written
+  row shape left; `PARTY_SELECT`'s three embeds defeat inference. Contained to
+  one line, and the type next to it is honest about what it's asserting.
 
 ---
 
 ## Resolved
+
+### Nothing recorded which migrations had been applied (noted 2026-08-14, resolved by 036)
+
+`db/` was declared ground truth while the database held no record of which files
+in it had run. The two were compared only by accident — by someone regenerating
+`database.types.ts` and noticing the diff, or by a feature failing in front of a
+player. The 2026-08-13 episode was the illustration: three inventory RPCs came
+back `PGRST202`, were read as "030 and 032 never ran", and re-running them fixed
+it — which is also exactly what a stale PostgREST schema cache would have looked
+like, since `create or replace function` emits a DDL event and forces a reload.
+
+`036_schema_migrations.sql` creates the ledger and backfills 000–036 behind a
+guard that raises if any migration's durable objects are missing, so the backfill
+cannot record a claim the catalog contradicts. From 037 on, every migration ends
+with a bare `insert into schema_migrations (version) values ('0NN');` inside its
+own transaction — no `on conflict`, so a re-run fails on the primary key and a
+half-run leaves no entry.
+
+**What is still assumed rather than proven:** data-only migrations (002 003 005
+017 023 024 026 034 035) have no object to check for and were recorded on the
+word of whoever ran the file. And the original 030/032 question — stale cache or
+never ran — was never settled; it is now simply answerable, which was the point.
+
+Worth keeping: `PGRST202` means _not found in the schema cache_, not _does not
+exist_. `notify pgrst, 'reload schema';` first, `pg_proc` before touching a
+migration file.
+
+### The decrement path was the last read-modify-write in the app (resolved by 032)
+
+030 and 031 made adds insert-or-increment through an RPC, and left decrement
+reading `currentQuantity` in the client and shipping back `quantity - 1` — so two
+concurrent decrements lost one. 030 also made it _more_ reachable: stacks used to
+fragment across rows, so two people spending arrows were often editing different
+rows; afterwards every copy funnels into one row that both the owner and the DM
+can decrement mid-session.
+
+032 moved the branch into plpgsql behind a `select ... for update`. The lock is
+the part that matters — the lock-free `update ... where quantity > 1` then
+delete-if-no-rows is correct against a concurrent decrement but loses both copies
+against a concurrent _add_ that bumps a stack of 1 to 2 in the window. Both
+functions are `security invoker`, so RLS remains the boundary.
+
+032 also dropped `character_inventory_character_id_idx`, which 030's unique
+constraint had made redundant and which 030 deliberately deferred.
 
 ### A blank NPC description could reach the database from a second caller (resolved 2026-08-14)
 
@@ -281,6 +470,23 @@ before the attempt and travels in by uuid — a null `npc_id` fails the same EXI
 with the same 42501, so without that the block would pass identically whether or
 not the interesting gate was ever reached.
 
+The same shape was carried into `037_character_spells.sql`: block 2 proves the
+campaign DM may write to a player's sheet, block 3 proves another _member_ may
+not, and block 3's subject is deliberately made a plain member first — as a
+non-member they'd be stopped by the outer half of the check and the block would
+prove the weaker thing.
+
+### NPCs were filtered client-side (resolved by 033/034)
+
+`NPC.tsx` held a hardcoded `NPCS` array and rendered `NPCS.filter(n =>
+n.is_revealed)` — the exact anti-pattern the reveal-gating principle bans, not
+leaking only because the data was static and identical for everyone. 033 gave
+NPCs the locations treatment: `campaign_id` NOT NULL, an `npc_dm_notes` sibling
+reached by a fail-closed join, and a SELECT policy of
+`is_campaign_dm(campaign_id) or (is_revealed and is_campaign_member(campaign_id))`.
+034 moved the roster into it. The page has no reveal filter now; `isDm` survives
+only to render the editors and style the hidden rows a DM still receives.
+
 ### Cross-campaign homebrew visible in every campaign's catalogue (resolved 2026-08-12)
 
 `getItems`/`getSpells` selected with no campaign filter and cached under bare
@@ -300,7 +506,5 @@ RLS remains the boundary.
 `addInvite` in `useInvites` used to prepend the minted row into local state,
 guarded by a `shownCampaignId` ref against cross-campaign paints; a
 same-campaign reload landing between the mint's two round trips could briefly
-duplicate the row. The react-query conversion removed the local prepend
-entirely — a mint now invalidates the `["invites", campaignId]` cache entry and
-the list is always exactly what the server returned, so neither the duplicate
-nor the cross-campaign paint can occur.
+duplicate the row. Resolved by the move to TanStack Query: the mint invalidates
+and the list comes back from the server, so there is no local prepend to race.
