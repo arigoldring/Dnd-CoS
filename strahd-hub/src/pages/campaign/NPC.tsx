@@ -51,6 +51,10 @@ export function Npcs() {
   if (authLoading || npcsLoading) return <p>Loading...</p>;
   if (error) return <p>{error.message}</p>;
 
+  // Only ever non-zero for the DM: RLS drops unrevealed rows from a player's
+  // response entirely, so a player's list has nothing to count.
+  const hidden = npcs.filter((n) => !n.isRevealed).length;
+
   // No reveal filter. RLS already dropped hidden rows from a player's response,
   // so this list is exactly what this user may see. isDm survives to show the
   // DM's controls and to mark rows the party cannot see yet; dmNotes needs no
@@ -59,6 +63,15 @@ export function Npcs() {
     <div className="npcs">
       <div className="npcs-header">
         <h2 className="npcs-title">Characters of Barovia</h2>
+        <p className="npcs-count">
+          {npcs.length} in the roster
+          {isDm && hidden > 0 && (
+            <>
+              {" · "}
+              <b>{hidden} not yet revealed</b>
+            </>
+          )}
+        </p>
         {isDm && (
           <button
             className="npcs-visibility-toggle"
@@ -69,7 +82,7 @@ export function Npcs() {
                 : "Show visibility panel"
             }
           >
-            👁️ Visibility
+            Reveals
           </button>
         )}
       </div>
@@ -154,7 +167,10 @@ export function Npcs() {
                   />
                 ) : (
                   npc.dmNotes && (
-                    <p className="npc-card__dm">DM notes: {npc.dmNotes}</p>
+                    <p className="npc-card__dm">
+                      <span className="npc-card__dm-label">DM notes</span>
+                      {npc.dmNotes}
+                    </p>
                   )
                 )}
               </div>
@@ -176,8 +192,18 @@ export function Npcs() {
             </button>
           </div>
           <div className="visibility-panel__list">
+            {/* Words rather than the two states of one glyph, which is a
+                coin-flip to read — and the hidden one was an emoji ZWJ sequence
+                that renders as two characters on Windows. The name leads, so
+                the list reads as names with a state beside each and the buttons
+                line up on one edge; the row carries the state as well, for a
+                scan that doesn't stop to read every button. */}
             {npcs.map((npc) => (
-              <div key={npc.id} className="visibility-panel__item">
+              <div
+                key={npc.id}
+                className={`visibility-panel__item${npc.isRevealed ? "" : " is-hidden"}`}
+              >
+                <span className="visibility-panel__name">{npc.name}</span>
                 <button
                   className="visibility-panel__toggle"
                   onClick={() =>
@@ -187,9 +213,8 @@ export function Npcs() {
                     npc.isRevealed ? "Hide from players" : "Show to players"
                   }
                 >
-                  {npc.isRevealed ? "👁️" : "👁️‍🗨️"}
+                  {npc.isRevealed ? "Shown" : "Hidden"}
                 </button>
-                <span className="visibility-panel__name">{npc.name}</span>
               </div>
             ))}
           </div>

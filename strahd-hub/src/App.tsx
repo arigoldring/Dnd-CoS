@@ -8,6 +8,7 @@ import { Npcs } from "./pages/campaign/NPC";
 import { Recaps } from "./pages/campaign/Recaps";
 import { PartyInventory } from "./pages/campaign/PartyInventory";
 import { Character } from "./pages/campaign/Character";
+import { Party } from "./pages/campaign/Party";
 import { CreateItem } from "./pages/campaign/CreateItem";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
@@ -52,6 +53,10 @@ function App() {
                     page is always "mine", and 028's policies make the owner the
                     only one who can rename or delete it regardless. */}
                   <Route path="Character" element={<Character />} />
+                  {/* The same read one level up: every character in the
+                    campaign rather than only yours. Not DM-gated — 028 lets any
+                    member read the whole table, and the page's one write is. */}
+                  <Route path="Party" element={<Party />} />
                   <Route path="CreateItem" element={<CreateItem />} />
                   <Route path="Maps" element={<Maps />} />
                   <Route path="Spells" element={<Spells />} />

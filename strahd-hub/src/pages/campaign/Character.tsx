@@ -1,4 +1,4 @@
-import { SubmitEvent, useState } from "react";
+import { Fragment, SubmitEvent, useState } from "react";
 import { useCampaign } from "../../components/CampaignLayout";
 import { useCharacter } from "../../hooks/useCharacter";
 import { useCharacterInventory } from "../../hooks/useCharacterInventory";
@@ -173,7 +173,10 @@ function CharacterGear({ characterId }: { characterId: string }) {
 
   return (
     <div className="ch-panel">
-      <h3 className="ch-section">Carried</h3>
+      <h3 className="ch-section">
+        Carried
+        <span className="ch-section__count">{entries.length} stacks</span>
+      </h3>
 
       <form className="ch-add" onSubmit={handleAdd}>
         <select
@@ -300,15 +303,24 @@ function GearRow({
   );
 }
 
-// One <optgroup> per level, levels ascending and names alphabetical inside
-// each. A flat select over the whole grimoire is a couple hundred options with
-// nothing to navigate by.
+// One group per level, levels ascending and names alphabetical inside each.
+// Two callers: the picker's <optgroup>s, where a flat select over the whole
+// grimoire is a couple hundred options with nothing to navigate by, and the
+// known list below it, which is read by level at the table ("what have I got
+// at 2nd?").
 //
-// Builds its own arrays rather than sorting in place — `spells` belongs to the
-// query cache, and sorting it would mutate what every other consumer of
-// useSpells is holding.
-function spellsByLevel(spells: Spell[]): { level: number; spells: Spell[] }[] {
-  const levels = new Map<number, Spell[]>();
+// Generic rather than a second grouper for the entries: CharacterSpellEntry is
+// Spell plus an entryId, so the constraint is all this function needs, and the
+// parameter keeps that entryId on the way out — narrowing to Spell[] would
+// strand the rows without the id their key and remove call are made of.
+//
+// Builds its own arrays rather than sorting in place — both lists belong to a
+// query cache, and sorting one would mutate what every other consumer is
+// holding.
+function spellsByLevel<T extends Spell>(
+  spells: T[],
+): { level: number; spells: T[] }[] {
+  const levels = new Map<number, T[]>();
   for (const spell of spells) {
     const group = levels.get(spell.level);
     if (group) group.push(spell);
@@ -376,7 +388,10 @@ function CharacterSpells({ characterId }: { characterId: string }) {
 
   return (
     <div className="ch-panel">
-      <h3 className="ch-section">Known Magic</h3>
+      <h3 className="ch-section">
+        Known Magic
+        <span className="ch-section__count">{entries.length} known</span>
+      </h3>
 
       <form className="ch-add" onSubmit={handleAdd}>
         <select
@@ -425,18 +440,33 @@ function CharacterSpells({ characterId }: { characterId: string }) {
         )}
       </div>
 
+      {/* Group headers are rows inside the same table as the spells, not a
+          table per level: that is what keeps a heading and the rows under it
+          sharing one column structure, so the Remove buttons stay on a single
+          right edge down the whole panel. colSpan matches SpellRow's two cells. */}
       {entries.length === 0 ? (
         <p className="ch-empty">They know no magic yet.</p>
       ) : (
         <table className="ch-table">
           <tbody>
-            {entries.map((entry) => (
-              <SpellRow
-                key={entry.entryId}
-                entry={entry}
-                onInspect={() => setPanelId(entry.entryId)}
-                onRemove={removeSpell}
-              />
+            {spellsByLevel(entries).map((group) => (
+              <Fragment key={group.level}>
+                <tr className="ch-spell-group">
+                  <td colSpan={2}>
+                    <span className="ch-spell-group__label">
+                      {spellLevelGroupLabel(group.level)}
+                    </span>
+                  </td>
+                </tr>
+                {group.spells.map((entry) => (
+                  <SpellRow
+                    key={entry.entryId}
+                    entry={entry}
+                    onInspect={() => setPanelId(entry.entryId)}
+                    onRemove={removeSpell}
+                  />
+                ))}
+              </Fragment>
             ))}
           </tbody>
         </table>

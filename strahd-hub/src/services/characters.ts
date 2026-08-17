@@ -171,3 +171,118 @@ export async function deleteCharacter(id: string): Promise<void> {
     throw new Error("That character is not yours to delete");
   }
 }
+
+// ---------------------------------------------------------------------------
+// the party
+// ---------------------------------------------------------------------------
+
+// The gear travels with the character rather than in a second query per row:
+// 028's SELECT policy on character_inventory is "can you see the character",
+// which every member passes, so one request carries the whole table's worth.
+const PARTY_SELECT =
+  "*, character_inventory(quantity, items(name), addedBy:added_by(display_name))";
+
+export interface PartyCharacterItem {
+  name: string;
+  quantity: number;
+  addedByName: string | null;
+}
+
+export interface PartyCharacter extends Character {
+  // Null for addedByName's reason, plus one this type has of its own: a deleted
+  // profile leaves the character behind, and (see getPartyCharacters) the names
+  // arrive from a separate read that a stale row can simply be missing from.
+  playerName: string | null;
+  items: PartyCharacterItem[];
+  stacks: number;
+  carried: number;
+}
+
+// Typed the way the sibling files do it — a row intersection naming the embeds
+// — rather than reaching for `any`. items is single and non-null (a NOT NULL
+// item_id); addedBy is single but nullable, `on delete set null` again.
+type PartyCharacterRow = Tables<"characters"> & {
+  character_inventory: {
+    quantity: number;
+    items: Pick<Tables<"items">, "name">;
+    addedBy: Pick<Tables<"profiles">, "display_name"> | null;
+  }[];
+};
+
+// The whole table's worth of one campaign, which getCharacter deliberately
+// refuses to be: that one is "mine" and uses maybeSingle. Here the list IS the
+// answer.
+//
+// Two round trips, not one, and the reason is a foreign key that doesn't exist.
+// The obvious embed — `player:user_id(display_name)` — needs a FK from
+// characters.user_id to profiles.id to resolve, and 028 gave the table a
+// COMPOSITE FK to campaign_members (campaign_id, user_id) instead, so PostgREST
+// has no single-column relationship to follow. The path that does exist,
+// characters -> campaign_members -> profiles, is worse than useless here: 013's
+// SELECT policy on campaign_members is `user_id = auth.uid()`, and RLS applies
+// to embedded joins, so it would return a name for exactly one character —
+// yours — and null for everyone else's.
+//
+// So the names come from profiles directly, which the "authenticated read
+// profiles" policy in 007 opens to any signed-in reader — the same policy
+// CHARACTER_INVENTORY_SELECT leans on to flatten added_by. Still two requests
+// for any size of party rather than the N+1 an embed was avoiding.
+export async function getPartyCharacters(
+  campaignId: string,
+): Promise<PartyCharacter[]> {
+  const { data, error } = await supabase
+    .from("characters")
+    .select(PARTY_SELECT)
+    .eq("campaign_id", campaignId)
+    .order("name");
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  const rows = data as PartyCharacterRow[];
+  const names = await getPlayerNames(rows.map((row) => row.user_id));
+
+  return rows.map((row) => {
+    const items = row.character_inventory
+      .map((entry) => ({
+        name: entry.items.name,
+        quantity: entry.quantity,
+        addedByName: entry.addedBy?.display_name ?? null,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      ...toCharacter(row),
+      playerName: names.get(row.user_id) ?? null,
+      items,
+      stacks: items.length,
+      // The count the dashboard band leads with: stacks is how many kinds of
+      // thing, this is how many things.
+      carried: items.reduce((sum, item) => sum + item.quantity, 0),
+    };
+  });
+}
+
+// Display names for a set of owners, as a lookup keyed by user id. Skips the
+// request entirely for an empty party rather than sending `in.()`, and returns
+// a Map so the caller's per-row lookup stays a hash rather than a scan.
+async function getPlayerNames(
+  userIds: string[],
+): Promise<Map<string, string | null>> {
+  const unique = [...new Set(userIds)];
+  if (unique.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", unique);
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return new Map(data.map((row) => [row.id, row.display_name]));
+}

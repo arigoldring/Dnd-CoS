@@ -1,5 +1,5 @@
-/* =========================================================
-   Character sheet — Barovia theme, self-contained.
+/* ============================================================================
+   Character sheet — the ledger. Import from pages/campaign/Character.tsx.
 
    Unlike partyInventory.css, this file does NOT extend shop.css. That page
    renders inside a .shop wrapper and inherits its nth-of-type contract, which
@@ -7,26 +7,18 @@
    (equipment slots, attunement), so it pays for its own styles to buy the
    freedom to reorder.
 
-   The palette below is copied from .shop rather than imported because those
-   custom properties are declared on .shop itself, not :root — there is nothing
-   to inherit from out here.
-   ========================================================= */
+   No local palette. Every colour here is a theme.css custom property, which is
+   what keeps this page from drifting from Shop and Recaps by a few percent of
+   every colour the way its own copy of the palette did. theme.css must load
+   first — main.tsx imports it before index.css.
+   ========================================================================== */
 
 .ch {
-  --void: #07060a;
-  --bone: #d6cab2;
-  --bone-soft: #a89c83;
-  --bone-dim: #6f6555;
-  --blood: #6a0a0a;
-  --blood-bright: #8a0d0d;
-  --blood-deep: #3a0606;
-
   width: 90%;
   max-width: 720px;
   margin: 0 auto 80px;
-  font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
-  font-size: 17px;
-  color: var(--bone);
+  font: 400 17px/1.5 var(--sh-body);
+  color: var(--sh-bone);
   text-align: left;
 }
 
@@ -41,22 +33,19 @@
 
 .ch-eyebrow {
   margin-top: 32px;
-  font-family: "Cinzel", serif;
+  font: 500 11px/1 var(--sh-display);
   letter-spacing: 0.42em;
-  font-size: 11px;
   text-transform: uppercase;
-  color: #c79a5a;
+  color: var(--sh-gold);
   text-align: center;
 }
 
 .ch-title {
-  font-family: "Cinzel", serif;
-  font-weight: 600;
-  font-size: 40px;
-  letter-spacing: 0.08em;
   margin: 10px auto 24px;
+  font: 600 40px/1 var(--sh-display);
+  letter-spacing: 0.08em;
   text-align: center;
-  color: var(--bone);
+  color: var(--sh-bone);
   text-shadow:
     0 0 1px rgba(214, 202, 178, 0.5),
     0 0 28px rgba(138, 13, 13, 0.35);
@@ -68,9 +57,7 @@
   position: relative;
   margin-bottom: 22px;
   padding: 24px 28px;
-  background:
-    linear-gradient(180deg, rgba(20, 15, 16, 0.96), rgba(12, 9, 11, 0.98)),
-    var(--void);
+  background: var(--sh-panel-raised), var(--sh-void);
   border: 1px solid rgba(160, 140, 110, 0.28);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
@@ -81,19 +68,32 @@
 .ch-blurb {
   margin: 0 0 16px;
   font-style: italic;
-  color: var(--bone-soft);
+  color: var(--sh-mute);
 }
 
+/* A flex header with a rule and a right-hand count, matching the Hoard's
+   .desk-panel__head. It works with nothing but text in it — the rule simply
+   fills the space to the right of the label. */
 .ch-section {
-  font-family: "Cinzel", serif;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #c79a5a;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
   margin: 0 0 16px;
   padding-bottom: 10px;
-  border-bottom: 1px dashed rgba(160, 140, 110, 0.18);
+  font: 500 13px/1 var(--sh-display);
+  font-variant: normal;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border-bottom: 1px dashed var(--sh-rule-faint);
+}
+
+.ch-section__count {
+  margin-left: auto;
+  font: 400 12px/1 var(--sh-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sh-dim);
 }
 
 /* ---------- identity ---------- */
@@ -108,11 +108,10 @@
 .ch-name {
   flex: 1 1 auto;
   margin: 0;
-  font-family: "Cinzel", serif;
-  font-size: 28px;
-  font-weight: 600;
+  font: 600 28px/1.15 var(--sh-display);
+  font-variant: normal;
   letter-spacing: 0.05em;
-  color: var(--bone);
+  color: var(--sh-bone);
 }
 
 .ch-reset {
@@ -144,12 +143,12 @@
 .ch-form input[type="text"],
 .ch-add select {
   flex: 0 1 260px;
-  font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 16px;
-  color: var(--bone);
-  background: rgba(10, 8, 9, 0.8);
-  border: 1px solid rgba(160, 140, 110, 0.35);
   padding: 8px 12px;
+  font: 400 16px/1.35 var(--sh-body);
+  color: var(--sh-bone);
+  background: var(--sh-panel-sunk);
+  border: 1px solid rgba(160, 140, 110, 0.35);
+  box-shadow: var(--sh-inset);
 }
 
 .ch-form input[type="text"]:focus,
@@ -161,9 +160,8 @@
 /* ---------- buttons ---------- */
 
 .ch-button {
-  font-family: "Cinzel", serif;
-  font-size: 11px;
-  font-weight: 500;
+  padding: 7px 14px;
+  font: 500 11px/1 var(--sh-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #ead9b6;
@@ -173,7 +171,6 @@
     rgba(28, 22, 24, 0.9)
   );
   border: 1px solid rgba(190, 165, 120, 0.45);
-  padding: 7px 14px;
   cursor: pointer;
   transition:
     background 0.2s,
@@ -182,8 +179,8 @@
 }
 
 .ch-button:hover:not(:disabled) {
-  color: #fbeec9;
-  border-color: var(--blood-bright);
+  color: var(--sh-candle);
+  border-color: var(--sh-blood-bright);
   background: linear-gradient(
     180deg,
     rgba(106, 10, 10, 0.45),
@@ -203,7 +200,7 @@
 
 .ch-button--danger:hover:not(:disabled) {
   color: #ffd9c4;
-  border-color: var(--blood-bright);
+  border-color: var(--sh-blood-bright);
   background: linear-gradient(
     180deg,
     rgba(106, 10, 10, 0.6),
@@ -220,7 +217,7 @@
 
 .ch-table td {
   padding: 10px 6px;
-  border-bottom: 1px solid rgba(160, 140, 110, 0.12);
+  border-bottom: 1px solid var(--sh-rule-faint);
   vertical-align: middle;
 }
 
@@ -228,17 +225,16 @@
   display: block;
   font-size: 12px;
   font-style: italic;
-  color: var(--bone-dim);
+  color: var(--sh-dim);
 }
 
 .ch-qty {
   width: 1%;
   text-align: right;
   white-space: nowrap;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 12px;
+  font: 400 12px/1 var(--sh-mono);
   letter-spacing: 0.06em;
-  color: var(--bone-soft);
+  color: var(--sh-mute);
 }
 
 .ch-actions {
@@ -252,44 +248,45 @@
 }
 
 .ch-empty {
+  padding: 18px 0;
   text-align: center;
   font-style: italic;
-  color: var(--bone-soft);
-  padding: 18px 0;
+  color: var(--sh-mute);
 }
 
 .ch-error {
   display: block;
   flex-basis: 100%;
   margin-top: 6px;
-  font-style: italic;
   font-size: 13px;
+  font-style: italic;
   color: #e08a8a;
   white-space: normal;
 }
 
-/* ---------- spell list ---------- */
+/* ---------- known magic ---------- */
 
 /* Shares .ch-table with the gear list. The name is a button because it opens
-   the detail card; these rules put it back to reading as the row's text. */
+   the detail card; these rules put it back to reading as the row's text, and
+   the dotted rule under it is the affordance that it opens at all. */
 .ch-spell-name {
   padding: 0;
-  font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 17px;
-  font-weight: 400;
+  font: 400 17px/1.4 var(--sh-body);
   letter-spacing: 0;
   text-transform: none;
   text-align: left;
-  color: var(--bone);
+  color: var(--sh-bone);
   background: none;
   border: 0;
+  border-bottom: 1px dotted rgba(199, 154, 90, 0.45);
   cursor: pointer;
 }
 
 .ch-spell-name:hover:not(:disabled) {
-  color: #fbeec9;
+  color: var(--sh-candle);
   background: none;
   border: 0;
+  border-bottom: 1px dotted var(--sh-gold);
 }
 
 /* "3rd-level evocation", under the name — the same line the card leads with, so
@@ -300,34 +297,64 @@
   font-size: 12px;
   font-variant: small-caps;
   letter-spacing: 0.06em;
-  color: var(--bone-dim);
+  color: var(--sh-dim);
 }
 
-/* conc / ritual beside the name. The grimoire's .spell-tag in shape, redone in
-   the sheet's own palette rather than reached for across pages: spells.css
-   arrives here only because SpellDetailCard imports it, and a class that
-   depended on that would break the day the card stopped being used. */
+/* A known-spell list is read by level at the table ("what have I got at 2nd?"),
+   so the rows group under the same headings the picker already uses. The group
+   header is a row inside the same table as the spells, which is what keeps it
+   sharing their column structure. */
+.ch-spell-group td {
+  padding: 22px 6px 6px;
+  border-bottom: 0;
+}
+
+.ch-spell-group:first-child td {
+  padding-top: 4px;
+}
+
+/* Draws its own trailing rule, so the heading reads as a divider across the
+   panel rather than a word floating above the first row. */
+.ch-spell-group__label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sh-gold-deep);
+}
+
+.ch-spell-group__label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--sh-rule-faint);
+}
+
+/* conc / ritual beside the name. The grimoire's .spell-tag in shape, redone
+   here rather than reached for across pages: spells.css arrives on this page
+   only because SpellDetailCard imports it, and a class that depended on that
+   would break the day the card stopped being used. */
 .ch-tag {
   display: inline-block;
   margin-left: 8px;
   padding: 3px 5px 2px;
-  font-family: "Cinzel", serif;
-  font-size: 8px;
-  font-weight: 500;
+  font: 500 8px/1 var(--sh-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #c79a5a;
+  color: var(--sh-gold);
   border: 1px solid rgba(199, 154, 90, 0.4);
   vertical-align: 2px;
 }
 
 /* The detail card's footer slot. */
 .ch-card-footer {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(160, 140, 110, 0.18);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--sh-rule);
 }

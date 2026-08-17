@@ -1,0 +1,217 @@
+/* ============================================================================
+   The Party — every character in the campaign, and what each is hauling.
+   Import from pages/campaign/Party.tsx.
+
+   character.css's ledger at panel scale: the same panel, rule and mono-gold
+   quantity, sized so several fit across a page instead of one down it. Reads
+   theme.css for every colour — no local palette.
+   ========================================================================== */
+
+.party {
+  margin-bottom: 80px;
+  font: 400 18px/1.5 var(--sh-body);
+  color: var(--sh-bone);
+}
+
+/* --- head --------------------------------------------------------------- */
+
+.party__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(160, 140, 110, 0.2);
+}
+
+.party__eyebrow {
+  margin: 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+.party__title {
+  margin: 10px 0 0;
+  text-shadow: 0 0 26px rgba(138, 13, 13, 0.35);
+}
+
+.party__tally {
+  margin: 0 0 0 auto;
+  font: 400 13px/1 var(--sh-mono);
+  color: var(--sh-dim);
+}
+
+.party__empty {
+  margin: 40px 0 0;
+  font-style: italic;
+  text-align: center;
+  color: var(--sh-dim);
+}
+
+/* --- the grid ----------------------------------------------------------- */
+
+/* align-items:start so a character with two things doesn't stretch to match the
+   one hauling twenty. */
+.party__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  align-items: start;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.party-sheet {
+  padding: 20px 22px 18px;
+  background: var(--sh-panel), var(--sh-void);
+  border: 1px solid rgba(160, 140, 110, 0.2);
+}
+
+/* Yours, and the only panel on the page lit: the sheet you check most is the
+   one you don't want to hunt for. */
+.party-sheet--mine {
+  border-color: rgba(199, 154, 90, 0.55);
+  background: var(--sh-panel-raised), var(--sh-void);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 24px 60px -32px rgba(0, 0, 0, 0.9);
+}
+
+.party-sheet__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.party-sheet__name {
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.party-sheet__player {
+  flex: 0 0 100%;
+  order: 3;
+  font: 400 13px/1 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+.party-sheet__count {
+  font: 400 11px/1 var(--sh-mono);
+  color: var(--sh-dim);
+}
+
+.party-sheet__rule {
+  height: 1px;
+  margin: 12px 0;
+  background: linear-gradient(90deg, rgba(154, 122, 58, 0.55), transparent 85%);
+}
+
+/* --- what they carry ---------------------------------------------------- */
+
+.party-sheet__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.party-sheet__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--sh-rule-faint);
+  font-size: 16px;
+  color: var(--sh-bone);
+}
+
+.party-sheet__row:last-child {
+  border-bottom: 0;
+}
+
+.party-sheet__item {
+  min-width: 0;
+}
+
+/* Who handed it over — the fact 029's added_by exists to record, and the
+   difference between what a player picked up and what the DM gave them. */
+.party-sheet__from {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+.party-sheet__qty {
+  margin-left: auto;
+  font: 400 12px/1 var(--sh-mono);
+  color: var(--sh-gold-deep);
+}
+
+.party-sheet__empty {
+  margin: 0;
+  padding: 6px 0 4px;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--sh-dim);
+}
+
+/* --- the DM's Give control ---------------------------------------------- */
+
+/* Rendered only for the DM, and set off by a rule rather than a panel of its
+   own: it belongs to the sheet above it. */
+.party-give {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(138, 13, 13, 0.35);
+}
+
+.party-give select {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 15px;
+}
+
+.party-give button {
+  flex: 0 0 auto;
+  padding: 9px 14px 8px;
+  font-size: 9px;
+}
+
+.party-give__error {
+  flex-basis: 100%;
+  font-size: 13px;
+  font-style: italic;
+  color: #e08a8a;
+}
+
+/* --- a member with no character ----------------------------------------- */
+
+/* Not rendered yet, and cannot be until 013's SELECT policy on campaign_members
+   widens past `user_id = auth.uid()` — nothing in the app can list a campaign's
+   roster, so the difference between "members" and "characters" is a set we
+   can't compute. The style is here for the day it can be. */
+.party-absent {
+  padding: 20px 22px 18px;
+  border: 1px dashed rgba(160, 140, 110, 0.28);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.party-absent .party-sheet__name {
+  color: var(--sh-dim);
+}
+
+.party-absent p {
+  margin: 12px 0 0;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--sh-dim);
+}

@@ -31,6 +31,9 @@ export function Layout() {
         <div className="app-nav">
           <NavLink to="." end>Home</NavLink>
           <NavLink to="Character">Character</NavLink>
+          {/* Not DM-gated: a player sees the same page, without the Give
+              controls on each panel. */}
+          <NavLink to="Party">The Party</NavLink>
           <NavLink to="Shop">Shop</NavLink>
           <NavLink to="Inventory">Inventory</NavLink>
           {campaign.isDm && (

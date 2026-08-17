@@ -3,9 +3,13 @@ import { useCampaign } from "../../components/CampaignLayout";
 import { useRecaps } from "../../hooks/useRecaps";
 import { useLocations } from "../../hooks/useLocations";
 import { usePartyInventory } from "../../hooks/usePartyInventory";
+import { useParty } from "../../hooks/useParty";
 import { Recap } from "../../services/recaps";
 import barovia from "../../assets/Maps/barovia.webp";
 import "./home.css";
+// After home.css: the band is a .desk-panel and this sheet only adds the seat
+// grid inside it, so the panel has to be declared first.
+import "./atTheTable.css";
 
 // Same semantics as the byline in Recaps.tsx: lastEditedAt, not the name,
 // decides whether the recap has been touched — the name is also null when the
@@ -34,6 +38,12 @@ export function Home() {
     isLoading: hoardLoading,
     error: hoardError,
   } = usePartyInventory(campaign.id);
+  // Deliberately not in the loading gate or the error line below. Those two
+  // decide whether the desk has anything to show at all, and the band is one
+  // panel of it — a slow party read should let the rest of the dashboard paint
+  // and fill in after, and a failed one should cost the band, not the page.
+  // The empty default is what makes that safe: `[]` hides the band entirely.
+  const { data: party = [] } = useParty(campaign.id);
 
   if (recapsLoading || locationsLoading || hoardLoading)
     return <p>Loading...</p>;
@@ -136,6 +146,38 @@ export function Home() {
             ))}
           </ul>
         </section>
+
+        {/* At the table — one column per character, below the Hoard. Just who
+            is here and who plays them; the gear each is hauling is the Party
+            page's job, not the band's. Hidden entirely on a campaign nobody
+            has rolled up in: an empty band on a fresh campaign is a gap, not
+            information.
+
+            The count is a plain character count rather than the design's
+            "4 of 5". The denominator would be the campaign's member count, and
+            013's SELECT policy on campaign_members is `user_id = auth.uid()` —
+            the only membership row anyone can read is their own, so the
+            fraction is a fact we don't have. */}
+        {party.length > 0 && (
+          <section className="desk-panel desk-panel--full at-table">
+            <div className="at-table__head">
+              <p className="at-table__title">At the Table</p>
+              <span className="at-table__count">
+                {party.length} {party.length === 1 ? "character" : "characters"}
+              </span>
+            </div>
+            <div className="at-table__grid">
+              {party.map((character) => (
+                <div className="at-table__seat" key={character.id}>
+                  <p className="at-table__name">{character.name}</p>
+                  <p className="at-table__player">
+                    played by {character.playerName ?? "someone since departed"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {campaign.isDm && (
           <section className="desk-dm">
