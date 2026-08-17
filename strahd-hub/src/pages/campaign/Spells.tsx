@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchBar } from "../../hooks/useSearchBar";
 import { useSpells } from "../../hooks/useSpells";
 import { useCampaign } from "../../components/CampaignLayout";
+import { SpellDetailCard } from "../../components/SpellDetailCard";
 import type { Spell } from "../../services/spells";
 import "./spells.css";
 
@@ -15,9 +16,15 @@ export function Spells() {
   const filtered = searchFiltered.filter(
     (spell) => levelFilter === null || spell.level === levelFilter,
   );
+  // Held by id, not the Spell itself — Shop's reasoning for panelId: a refetch
+  // replaces the object, so a stored one would leave the card showing a stale
+  // spell beside a fresh table row.
+  const [panelId, setPanelId] = useState<string | null>(null);
 
   if (loading) return <p>Loading spells...</p>;
   if (error) return <p>Couldn't load spells: {error.message}</p>;
+
+  const panel = spells.find((spell) => spell.id === panelId) ?? null;
 
   function createSpellTable() {
     return (
@@ -36,7 +43,12 @@ export function Spells() {
           {filtered.map((spell: Spell) => (
             <tr key={spell.id}>
               <td>
-                {spell.name}
+                <button
+                  className="spells__open"
+                  onClick={() => setPanelId(spell.id)}
+                >
+                  {spell.name}
+                </button>
                 {spell.concentration && <span className="spell-tag">conc</span>}
                 {spell.ritual && <span className="spell-tag">ritual</span>}
               </td>
@@ -93,6 +105,21 @@ export function Spells() {
         <span className="spells__count">
           {filtered.length} of {spells.length}
         </span>
+      </div>
+
+      {/* Click-outside backdrop. spells.css promotes it to a fixed overlay only
+          while it holds a card, so with nothing selected it stays an inert empty
+          div; the card stops propagation so clicking inside doesn't dismiss it.
+          The table below keeps its two-line clamp — that is the right shape for
+          a row now that there is a way to read the rest. */}
+      <div className="spell-detail-backdrop" onClick={() => setPanelId(null)}>
+        {panel && (
+          <SpellDetailCard
+            key={panel.id}
+            spell={panel}
+            onClose={() => setPanelId(null)}
+          />
+        )}
       </div>
 
       {filtered.length === 0 ? (

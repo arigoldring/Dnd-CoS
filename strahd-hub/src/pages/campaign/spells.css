@@ -218,3 +218,194 @@
   background: rgba(160, 140, 110, 0.05);
   border: 1px solid rgba(160, 140, 110, 0.18);
 }
+
+/* --- the row that opens the detail card --------------------------------- */
+
+/* A button so the name is reachable by keyboard and reads as an action, styled
+   back down to the text it replaced — the table's own td:nth-child(1) rule
+   supplies the size and colour. */
+.spells__open {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.spells__open:hover:not(:disabled) {
+  color: var(--sh-candle);
+  background: none;
+  border: 0;
+}
+
+/* =========================================================
+   SPELL DETAIL CARD — used by the grimoire and by the character sheet
+
+   Every rule below is keyed on a class, never on position in the tree. That is
+   the one deliberate difference from shop.css's item card, which is selected as
+   `.shop > div:nth-of-type(2) > div` and so cannot be rendered anywhere but the
+   Shop. This card renders identically under .spells and under .ch, which is why
+   the colours are the --sh-* tokens from theme.css (declared on :root) rather
+   than the --bone/--blood properties those two wrappers each declare for
+   themselves.
+   ========================================================= */
+
+/* Promoted to a full-screen overlay only while it actually holds a card, so
+   with nothing selected it stays an inert empty div in the flow. */
+.spell-detail-backdrop:has(> div) {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 3, 5, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.spell-detail-card {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: 82vh;
+  overflow-y: auto;
+  padding: 24px 28px 26px;
+  text-align: left;
+  color: var(--sh-bone);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(138, 13, 13, 0.14), transparent 60%),
+    linear-gradient(180deg, rgba(36, 29, 32, 0.98), rgba(16, 12, 14, 0.99));
+  border: 1px solid var(--sh-rule-strong);
+  box-shadow:
+    0 30px 70px -20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 240, 210, 0.05);
+}
+
+.spell-detail-card::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--sh-rule-faint);
+  pointer-events: none;
+}
+
+.spell-detail-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font: 400 15px/1 var(--sh-display);
+  letter-spacing: 0;
+  color: var(--sh-mute);
+  background: transparent;
+  border: 1px solid var(--sh-rule-strong);
+}
+
+.spell-detail-close:hover:not(:disabled) {
+  color: var(--sh-candle);
+  border-color: var(--sh-blood-bright);
+  background: rgba(106, 10, 10, 0.25);
+}
+
+.spell-detail-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-right: 28px;
+}
+
+.spell-detail-name {
+  font: 600 20px/1.2 var(--sh-display);
+  letter-spacing: 0.04em;
+  color: var(--sh-bone-bright);
+}
+
+/* "3rd-level evocation" — the stat-block line under the name. */
+.spell-detail-level {
+  margin: 6px 0 0;
+  font: 400 15px/1.3 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--sh-gold);
+}
+
+.spell-detail-stats {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--sh-rule);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spell-detail-stat {
+  display: flex;
+  gap: 10px;
+}
+
+.spell-detail-stat dt {
+  flex: 0 0 118px;
+  margin: 0;
+  font: 500 10px/1.6 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+}
+
+.spell-detail-stat dd {
+  margin: 0;
+  font: 400 15px/1.4 var(--sh-body);
+  color: var(--sh-bone);
+}
+
+.spell-detail-text {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--sh-rule);
+  font: 400 16px/1.55 var(--sh-body);
+  color: var(--sh-mute);
+  white-space: pre-line;
+}
+
+.spell-detail-heading {
+  margin: 16px 0 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+/* The heading already separates this paragraph, so it drops the rule the
+   description carries. */
+.spell-detail-heading + .spell-detail-text {
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.spell-detail-classes {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spell-detail-class {
+  padding: 3px 8px;
+  font: 500 9px/1.5 var(--sh-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+  border: 1px solid var(--sh-rule-strong);
+}

@@ -34,7 +34,10 @@ export interface Spell {
   tags: string[];
 }
 
-function toSpell(row: Tables<"spells">): Spell {
+// Exported the way items.ts exports toItem, and for the same reason:
+// characterSpells.ts embeds a whole spells row and needs exactly this mapping,
+// requireField checks included.
+export function toSpell(row: Tables<"spells">): Spell {
   const subject = `Spell ${row.id}`;
   return {
     id: row.id,
@@ -60,6 +63,33 @@ function toSpell(row: Tables<"spells">): Spell {
     higherLevels: row.higher_levels ?? undefined,
     tags: row.tags ?? [],
   };
+}
+
+// Indexed by level, so 0 has no entry — a cantrip never reads as an ordinal.
+// The fallback covers a level outside 1-9, which the column does not currently
+// forbid.
+const spellOrdinals = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
+
+function ordinal(level: number): string {
+  return spellOrdinals[level] ?? `${level}th`;
+}
+
+// How a level reads in a stat block: "Evocation cantrip" at 0, "3rd-level
+// evocation" above it. One function rather than separate level and school
+// formatters because which of the two leads — and so which one is capitalised —
+// changes with the level.
+export function spellLevelLine(spell: Spell): string {
+  if (spell.level === 0) {
+    return `${spell.school.charAt(0).toUpperCase()}${spell.school.slice(1)} cantrip`;
+  }
+  return `${ordinal(spell.level)}-level ${spell.school}`;
+}
+
+// The heading over a group of spells of one level, as the character sheet's
+// picker uses it. Plural at 0 because "Cantrips" is what the grimoire's own
+// filter button already calls them.
+export function spellLevelGroupLabel(level: number): string {
+  return level === 0 ? "Cantrips" : `${ordinal(level)} level`;
 }
 
 // Same shape and reasoning as getItems (items.ts): 022 gave spells the same
