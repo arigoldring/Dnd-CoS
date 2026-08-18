@@ -1,11 +1,12 @@
 /* ============================================================================
    Character sheet — the ledger. Import from pages/campaign/Character.tsx.
 
-   Unlike partyInventory.css, this file does NOT extend shop.css. That page
-   renders inside a .shop wrapper and inherits its nth-of-type contract, which
-   fixes the order of its children; a sheet is expected to grow sections
-   (equipment slots, attunement), so it pays for its own styles to buy the
-   freedom to reorder.
+   This file does NOT extend shop.css. The old partyInventory.css did, and paid
+   for it: that page rendered inside a .shop wrapper and inherited its
+   nth-of-type contract, which fixed the order of its children. A sheet is
+   expected to grow sections, so it pays for its own styles to buy the freedom
+   to reorder. (Both that page and its stylesheet are gone — inventory.css
+   replaced them and made the same call.)
 
    No local palette. Every colour here is a theme.css custom property, which is
    what keeps this page from drifting from Shop and Recaps by a few percent of

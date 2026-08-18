@@ -748,6 +748,14 @@ export type Database = {
         Returns: boolean
       }
       is_dm: { Args: never; Returns: boolean }
+      move_character_item_to_party: {
+        Args: { target_entry: string }
+        Returns: undefined
+      }
+      move_party_item_to_character: {
+        Args: { target_character: string; target_entry: string }
+        Returns: undefined
+      }
       set_display_name: {
         Args: { new_display_name: string }
         Returns: undefined

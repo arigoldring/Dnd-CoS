@@ -6,7 +6,7 @@ import { Spells } from "./pages/campaign/Spells";
 import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/campaign/NPC";
 import { Recaps } from "./pages/campaign/Recaps";
-import { PartyInventory } from "./pages/campaign/PartyInventory";
+import { Inventory } from "./pages/campaign/Inventory";
 import { Character } from "./pages/campaign/Character";
 import { Party } from "./pages/campaign/Party";
 import { CreateItem } from "./pages/campaign/CreateItem";
@@ -48,7 +48,11 @@ function App() {
                     bare /campaign/:campaignId URL. */}
                   <Route index element={<Home />} />
                   <Route path="Shop" element={<Shop />} />
-                  <Route path="Inventory" element={<PartyInventory />} />
+                  {/* Both inventories on one page: the viewer's pack and the
+                    party's hoard, with the transfer between them. Same path as
+                    the party-only page it replaces, so every existing link and
+                    bookmark keeps working. */}
+                  <Route path="Inventory" element={<Inventory />} />
                   {/* The viewer's own PC. No isDm branch and no :userId — the
                     page is always "mine", and 028's policies make the owner the
                     only one who can rename or delete it regardless. */}

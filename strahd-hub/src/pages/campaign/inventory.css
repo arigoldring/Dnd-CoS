@@ -1,0 +1,574 @@
+/* ============================================================================
+   Inventory — your pack and the party's hoard on one page. Import from
+   pages/campaign/Inventory.tsx.
+
+   Written for this page rather than copied from handoff/inventory.css, which
+   the brief names as the source and which does not exist in the repo or in its
+   history. Everything below is derived from character.css, whose conventions
+   this page follows exactly: one wrapper class, no palette on :root, every
+   colour a theme.css custom property. theme.css must load first — main.tsx
+   imports it before index.css.
+
+   Deliberately NOT built on shop.css, which is what the page this replaces did.
+   partyInventory.css inherited Shop's positional nth-of-type contract, so the
+   order of that page's children was load-bearing and undocumented anywhere the
+   person reordering them would look. A two-column page cannot afford that.
+
+   The cost of leaving .shop, and the one thing to know before editing this
+   file: ItemDetailCard is styled half by class and half by POSITION. Its
+   overlay, its card panel and its description paragraph live in shop.css under
+   `.shop > div:nth-of-type(2) ...`, and the class-based half (.item-detail-name,
+   .item-detail-close, .item-detail-stat, .item-tag) reads custom properties
+   scoped to `.shop`. Rendered here, the card would arrive with neither. So this
+   sheet supplies both — the container rules under .inv-backdrop, the way
+   spells.css does for SpellDetailCard, and the four shop-palette names aliased
+   onto theme tokens below. Both are marked where they appear.
+   ========================================================================== */
+
+.inv {
+  /* Shop's palette names, aliased to theme.css tokens, for the item-detail-*
+     rules that shop.css defines by class and colours from `.shop`. Not a second
+     palette: four aliases pointing at the tokens the rest of this file uses
+     directly, so the card cannot drift from the page around it. Delete these
+     the day ItemDetailCard carries its own colours. */
+  --bone: var(--sh-bone);
+  --bone-soft: var(--sh-mute);
+  --tarnish: var(--sh-gold-deep);
+  --blood-bright: var(--sh-blood-bright);
+
+  width: 92%;
+  max-width: 1120px;
+  margin: 0 auto 80px;
+  font: 400 17px/1.5 var(--sh-body);
+  color: var(--sh-bone);
+  text-align: left;
+}
+
+/* Matches character.css and shop.css: the campaign shell centres a narrow
+   column by default, which would squeeze two columns into one. */
+#root:has(.inv) {
+  width: 100%;
+  max-width: 100%;
+  border: none;
+  text-align: left;
+}
+
+.inv-eyebrow {
+  margin-top: 32px;
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  text-align: center;
+}
+
+.inv-title {
+  margin: 10px auto 10px;
+  font: 600 40px/1 var(--sh-display);
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: var(--sh-bone);
+  text-shadow:
+    0 0 1px rgba(214, 202, 178, 0.5),
+    0 0 28px rgba(138, 13, 13, 0.35);
+}
+
+.inv-sub {
+  margin: 0 auto 26px;
+  max-width: 640px;
+  font-style: italic;
+  text-align: center;
+  color: var(--sh-mute);
+}
+
+/* ---------- the two columns ---------- */
+
+/* Pack first in source order as well as on screen, so the page reads "yours,
+   then the party's" to a screen reader too. The rail is a fixed track rather
+   than a fraction: it holds one column of short rows and gains nothing from the
+   extra width a fraction would hand it on a wide monitor.
+
+   minmax(0, 1fr) rather than 1fr on the pack: a grid item's min-width defaults
+   to auto, so a long item name in the table would push the track wider than its
+   share instead of wrapping, and the rail would be squeezed off the edge. */
+.inv-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 22px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .inv-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.inv-panel {
+  position: relative;
+  padding: 24px 28px;
+  background: var(--sh-panel-raised), var(--sh-void);
+  border: 1px solid rgba(160, 140, 110, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 34px 90px -28px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 240, 210, 0.04);
+}
+
+/* A flex header with a rule and a right-hand count — character.css's
+   .ch-section, which is itself the Hoard band's .desk-panel__head. It works with
+   nothing but text in it: the rule simply fills the space to the right. */
+.inv-section {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  font: 500 13px/1 var(--sh-display);
+  font-variant: normal;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border-bottom: 1px dashed var(--sh-rule-faint);
+}
+
+.inv-section__count {
+  margin-left: auto;
+  font: 400 12px/1 var(--sh-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sh-dim);
+}
+
+/* ---------- the add / search row ---------- */
+
+.inv-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.inv-add select,
+.inv-search {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 8px 12px;
+  font: 400 16px/1.35 var(--sh-body);
+  color: var(--sh-bone);
+  background: var(--sh-panel-sunk);
+  border: 1px solid rgba(160, 140, 110, 0.35);
+  box-shadow: var(--sh-inset);
+}
+
+.inv-add select:focus,
+.inv-search:focus {
+  outline: none;
+  border-color: rgba(199, 154, 90, 0.7);
+}
+
+/* ---------- buttons ---------- */
+
+.inv-button {
+  padding: 7px 14px;
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ead9b6;
+  background: linear-gradient(
+    180deg,
+    rgba(48, 38, 40, 0.85),
+    rgba(28, 22, 24, 0.9)
+  );
+  border: 1px solid rgba(190, 165, 120, 0.45);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.inv-button:hover:not(:disabled) {
+  color: var(--sh-candle);
+  border-color: var(--sh-blood-bright);
+  background: linear-gradient(
+    180deg,
+    rgba(106, 10, 10, 0.45),
+    rgba(58, 6, 6, 0.6)
+  );
+}
+
+.inv-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.inv-button--danger {
+  color: #e7b7a0;
+  border-color: rgba(138, 13, 13, 0.5);
+}
+
+.inv-button--danger:hover:not(:disabled) {
+  color: #ffd9c4;
+  border-color: var(--sh-blood-bright);
+  background: linear-gradient(
+    180deg,
+    rgba(106, 10, 10, 0.6),
+    rgba(58, 6, 6, 0.7)
+  );
+}
+
+/* Take and Stow. Gold rather than the neutral treatment above, because moving a
+   stack across the page is the one thing this page can do that neither half
+   could do before — the buttons either side of it spend and destroy, and this
+   one should not read as a third member of that set. */
+.inv-move {
+  padding: 7px 14px;
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  background: linear-gradient(
+    180deg,
+    rgba(199, 154, 90, 0.16),
+    rgba(154, 122, 58, 0.08)
+  );
+  border: 1px solid rgba(199, 154, 90, 0.5);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.inv-move:hover:not(:disabled) {
+  color: var(--sh-candle);
+  border-color: rgba(199, 154, 90, 0.85);
+  background: linear-gradient(
+    180deg,
+    rgba(199, 154, 90, 0.3),
+    rgba(154, 122, 58, 0.16)
+  );
+}
+
+.inv-move:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- the pack table ---------- */
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inv-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--sh-rule-faint);
+  vertical-align: middle;
+}
+
+/* The reason added_by is written at all: on a shared sheet it is the difference
+   between what a player picked up and what the DM handed them. */
+.inv-byline {
+  display: block;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+.inv-qty {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+  font: 400 12px/1 var(--sh-mono);
+  letter-spacing: 0.06em;
+  color: var(--sh-mute);
+}
+
+.inv-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.inv-actions > .inv-button,
+.inv-actions > .inv-move {
+  margin-left: 8px;
+}
+
+.inv-empty {
+  padding: 18px 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--sh-mute);
+}
+
+.inv-error {
+  display: block;
+  flex-basis: 100%;
+  margin-top: 6px;
+  font-size: 13px;
+  font-style: italic;
+  color: #e08a8a;
+  white-space: normal;
+}
+
+/* ---------- the hoard rail ---------- */
+
+/* Sticky so the pile stays reachable while a long pack scrolls past it — the
+   Take button is only useful next to the row it targets, and on a sheet of
+   thirty stacks the rail would otherwise be a screen behind. top clears the
+   panel's own padding; max-height and the scroll keep a long hoard from running
+   off the bottom of the viewport, which is the state that would break the
+   stickiness rather than use it. */
+.inv-rail {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 20px 22px;
+}
+
+@media (max-width: 900px) {
+  .inv-rail {
+    position: static;
+    max-height: none;
+  }
+}
+
+.inv-rail__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  font: 500 11px/1 var(--sh-display);
+  font-variant: normal;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border-bottom: 1px dashed var(--sh-rule-faint);
+}
+
+.inv-rail__count {
+  margin-left: auto;
+  font: 400 12px/1 var(--sh-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sh-dim);
+}
+
+/* Rows rather than a table, unlike the pack. Three controls, a name and a kind
+   do not fit across 330px as cells, and stacking them inside a <td> would be a
+   table pretending to be a list. */
+.inv-rail__row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--sh-rule-faint);
+}
+
+/* Name left, quantity right, on one line. A flex line rather than a float on
+   the quantity: .inv-rail__actions below is a flex container and therefore
+   establishes its own formatting context, so it would be shortened to dodge a
+   float that ran past the name — which is exactly what happens to a
+   single-line name. Nothing here can overlap anything. */
+.inv-rail__line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* The name is a button because it opens the detail card; these rules put it
+   back to reading as the row's text, and the dotted rule under it is the
+   affordance that it opens at all. character.css's .ch-spell-name, same job. */
+.inv-rail__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0;
+  font: 400 16px/1.4 var(--sh-body);
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+  color: var(--sh-bone);
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted rgba(199, 154, 90, 0.45);
+  cursor: pointer;
+}
+
+.inv-rail__name:hover:not(:disabled) {
+  color: var(--sh-candle);
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted var(--sh-gold);
+}
+
+.inv-rail__kind {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--sh-dim);
+}
+
+.inv-rail__qty {
+  margin-left: auto;
+  white-space: nowrap;
+  font: 400 12px/1.6 var(--sh-mono);
+  letter-spacing: 0.06em;
+  color: var(--sh-mute);
+}
+
+.inv-rail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Smaller than the pack's, because three of them share a 330px column. */
+.inv-rail__actions > .inv-button,
+.inv-rail__actions > .inv-move {
+  padding: 5px 9px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.inv-rail__foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  text-align: center;
+  border-top: 1px dashed var(--sh-rule-faint);
+}
+
+.inv-rail__foot a {
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sh-gold-deep);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(154, 122, 58, 0.5);
+}
+
+.inv-rail__foot a:hover {
+  color: var(--sh-gold);
+  border-bottom-color: var(--sh-gold);
+}
+
+/* ---------- no character yet ---------- */
+
+/* The Character page's own invitation rather than an empty table. This is also
+   what a DM sees, and it is honest: a DM has no character in this campaign, so
+   they have no pack. */
+.inv-none {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.inv-none p {
+  margin: 0;
+  max-width: 380px;
+  font-style: italic;
+  color: var(--sh-mute);
+}
+
+.inv-none a {
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ead9b6;
+  text-decoration: none;
+  padding: 9px 18px;
+  border: 1px solid rgba(190, 165, 120, 0.45);
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.inv-none a:hover {
+  color: var(--sh-candle);
+  border-color: var(--sh-blood-bright);
+  background: linear-gradient(
+    180deg,
+    rgba(106, 10, 10, 0.45),
+    rgba(58, 6, 6, 0.6)
+  );
+}
+
+/* ---------- the item detail card ---------- */
+
+/* What shop.css styles positionally and this page therefore has to restate. See
+   the note at the top of the file: outside `.shop` the card arrives with no
+   overlay, no panel and no description styling, because those three rules are
+   `.shop > div:nth-of-type(2) ...` rather than classes.
+
+   `:has(> div)` is what keeps the empty backdrop inert — with nothing selected
+   it stays a zero-height div rather than an invisible full-screen click trap.
+   Same mechanism spells.css uses, and the reason the JSX renders the wrapper
+   unconditionally. */
+.inv-backdrop:has(> div) {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 3, 5, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.inv-backdrop > div {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px 28px 26px;
+  font: 600 15px/1.5 var(--sh-display);
+  letter-spacing: 0.06em;
+  text-align: left;
+  color: var(--sh-bone);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(138, 13, 13, 0.14), transparent 60%),
+    linear-gradient(180deg, rgba(36, 29, 32, 0.98), rgba(16, 12, 14, 0.99));
+  border: 1px solid var(--sh-rule-strong);
+  box-shadow:
+    0 30px 70px -20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 240, 210, 0.05);
+}
+
+.inv-backdrop > div::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(160, 140, 110, 0.12);
+  pointer-events: none;
+}
+
+/* The description paragraph, which shop.css also reaches by position. */
+.inv-backdrop p {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(160, 140, 110, 0.18);
+  font: 400 italic 16px/1.55 var(--sh-body);
+  letter-spacing: 0;
+  color: var(--sh-mute);
+}
+
+.inv-backdrop p::first-letter {
+  font-family: var(--sh-display);
+  font-size: 1.5em;
+  font-style: normal;
+  color: var(--sh-blood-bright);
+  padding-right: 2px;
+}

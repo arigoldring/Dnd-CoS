@@ -1,13 +1,10 @@
 import { Fragment, SubmitEvent, useState } from "react";
 import { useCampaign } from "../../components/CampaignLayout";
 import { useCharacter } from "../../hooks/useCharacter";
-import { useCharacterInventory } from "../../hooks/useCharacterInventory";
 import { useCharacterSpells } from "../../hooks/useCharacterSpells";
-import { useItems } from "../../hooks/useItems";
 import { useSpells } from "../../hooks/useSpells";
 import { SpellDetailCard } from "../../components/SpellDetailCard";
 import type { Character as CharacterModel } from "../../services/characters";
-import type { CharacterInventoryEntry } from "../../services/characterInventory";
 import type { CharacterSpellEntry } from "../../services/characterSpells";
 import {
   spellLevelGroupLabel,
@@ -22,10 +19,11 @@ import "./character.css";
  * none, the sheet when they do. Two states, one query — the same shape
  * AuthGate uses for the display name, one level down.
  *
- * Deliberately not styled through shop.css the way PartyInventory is. That page
- * inherits the Shop's positional nth-of-type contract, which is a real
- * constraint on the order of its children; this page has its own stylesheet so
- * a sheet is free to grow sections without counting siblings.
+ * Deliberately not styled through shop.css, which the old PartyInventory page
+ * was: it inherited the Shop's positional nth-of-type contract, a real
+ * constraint on the order of its children. This page has its own stylesheet so
+ * a sheet is free to grow sections without counting siblings. Inventory.tsx,
+ * which replaced that page, made the same choice for the same reason.
  */
 export function Character() {
   // Non-null by construction: this route sits under CampaignLayout, which has
@@ -66,8 +64,13 @@ export function Character() {
   );
 }
 
-// The sheet: identity at the top (owner-only writes), gear below (owner or DM).
-// The split in this component mirrors the split in 028's policies exactly.
+// The sheet: identity at the top (owner-only writes), known magic below (owner
+// or DM). The split in this component mirrors the split in 028's policies
+// exactly.
+//
+// Gear used to sit between the two and now lives on the Inventory page, beside
+// the party's hoard — the two lists a stack can move between belong on one
+// screen more than what you carry belongs under your name.
 function CharacterSheet({ character }: { character: CharacterModel }) {
   const campaign = useCampaign();
   const { renameCharacter, resetCharacter } = useCharacter(campaign.id);
@@ -129,188 +132,16 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
         )}
       </div>
 
-      <CharacterGear characterId={character.id} />
       <CharacterSpells characterId={character.id} />
     </>
   );
 }
 
-// The gear list. Writable by the owner OR the campaign's DM — the widening
-// 028's can_edit_character exists for. Nothing here checks which one you are:
-// RLS is the enforcement layer, and a forbidden write comes back as an error
-// the row reports, exactly as everywhere else in this app.
-function CharacterGear({ characterId }: { characterId: string }) {
-  const campaign = useCampaign();
-  const {
-    data: entries = [],
-    isLoading,
-    error,
-    addItem,
-    decrementItem,
-    removeItem,
-  } = useCharacterInventory(characterId);
-  const { data: items = [] } = useItems(campaign.id);
-
-  const [itemId, setItemId] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
-
-  async function handleAdd(e: SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!itemId) return;
-
-    setAdding(true);
-    setAddError(null);
-    try {
-      await addItem(itemId);
-      setItemId("");
-    } catch (err) {
-      console.error("Problem adding item to character:", err);
-      setAddError(errorMessage(err, "Couldn't add that item"));
-    } finally {
-      setAdding(false);
-    }
-  }
-
-  if (isLoading) return <p className="ch-panel">Loading gear...</p>;
-  if (error) return <p className="ch-panel">Couldn't load gear: {error.message}</p>;
-
-  return (
-    <div className="ch-panel">
-      <h3 className="ch-section">
-        Carried
-        <span className="ch-section__count">{entries.length} stacks</span>
-      </h3>
-
-      <form className="ch-add" onSubmit={handleAdd}>
-        <select
-          value={itemId}
-          onChange={(e) => setItemId(e.target.value)}
-          disabled={adding}
-        >
-          <option value="">Choose an item...</option>
-          {items.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-        <button
-          className="ch-button"
-          type="submit"
-          disabled={adding || !itemId}
-        >
-          {adding ? "Adding..." : "Add"}
-        </button>
-        {addError && <span className="ch-error">{addError}</span>}
-      </form>
-
-      {entries.length === 0 ? (
-        <p className="ch-empty">They carry nothing yet.</p>
-      ) : (
-        <table className="ch-table">
-          <tbody>
-            {entries.map((entry) => (
-              <GearRow
-                key={entry.entryId}
-                entry={entry}
-                onDecrement={decrementItem}
-                onRemove={removeItem}
-              />
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
-// One row owning its own action state, the same shape as PartyInventory's
-// InventoryRow: a failure reports beside the stack it happened to rather than
-// as one page-level message that can't say which. `busy` covers both buttons —
-// you only do one thing to a row at a time, and it stops a double-click firing
-// two writes at the same entry.
-function GearRow({
-  entry,
-  onDecrement,
-  onRemove,
-}: {
-  entry: CharacterInventoryEntry;
-  onDecrement: (entryId: string) => Promise<void>;
-  onRemove: (entryId: string) => Promise<void>;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleDecrement() {
-    setBusy(true);
-    setError(null);
-    try {
-      await onDecrement(entry.entryId);
-    } catch (err) {
-      console.error("Problem updating character item:", err);
-      setError(errorMessage(err, "Couldn't update this item"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleRemove() {
-    if (!window.confirm(`Remove ${entry.name} from this character?`)) return;
-
-    setBusy(true);
-    setError(null);
-    try {
-      await onRemove(entry.entryId);
-    } catch (err) {
-      console.error("Problem removing character item:", err);
-      setError(errorMessage(err, "Couldn't remove this item"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <tr>
-      <td>
-        {entry.name}
-        {/* The reason added_by is written at all: on a shared sheet it is the
-            difference between what a player picked up and what the DM handed
-            them. Null for entries whose adder's profile is gone. */}
-        {entry.addedByName && (
-          <span className="ch-byline">from {entry.addedByName}</span>
-        )}
-      </td>
-      <td className="ch-qty">×{entry.quantity}</td>
-      <td className="ch-actions">
-        <button
-          className="ch-button"
-          onClick={handleDecrement}
-          disabled={busy}
-          title="Use one"
-          aria-label={`Use one ${entry.name}`}
-        >
-          −1
-        </button>
-        <button
-          className="ch-button ch-button--danger"
-          onClick={handleRemove}
-          disabled={busy}
-          title="Remove from this character"
-          aria-label={`Remove ${entry.name} from this character`}
-        >
-          Remove
-        </button>
-        {error && <span className="ch-error">{error}</span>}
-      </td>
-    </tr>
-  );
-}
-
 // The character's spell list. Writable by the owner OR the campaign's DM,
-// through the same can_edit_character that governs the gear above it. Nothing
-// here checks which one you are: RLS is the enforcement layer, and a forbidden
-// write comes back as an error the row reports.
+// through 028's can_edit_character — the same predicate that governs their gear
+// over on the Inventory page. Nothing here checks which one you are: RLS is the
+// enforcement layer, and a forbidden write comes back as an error the row
+// reports.
 //
 // No slots, no prepared/known split, no per-day usage — 037 records that a
 // character has a spell and nothing else, and this panel shows exactly that

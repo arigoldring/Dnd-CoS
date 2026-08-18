@@ -31,11 +31,14 @@ export function Layout() {
         <div className="app-nav">
           <NavLink to="." end>Home</NavLink>
           <NavLink to="Character">Character</NavLink>
+          {/* Directly after Character, because Inventory is now half a personal
+              page — your own pack, with the party's hoard beside it — rather
+              than the shared pile alone. */}
+          <NavLink to="Inventory">Inventory</NavLink>
           {/* Not DM-gated: a player sees the same page, without the Give
               controls on each panel. */}
           <NavLink to="Party">The Party</NavLink>
           <NavLink to="Shop">Shop</NavLink>
-          <NavLink to="Inventory">Inventory</NavLink>
           {campaign.isDm && (
             <NavLink to="CreateItem" className="app-nav__dm">New Item</NavLink>
           )}
