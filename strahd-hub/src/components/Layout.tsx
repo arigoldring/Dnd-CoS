@@ -51,8 +51,10 @@ export function Layout() {
               than the shared pile alone. */}
           <NavLink to="Inventory">Inventory</NavLink>
           {/* Not DM-gated: a player sees the same page, without the Give
-              controls on each panel. */}
-          <NavLink to="Party">The Party</NavLink>
+              controls on each panel.
+
+              Temporarily hidden while we look at the app without The Party. */}
+          {/* <NavLink to="Party">The Party</NavLink> */}
           <NavLink to="Shop">Shop</NavLink>
           {campaign.isDm && (
             <NavLink to="CreateItem" className="app-nav__dm">New Item</NavLink>

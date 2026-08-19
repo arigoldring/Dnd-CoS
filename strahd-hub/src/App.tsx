@@ -8,7 +8,7 @@ import { Npcs } from "./pages/campaign/NPC";
 import { Recaps } from "./pages/campaign/Recaps";
 import { Inventory } from "./pages/campaign/Inventory";
 import { Character } from "./pages/campaign/Character";
-import { Party } from "./pages/campaign/Party";
+// import { Party } from "./pages/campaign/Party";
 import { CreateItem } from "./pages/campaign/CreateItem";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
@@ -59,8 +59,12 @@ function App() {
                   <Route path="Character" element={<Character />} />
                   {/* The same read one level up: every character in the
                     campaign rather than only yours. Not DM-gated — 028 lets any
-                    member read the whole table, and the page's one write is. */}
-                  <Route path="Party" element={<Party />} />
+                    member read the whole table, and the page's one write is.
+
+                    Temporarily off while we look at the app without it. The
+                    catch-all below now swallows /campaign/:id/Party and sends
+                    it to the picker. */}
+                  {/* <Route path="Party" element={<Party />} /> */}
                   <Route path="CreateItem" element={<CreateItem />} />
                   <Route path="Maps" element={<Maps />} />
                   <Route path="Spells" element={<Spells />} />
