@@ -15,7 +15,12 @@
    ========================================================================== */
 
 .inv {
-  --inv-rail-width: 340px;
+  --inv-rail-width: 400px;
+  /* The pack is a table of short rows, and on a wide monitor a 1fr column
+     stretches its dotted leaders across half a metre of empty panel. Capped at
+     the width character.css gives its own column, so the two pages read the
+     same; the slack goes to the page margin, not to the table. */
+  --inv-pack-max: 780px;
   --inv-gap: 30px;
 }
 
@@ -44,23 +49,28 @@
 
 /* --- the two columns ---------------------------------------------------- */
 
-/* minmax(0, 1fr) and not 1fr: the table column holds a <table>, whose
-   min-content width is its widest row, and a bare 1fr would let it push the
-   rail off the page instead of letting cells wrap. align-items: start so each
-   column ends at its own content — the pack is five stacks and the hoard is
-   seventeen, and stretching the short one leaves a tall empty frame. */
+/* minmax(0, …) and not a bare width: the table column holds a <table>, whose
+   min-content width is its widest row, and without the 0 floor it would push
+   the rail off the page instead of letting cells wrap. The max is a cap and not
+   a size, so the column still shrinks on a narrow window. justify-content:
+   start keeps the pair together on a wide one — the leftover goes to the right
+   margin rather than opening a gutter between pack and hoard. align-items:
+   start so each column ends at its own content — the pack is five stacks and
+   the hoard is seventeen, and stretching the short one leaves a tall empty
+   frame. */
 .inv-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--inv-rail-width);
+  grid-template-columns: minmax(0, var(--inv-pack-max)) var(--inv-rail-width);
   gap: var(--inv-gap);
   align-items: start;
+  justify-content: start;
   margin: 22px 0 0;
 }
 
 /* One breakpoint, and it is about the rail, not the phone: below this the rail
    is narrower than the item names it has to hold, so it goes under the table
    and becomes a wide list. */
-@media (max-width: 1080px) {
+@media (max-width: 1140px) {
   .inv-columns {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -286,11 +296,15 @@
   overflow-y: auto;
 }
 
+/* A stack and not a row: the rail is 400px wide and a hoard row carries a name,
+   a count, a kind and three buttons. Side by side those fight for the same
+   inch and the name loses, wrapping to three lines beside buttons that wrap
+   too. Stacked, each gets the full width of the rail for one line. */
 .inv-rail__row {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 2px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 2px;
   border-bottom: 1px solid var(--sh-rule-faint);
 }
 
@@ -298,9 +312,29 @@
   border-bottom: 0;
 }
 
-.inv-rail__item {
-  flex: 1;
+/* Name left, count pushed to the rail's right edge — the same "name … ×n"
+   reading the pack table gets from its dotted leader. */
+.inv-rail__line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.inv-rail__line .inv-rail__name {
   min-width: 0;
+  text-align: left;
+}
+
+.inv-rail__line .inv-rail__qty {
+  margin-left: auto;
+  flex: none;
+}
+
+.inv-rail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 /* A button, because the name is still the way into ItemDetailCard — the rail
@@ -325,7 +359,8 @@
 
 .inv-rail__kind {
   display: block;
-  margin-top: 3px;
+  /* The stack's own gap spaces this now. */
+  margin-top: 0;
   font: 500 8.5px/1 var(--sh-display);
   letter-spacing: 0.16em;
   text-transform: uppercase;
