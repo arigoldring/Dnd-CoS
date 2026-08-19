@@ -3,11 +3,13 @@ import { signOut } from "../services/auth";
 import { NamePrompt } from "./NamePrompt";
 import { useAuth } from "../services/AuthContext";
 import { useCampaign } from "./CampaignLayout";
+import { usePlayerPreview } from "./PlayerPreviewContext";
 import { useState } from "react";
 import "./layout.css";
 
 export function Layout() {
   const { profile } = useAuth();
+  const { previewing, setPreviewing } = usePlayerPreview();
   // Read back off the outlet only to hand it down again. A bare <Outlet /> is
   // not a pass-through: it provides context={undefined}, which would blank out
   // the campaign CampaignLayout set. Every layout between the provider and the
@@ -26,6 +28,19 @@ export function Layout() {
           >
             {campaign.isDm ? "Dungeon Master" : "Player"}
           </span>
+          {/* campaign.isDm, never the previewing-aware gate the pages use: this
+              control has to survive its own effect, or switching it on would
+              take away the only way to switch it back off. The rail itself is
+              not part of what preview hides — the badge above and the DM links
+              below stay exactly as they are. */}
+          {campaign.isDm && (
+            <button
+              className={`app-rail__preview${previewing ? " is-on" : ""}`}
+              onClick={() => setPreviewing(!previewing)}
+            >
+              {previewing ? "Exit player view" : "View as player"}
+            </button>
+          )}
         </div>
 
         <div className="app-nav">

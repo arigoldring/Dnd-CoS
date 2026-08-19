@@ -1,6 +1,7 @@
-import { SubmitEvent, useState } from "react";
+import { SubmitEvent, useEffect, useState } from "react";
 import { useAuth } from "../../services/AuthContext";
 import { useCampaign } from "../../components/CampaignLayout";
+import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useNpcs } from "../../hooks/useNpcs";
 import { useLocations } from "../../hooks/useLocations";
 import { Npc, NpcEdit } from "../../services/npcs";
@@ -25,10 +26,17 @@ export function Npcs() {
   const { loading: authLoading } = useAuth();
   // Non-null by construction — this route sits under CampaignLayout.
   const campaign = useCampaign();
+  const { previewing } = usePlayerPreview();
   // campaign.isDm, not profile.role: the policies behind these controls ask
   // is_campaign_dm, so a global DM who is only a player here must not be shown
-  // buttons the database would then refuse. This gate and the RLS agree.
-  const isDm = campaign.isDm;
+  // buttons the database would then refuse. That gate and the RLS agree, and
+  // campaign.isDm keeps meaning exactly that.
+  //
+  // showDmUi is the separate, weaker question this page renders from: is the DM
+  // currently asking to be shown their own tools. Preview may take the controls
+  // away; it does not take the permission away, and nothing that talks to the
+  // database may be gated on this.
+  const showDmUi = campaign.isDm && !previewing;
   const {
     data: npcs = [],
     isLoading: npcsLoading,
@@ -37,10 +45,14 @@ export function Npcs() {
     saveDmNotes,
     toggleVisibility,
     toggleVisibilityError,
-  } = useNpcs(campaign.id);
+  } = useNpcs(campaign.id, { asPlayer: previewing });
   // Only for the DM's location picker. Players never open the editor, and the
-  // list renders the location name that came back on the NPC itself.
-  const { data: locations = [] } = useLocations(campaign.id);
+  // list renders the location name that came back on the NPC itself. Passed the
+  // flag anyway, so that every reveal-gated read on the page answers to it —
+  // the picker is hidden in preview, so this is consistency, not effect.
+  const { data: locations = [] } = useLocations(campaign.id, {
+    asPlayer: previewing,
+  });
 
   // Held by id rather than as a copied object, so an open editor re-renders
   // from the list and shows the saved value instead of a stale snapshot.
@@ -48,31 +60,44 @@ export function Npcs() {
   const [notesId, setNotesId] = useState<string | null>(null);
   const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
 
+  // Preview changes which affordances exist, not merely which are visible.
+  // Anything opened before the switch — an editor, a notes drawer, the reveal
+  // panel — would otherwise ride straight through it and sit there as a DM
+  // control on the page that is meant to be showing what a player sees.
+  useEffect(() => {
+    setEditingId(null);
+    setNotesId(null);
+    setShowVisibilityPanel(false);
+  }, [previewing]);
+
   if (authLoading || npcsLoading) return <p>Loading...</p>;
   if (error) return <p>{error.message}</p>;
 
-  // Only ever non-zero for the DM: RLS drops unrevealed rows from a player's
-  // response entirely, so a player's list has nothing to count.
+  // Only ever non-zero for a DM who is not previewing: RLS drops unrevealed
+  // rows from a player's response entirely, and useNpcs drops them again from a
+  // previewing DM's, so in both cases there is nothing here to count.
   const hidden = npcs.filter((n) => !n.isRevealed).length;
 
-  // No reveal filter. RLS already dropped hidden rows from a player's response,
-  // so this list is exactly what this user may see. isDm survives to show the
-  // DM's controls and to mark rows the party cannot see yet; dmNotes needs no
-  // check at all, since RLS left that key absent for everyone else.
+  // Still no reveal filter on this page. RLS dropped hidden rows from a
+  // player's response before it arrived, and useNpcs' select dropped them from
+  // a previewing DM's — so by here the list is already exactly what should be
+  // rendered, and dmNotes is already absent from every row that shouldn't carry
+  // it. The two do different jobs: RLS is the boundary, select is the DM's own
+  // view of their own data.
   return (
     <div className="npcs">
       <div className="npcs-header">
         <h2 className="npcs-title">Characters of Barovia</h2>
         <p className="npcs-count">
           {npcs.length} in the roster
-          {isDm && hidden > 0 && (
+          {showDmUi && hidden > 0 && (
             <>
               {" · "}
               <b>{hidden} not yet revealed</b>
             </>
           )}
         </p>
-        {isDm && (
+        {showDmUi && (
           <button
             className="npcs-visibility-toggle"
             onClick={() => setShowVisibilityPanel(!showVisibilityPanel)}
@@ -137,7 +162,7 @@ export function Npcs() {
                         </span>
                       )}
                     </p>
-                    {isDm && (
+                    {showDmUi && (
                       <div className="npc-card__actions">
                         <button
                           className="npc-card__edit"
@@ -179,7 +204,7 @@ export function Npcs() {
         })}
       </div>
 
-      {isDm && showVisibilityPanel && (
+      {showDmUi && showVisibilityPanel && (
         <aside className="visibility-panel">
           <div className="visibility-panel__header">
             <h3>NPC Visibility</h3>

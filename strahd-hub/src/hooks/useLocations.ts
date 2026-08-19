@@ -2,11 +2,24 @@ import {
   getLocations,
   updateLocationDescription,
   updateLocationVisibility,
+  Location,
 } from "../services/locations";
+import { asPlayerView } from "../lib/playerView";
 import { errorMessage } from "../lib/errors";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
-export function useLocations(campaignId: string) {
+// Module scope, so the identity is stable across renders — see useNpcs.
+const locationsAsPlayer = (locations: Location[]): Location[] =>
+  asPlayerView(locations);
+
+/**
+ * asPlayer re-renders the DM's own pins the way a player's would arrive. Passed
+ * in rather than read from context here, for the reason useNpcs gives.
+ */
+export function useLocations(
+  campaignId: string,
+  { asPlayer = false }: { asPlayer?: boolean } = {},
+) {
   const queryClient = useQueryClient();
   // Destructured, not spread: v5 only subscribes the component to the fields
   // actually read, and a spread reads every one of them — including
@@ -17,6 +30,9 @@ export function useLocations(campaignId: string) {
       getLocations(campaignId).catch((err) => {
         throw new Error(errorMessage(err, "Failed to load locations"));
       }),
+    // Not in the key, for the reason useNpcs gives: same request, filtered per
+    // observer.
+    select: asPlayer ? locationsAsPlayer : undefined,
   });
   const saveDescriptionMutation = useMutation({
     mutationFn: ({ id, description }: { id: string; description: string }) =>

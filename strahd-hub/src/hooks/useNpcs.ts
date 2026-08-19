@@ -2,12 +2,29 @@ import {
   getNpcs,
   updateNpc,
   saveNpcDmNotes,
+  Npc,
   NpcEdit,
 } from "../services/npcs";
+import { asPlayerView } from "../lib/playerView";
 import { errorMessage } from "../lib/errors";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
-export function useNpcs(campaignId: string) {
+// Module scope, so the identity is stable across renders: v5 recomputes select
+// whenever the function itself changes, and an inline arrow would rebuild the
+// array — and hand the page a new one — on every render.
+const npcsAsPlayer = (npcs: Npc[]): Npc[] => asPlayerView(npcs);
+
+/**
+ * asPlayer re-renders the DM's own roster the way a player's would arrive.
+ *
+ * Taken as an argument rather than read from the preview context in here: these
+ * hooks are data, and one that reached for a UI provider itself would throw for
+ * every caller mounted outside it.
+ */
+export function useNpcs(
+  campaignId: string,
+  { asPlayer = false }: { asPlayer?: boolean } = {},
+) {
   const queryClient = useQueryClient();
   // Destructured, not spread: v5 only subscribes the component to the fields
   // actually read, and a spread reads every one of them — including
@@ -18,6 +35,11 @@ export function useNpcs(campaignId: string) {
       getNpcs(campaignId).catch((err) => {
         throw new Error(errorMessage(err, "Failed to load NPCs"));
       }),
+    // asPlayer is deliberately absent from the key. It changes how this
+    // observer reads the response, not what was asked of the server — keying on
+    // it would refetch byte-identical rows into a second cache entry and drop
+    // the page back to Loading on every toggle.
+    select: asPlayer ? npcsAsPlayer : undefined,
   });
 
   // One mutation for the whole editor rather than one per field. Name,

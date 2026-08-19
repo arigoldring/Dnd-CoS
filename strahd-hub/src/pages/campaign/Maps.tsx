@@ -3,6 +3,7 @@ import barovia_map from "../../assets/Maps/barovia.webp";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useAuth } from "../../services/AuthContext";
 import { useCampaign } from "../../components/CampaignLayout";
+import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useLocations } from "../../hooks/useLocations";
 import { Location } from "../../services/locations";
 import { errorMessage } from "../../lib/errors";
@@ -25,11 +26,17 @@ export function Maps() {
   // pin fetch to this campaign so a DM in two of them doesn't get both maps'
   // pins merged onto one Barovia.
   const campaign = useCampaign();
+  const { previewing } = usePlayerPreview();
   // campaign.isDm, not profile.role — after 018 "dms update locations" checks
   // is_campaign_dm(campaign_id), so a global DM who's only a player in this
   // campaign must not see the Edit button the update behind it would then
-  // refuse. This gate and the RLS agree.
-  const isDm = campaign.isDm;
+  // refuse. That gate and the RLS agree, and campaign.isDm still means only
+  // that.
+  //
+  // showDmUi is the weaker, presentation-only question the markup below asks:
+  // is the DM currently asking to see their own tools. It gates controls, never
+  // a write — see PlayerPreviewContext.
+  const showDmUi = campaign.isDm && !previewing;
   const {
     data: locations = [],
     isLoading: locationsLoading,
@@ -37,7 +44,7 @@ export function Maps() {
     saveDescription,
     toggleVisibility,
     toggleVisibilityError,
-  } = useLocations(campaign.id);
+  } = useLocations(campaign.id, { asPlayer: previewing });
   // The open location is held by id, not as a copied Location object: the
   // drawer then re-renders straight from the list, so a saved edit shows up
   // instead of a stale snapshot taken at click time.
@@ -60,6 +67,17 @@ export function Maps() {
     window.clearTimeout(dwell.current);
     setPeek(null);
   }, []);
+
+  // Preview changes which affordances exist, not merely which are visible. A
+  // drawer, an open editor, a peek or the reveal panel left over from the other
+  // mode would otherwise ride through the switch and sit there as a DM control
+  // on the page that is meant to be showing what a player sees. The peek goes
+  // through clearPeek so the pending dwell timer dies with it.
+  useEffect(() => {
+    closePanel();
+    clearPeek();
+    setShowVisibilityPanel(false);
+  }, [previewing, closePanel, clearPeek]);
 
   // The peek is rendered OUTSIDE the zoom transform and positioned from the
   // marker's live screen rect, so it stays a constant size at any zoom level
@@ -109,16 +127,20 @@ export function Maps() {
   if (authLoading || locationsLoading) return <p>Loading...</p>;
   if (error) return <p>{error.message}</p>;
 
-  // No reveal filter here: RLS already dropped hidden rows from a player's
-  // response, so `locations` is exactly what this user may see.
-  // isDm has one job left: showing the edit button. The hidden-pin styling
-  // reads loc.isRevealed, not the role, and dmNotes needs no check at all —
-  // RLS already left that key absent for players.
+  // Still no reveal filter here: RLS dropped hidden rows from a player's
+  // response before it arrived, and useLocations' select dropped them from a
+  // previewing DM's, so `locations` is already exactly what should be drawn.
+  // The two are not the same mechanism — RLS is the boundary, select is the
+  // DM's own view of data they are entitled to either way.
+  //
+  // showDmUi has one job: showing the edit button and the reveal panel. The
+  // hidden-pin styling reads loc.isRevealed, not the role, and dmNotes needs no
+  // check at all — it is absent by the time it gets here.
   return (
     <div className="maps has-peek">
       <div className="maps-header">
         <p>Maps</p>
-        {isDm && (
+        {showDmUi && (
           <button
             className="maps-visibility-toggle"
             onClick={() => setShowVisibilityPanel(!showVisibilityPanel)}
@@ -256,7 +278,7 @@ export function Maps() {
                     </span>
                   )}
                 </p>
-                {isDm && (
+                {showDmUi && (
                   <button
                     className="loc-panel__edit"
                     onClick={() => setEditing(true)}
@@ -273,7 +295,7 @@ export function Maps() {
           </aside>
         )}
 
-        {isDm && showVisibilityPanel && (
+        {showDmUi && showVisibilityPanel && (
           <aside className="visibility-panel">
             <div className="visibility-panel__header">
               <h3>Location Visibility</h3>

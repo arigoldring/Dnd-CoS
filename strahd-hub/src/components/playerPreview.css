@@ -1,0 +1,68 @@
+/* ============================================================================
+   playerPreview.css – the banner shown while a DM is viewing as a player.
+   Imported from components/CampaignLayout.tsx, which renders the banner above
+   the outlet. The rail's toggle is styled in layout.css, beside the other
+   DM-only doors.
+   ========================================================================== */
+
+/* Sticky rather than in flow alone: the mode is persistent, so its way out has
+   to survive a scroll down a long roster. z-index clears .visibility-panel (40)
+   and the optional .atmosphere vignette (30), both of which would otherwise
+   cover it. */
+.preview-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+  padding: 13px 26px;
+  background: linear-gradient(
+    180deg,
+    var(--sh-blood-bright),
+    var(--sh-blood-dark)
+  );
+  border-bottom: 1px solid rgba(255, 210, 180, 0.4);
+  box-shadow: 0 12px 32px -20px rgba(0, 0, 0, 0.95);
+}
+
+.preview-banner__label {
+  flex: none;
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sh-candle);
+}
+
+.preview-banner__note {
+  flex: 1;
+  min-width: 240px;
+  font: 400 15px/1.4 var(--sh-body);
+  color: rgba(255, 242, 208, 0.82);
+  text-wrap: pretty;
+}
+
+/* Candle on blood: the one bright thing in the bar, because it is the control
+   the DM is looking for. */
+.preview-banner__exit {
+  flex: none;
+  padding: 7px 14px 6px;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sh-blood-dark);
+  background: var(--sh-candle);
+  border: 1px solid rgba(255, 242, 208, 0.9);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.preview-banner__exit:hover {
+  background: #fff;
+}
+
+.preview-banner__exit:focus-visible {
+  outline: 2px solid var(--sh-candle);
+  outline-offset: 2px;
+}

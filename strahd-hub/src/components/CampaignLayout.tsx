@@ -7,6 +7,8 @@ import {
 } from "react-router-dom";
 import { useCampaigns } from "../hooks/useCampaigns";
 import { Campaign } from "../services/campaigns";
+import { PlayerPreviewProvider, usePlayerPreview } from "./PlayerPreviewContext";
+import "./playerPreview.css";
 
 /**
  * The gate on every campaign-scoped route, in the same shape as AuthGate:
@@ -34,7 +36,46 @@ export function CampaignLayout() {
   const campaign = campaigns.find((c) => c.id === campaignId);
   if (!campaign) return <Navigate to="/" replace />;
 
-  return <Outlet context={campaign} />;
+  return (
+    // key: the preview flag belongs to the campaign it was raised in. Changing
+    // campaigns re-renders this component rather than remounting it — same
+    // route, new param — so without the key a preview would silently follow the
+    // DM into the next campaign.
+    <PlayerPreviewProvider key={campaign.id}>
+      <PlayerPreviewBanner />
+      <Outlet context={campaign} />
+    </PlayerPreviewProvider>
+  );
+}
+
+/**
+ * Rendered above the outlet rather than by a page, so that no page can be the
+ * reason the way out isn't on screen. This matters more than it looks: a
+ * preview mode with nothing announcing it is indistinguishable from a campaign
+ * that has lost half its content.
+ *
+ * No isDm check — the flag can only be raised by the rail's toggle, which has
+ * one.
+ */
+function PlayerPreviewBanner() {
+  const { previewing, setPreviewing } = usePlayerPreview();
+  if (!previewing) return null;
+
+  return (
+    <div className="preview-banner" role="status">
+      <span className="preview-banner__label">Player view</span>
+      <span className="preview-banner__note">
+        Unrevealed NPCs and locations are hidden here, along with your DM notes.
+        Nothing about the campaign has changed.
+      </span>
+      <button
+        className="preview-banner__exit"
+        onClick={() => setPreviewing(false)}
+      >
+        Exit player view
+      </button>
+    </div>
+  );
 }
 
 /**
