@@ -24,12 +24,13 @@
 -- tell you which of the two deletes to do first.
 --
 -- Removing the campaign takes campaign_members with it (013's cascade), and
--- through it characters, character_inventory and character_spells (028, 037),
--- along with the campaign's locations, DM notes, recaps and invites. That is the
--- same total destruction 020 documents when a DM deletes a campaign from the
--- app, and the same one KNOWN_ISSUES.md warns about under "Removing a player
--- from a campaign destroys their character, gear and spells". Here it is the
--- point.
+-- through it characters, character_inventory, character_spells and
+-- character_feats (028, 037, 041), along with the campaign's locations, DM
+-- notes, recaps, invites and any homebrew feats it authored (039's cascade on
+-- feats.campaign_id). That is the same total destruction 020 documents when a DM
+-- deletes a campaign from the app, and the same one KNOWN_ISSUES.md warns about
+-- under "Removing a player from a campaign destroys their character, gear,
+-- spells and feats". Here it is the point.
 --
 -- ---------------------------------------------------------------------------
 -- WHAT SURVIVES
@@ -41,8 +42,8 @@
 -- and its display name are untouched, because step 2 is scoped to the fixture
 -- email domain and nothing else.
 --
--- Nothing outside the campaign is touched either. The shared item and spell
--- catalogues are campaign_id is null rows; this file never references them.
+-- Nothing outside the campaign is touched either. The shared item, spell and
+-- feat catalogues are campaign_id is null rows; this file never references them.
 --
 -- CORRECT OUTPUT: one result set, four rows, every `remaining` count 0.
 

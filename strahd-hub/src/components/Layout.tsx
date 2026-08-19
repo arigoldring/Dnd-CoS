@@ -61,6 +61,11 @@ export function Layout() {
           )}
           <NavLink to="Maps">Maps</NavLink>
           <NavLink to="Spells">Spells</NavLink>
+          {/* Beside Spells, because they are the same kind of page: a reference
+              catalogue you browse and then take something from onto your sheet.
+              CreateFeat is deliberately not here — the rail is for
+              destinations, and the Feats page carries its own forge link. */}
+          <NavLink to="Feats">Feats</NavLink>
           <NavLink to="NPC">NPCs</NavLink>
           <NavLink to="Recaps">Recaps</NavLink>
           <div className="app-nav__rule" />

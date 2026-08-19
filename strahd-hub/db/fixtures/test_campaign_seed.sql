@@ -241,6 +241,48 @@ insert into spellbook (character_name, spell_name) values
   ('Ysolde Karth',    'Telekinesis');
 
 
+-- Feats, spread across categories for the reason the spell list is spread
+-- across levels: the sheet groups them under a header per category
+-- (featsByCategory in services/feats.ts), and a list that lands in one bucket
+-- never shows that the grouping works.
+--
+-- Aldric is in this table even though he is absent from `spellbook` -- the
+-- point of him is a character with no magic, not a character with nothing, and
+-- two feats give his sheet something in the panel below the empty one.
+create temp table featbook (
+  character_name text not null,
+  feat_name      text not null
+) on commit drop;
+
+insert into featbook (character_name, feat_name) values
+  -- combat and defense: the fighter, who has no spells to show
+  ('Aldric Thorne',   'Great Weapon Master'),
+  ('Aldric Thorne',   'Sentinel'),
+  ('Aldric Thorne',   'Heavy Armor Master'),
+  ('Aldric Thorne',   'Tough'),
+
+  ('Brother Ilyan',   'War Caster'),
+  ('Brother Ilyan',   'Inspiring Leader'),
+  ('Brother Ilyan',   'Moderately Armored'),
+
+  ('Vasha Ridewind',  'Sharpshooter'),
+  ('Vasha Ridewind',  'Mobile'),
+  ('Vasha Ridewind',  'Alert'),
+
+  -- The rogue gets the two that read as his job, plus Skulker, which is the one
+  -- seeded feat with a Dexterity prerequisite -- so at least one row on one
+  -- sheet exercises the prerequisite line under a name.
+  ('Nym Quickfinger', 'Skulker'),
+  ('Nym Quickfinger', 'Observant'),
+  ('Nym Quickfinger', 'Lucky'),
+
+  -- Elemental Adept is here to put a `repeatable` tag on screen. The sheet can
+  -- still only hold it once -- see KNOWN_ISSUES.md.
+  ('Ysolde Karth',    'Elemental Adept'),
+  ('Ysolde Karth',    'Spell Sniper'),
+  ('Ysolde Karth',    'Resilient');
+
+
 -- ===========================================================================
 -- ASSERTIONS -- before anything is written, not after
 -- ===========================================================================
@@ -299,15 +341,16 @@ begin
     raise notice 'Unconfirmed (harmless, these never sign in): %', missing;
   end if;
 
-  -- Every gear and spell row has to name a character in `roster`, or it is
-  -- addressed to nobody.
+  -- Every gear, spell and feat row has to name a character in `roster`, or it
+  -- is addressed to nobody.
   select string_agg(distinct character_name, ', ') into missing
   from (select character_name from gear
-        union select character_name from spellbook) g
+        union select character_name from spellbook
+        union select character_name from featbook) g
   where character_name not in (select character_name from roster);
 
   if missing is not null then
-    raise exception 'Gear or spells assigned to a character not in `roster`: %', missing;
+    raise exception 'Gear, spells or feats assigned to a character not in `roster`: %', missing;
   end if;
 
   -- `campaign_id is null` on both lookups below, and it is load-bearing rather
@@ -333,6 +376,21 @@ begin
 
   if missing is not null then
     raise exception 'Not in the shared spell catalogue: %', missing;
+  end if;
+
+  -- Same `campaign_id is null` for the same reason, and it matters more here
+  -- than it does for spells: 039 shipped an INSERT policy with the table, so a
+  -- campaign's homebrew feat of the same name is not hypothetical. Resolving one
+  -- would attach a feat this campaign cannot read, which the sheet renders by
+  -- throwing -- see KNOWN_ISSUES.md and 041's BLOCK 6.
+  select string_agg(distinct f.feat_name, ', ') into missing
+  from featbook f
+  where not exists (
+    select 1 from feats ft where ft.name = f.feat_name and ft.campaign_id is null
+  );
+
+  if missing is not null then
+    raise exception 'Not in the shared feat catalogue: %', missing;
   end if;
 
   -- The DM, who from_dm stamps as the giver. Absent only if the campaign was
@@ -485,6 +543,19 @@ join characters ch on ch.campaign_id = c.id and ch.user_id = u.id
 join spells sp     on sp.name = s.spell_name and sp.campaign_id is null
 on conflict (character_id, spell_id) do nothing;
 
+-- character_feats. 041's unique (character_id, feat_id) is 037's constraint one
+-- table over and takes the same clause, for the same reason: it is the one the
+-- app itself leans on, via the upsert's ignoreDuplicates.
+insert into character_feats (character_id, feat_id)
+select ch.id, ft.id
+from featbook f
+join roster r     on r.character_name = f.character_name
+join auth.users u on u.email = r.email
+cross join (select id from campaigns where name = 'Test Roster') c
+join characters ch on ch.campaign_id = c.id and ch.user_id = u.id
+join feats ft      on ft.name = f.feat_name and ft.campaign_id is null
+on conflict (character_id, feat_id) do nothing;
+
 
 -- ===========================================================================
 -- WHAT LANDED
@@ -498,7 +569,8 @@ on conflict (character_id, spell_id) do nothing;
 -- never claimed, and if its display_name is null, that account has not set a
 -- name yet (NamePrompt), which the app renders as "someone since departed".
 --
--- Aldric Thorne showing spells = 0 is correct and is the point of him.
+-- Aldric Thorne showing spells = 0 is correct and is the point of him. He has
+-- the most feats of anyone for the same reason.
 --
 -- no_byline is the column that checks the trigger workaround above actually
 -- worked, and it should be 0 on every row. Any other number means added_by came
@@ -512,6 +584,7 @@ select ch.name          as character,
        (select count(*) from character_inventory ci where ci.character_id = ch.id) as gear,
        (select coalesce(sum(ci.quantity), 0) from character_inventory ci where ci.character_id = ch.id) as carried,
        (select count(*) from character_spells cs where cs.character_id = ch.id) as spells,
+       (select count(*) from character_feats cf where cf.character_id = ch.id) as feats,
        (select count(*) from character_inventory ci
         where ci.character_id = ch.id and ci.added_by is null) as no_byline
 from characters ch

@@ -1,0 +1,418 @@
+/* ============================================================================
+   feats.css — the Feats page and the feat detail card.
+   Imported by pages/campaign/Feats.tsx and by components/FeatDetailCard.tsx.
+
+   Modelled on spells.css, including its one rule about itself: every selector
+   below is keyed on a class, never on position in the tree. shop.css selects
+   its card as `.shop > div:nth-of-type(2) > div` and so cannot render anywhere
+   but the Shop; this sheet has to work under .feats, under .ch, and under
+   whatever the sheet grows next.
+   ========================================================================== */
+
+.feats__head {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(160, 140, 110, 0.2);
+}
+
+.feats__eyebrow {
+  margin: 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+.feats__head h1 {
+  margin: 11px 0 0;
+}
+
+.feats__search {
+  width: 320px;
+  margin-left: auto;
+  padding: 11px 14px;
+  font-size: 16px;
+}
+
+/* --- category filters ---------------------------------------------------- */
+
+.feats__filters {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 22px 0 0;
+}
+
+.feats__filters-label {
+  margin: 0 10px 0 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+}
+
+/* Every filter here is a word, unlike the grimoire's digits — so they all take
+   the small-caps treatment spells.css gives only to All and Cantrips. */
+.feats__filters button {
+  padding: 9px 15px 8px;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+  border: 1px solid rgba(160, 140, 110, 0.28);
+}
+
+.feats__filters button.active {
+  color: var(--sh-candle);
+  background: linear-gradient(180deg, rgba(106, 10, 10, 0.9), rgba(58, 6, 6, 0.9));
+  border-color: rgba(255, 210, 180, 0.36);
+}
+
+.feats__count {
+  margin-left: auto;
+  font: 400 13px/1 var(--sh-mono);
+  color: var(--sh-dim);
+}
+
+/* The DM's way into CreateFeat, sitting after the count on the filter row
+   rather than in the nav rail — the rail is for destinations. */
+.feats__forge {
+  margin-left: 16px;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(199, 154, 90, 0.4);
+  padding-bottom: 2px;
+}
+
+.feats__forge:hover {
+  color: var(--sh-candle);
+  border-bottom-color: var(--sh-blood-bright);
+}
+
+/* --- the table ----------------------------------------------------------- */
+
+.feats table {
+  width: 100%;
+  margin: 22px 0 0;
+  border-collapse: collapse;
+  border: 1px solid var(--sh-rule);
+  background: var(--sh-panel);
+  table-layout: fixed;
+}
+
+.feats thead tr {
+  background: rgba(106, 10, 10, 0.1);
+}
+
+.feats th {
+  padding: 14px 0 13px;
+  text-align: left;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border-bottom: 1px solid rgba(160, 140, 110, 0.3);
+}
+
+/* Column widths, in the order Feats.tsx renders them:
+   Name · Category · Prerequisite · Description.
+   Name fits "Medium Armor Master" plus its tag on one line; Prerequisite fits
+   "The ability to cast at least one spell", the longest of the eleven;
+   Description takes the rest and clamps to two lines. */
+.feats th:nth-child(1),
+.feats td:nth-child(1) {
+  width: 258px;
+  padding-left: 26px;
+}
+
+.feats th:nth-child(2),
+.feats td:nth-child(2) {
+  width: 116px;
+}
+
+.feats th:nth-child(3),
+.feats td:nth-child(3) {
+  width: 246px;
+}
+
+.feats th:nth-child(4),
+.feats td:nth-child(4) {
+  padding-right: 26px;
+}
+
+.feats tbody tr {
+  border-bottom: 1px solid var(--sh-rule-faint);
+}
+
+.feats tbody tr:last-child {
+  border-bottom: 0;
+}
+
+.feats tbody tr:hover {
+  background: rgba(154, 122, 58, 0.08);
+  box-shadow: inset 3px 0 0 var(--sh-gold-deep);
+}
+
+.feats td {
+  padding: 15px 18px 15px 0;
+  vertical-align: baseline;
+}
+
+/* name */
+.feats td:nth-child(1) {
+  font-size: 18px;
+  color: var(--sh-bone-bright);
+}
+
+/* category */
+.feats td:nth-child(2) {
+  font: 400 15px/1 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--sh-mute);
+}
+
+/* prerequisite — mono, because it is a condition rather than prose, and the em
+   dash for the thirty-one feats that have none reads as a column of blanks
+   rather than a column of the word "none". */
+.feats td:nth-child(3) {
+  font: 400 13px/1.35 var(--sh-mono);
+  color: var(--sh-mute);
+}
+
+.feats__no-prereq {
+  color: var(--sh-dim);
+}
+
+/* description — two lines, so a row is a row */
+.feats td:nth-child(4) {
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--sh-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* the repeatable tag beside a name — spell-tag's twin, kept separate so the
+   grimoire's conc/ritual badges and this one can drift apart without either
+   page reaching into the other's sheet */
+.feat-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 5px 2px;
+  font: 500 8px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+  border: 1px solid rgba(199, 154, 90, 0.4);
+  vertical-align: 2px;
+}
+
+.feats__empty {
+  margin: 22px 0 0;
+  padding: 20px 24px;
+  text-align: center;
+  font: 400 19px/1.4 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-mute);
+  background: rgba(160, 140, 110, 0.05);
+  border: 1px solid rgba(160, 140, 110, 0.18);
+}
+
+/* --- the row that opens the detail card ---------------------------------- */
+
+/* A button so the name is reachable by keyboard and reads as an action, styled
+   back down to the text it replaced — the table's own td:nth-child(1) rule
+   supplies the size and colour. */
+.feats__open {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.feats__open:hover:not(:disabled) {
+  color: var(--sh-candle);
+  background: none;
+  border: 0;
+}
+
+/* =========================================================
+   FEAT DETAIL CARD — used by the Feats page and by the character sheet
+
+   Colours are the --sh-* tokens from theme.css (declared on :root) rather than
+   the --bone/--blood properties .feats and .ch each declare for themselves, so
+   the card renders identically under both.
+   ========================================================= */
+
+/* Promoted to a full-screen overlay only while it actually holds a card, so
+   with nothing selected it stays an inert empty div in the flow. */
+.feat-detail-backdrop:has(> div) {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 3, 5, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.feat-detail-card {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: 82vh;
+  overflow-y: auto;
+  padding: 24px 28px 26px;
+  text-align: left;
+  color: var(--sh-bone);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(138, 13, 13, 0.14), transparent 60%),
+    linear-gradient(180deg, rgba(36, 29, 32, 0.98), rgba(16, 12, 14, 0.99));
+  border: 1px solid var(--sh-rule-strong);
+  box-shadow:
+    0 30px 70px -20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 240, 210, 0.05);
+}
+
+.feat-detail-card::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--sh-rule-faint);
+  pointer-events: none;
+}
+
+.feat-detail-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font: 400 15px/1 var(--sh-display);
+  letter-spacing: 0;
+  color: var(--sh-mute);
+  background: transparent;
+  border: 1px solid var(--sh-rule-strong);
+}
+
+.feat-detail-close:hover:not(:disabled) {
+  color: var(--sh-candle);
+  border-color: var(--sh-blood-bright);
+  background: rgba(106, 10, 10, 0.25);
+}
+
+.feat-detail-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-right: 28px;
+}
+
+.feat-detail-name {
+  font: 600 20px/1.2 var(--sh-display);
+  letter-spacing: 0.04em;
+  color: var(--sh-bone-bright);
+}
+
+/* "Combat" — the line under the name, where the spell card puts its level. */
+.feat-detail-category {
+  margin: 6px 0 0;
+  font: 400 15px/1.3 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--sh-gold);
+}
+
+/* One row, present only for the eleven feats that have a prerequisite. Built as
+   a dl like the spell card's stat block, so the two cards line their labels up
+   at the same 118px gutter. */
+.feat-detail-stats {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--sh-rule);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feat-detail-stat {
+  display: flex;
+  gap: 10px;
+}
+
+.feat-detail-stat dt {
+  flex: 0 0 118px;
+  margin: 0;
+  font: 500 10px/1.6 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+}
+
+.feat-detail-stat dd {
+  margin: 0;
+  font: 400 15px/1.4 var(--sh-body);
+  color: var(--sh-bone);
+}
+
+.feat-detail-text {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--sh-rule);
+  font: 400 16px/1.55 var(--sh-body);
+  color: var(--sh-mute);
+  white-space: pre-line;
+}
+
+.feat-detail-heading {
+  margin: 16px 0 0;
+  font: 500 10px/1 var(--sh-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+/* The bullets. A real list rather than paragraphs, because that is what a feat
+   is — a lead sentence and then a set of separately applicable clauses, and
+   running them together is what makes Great Weapon Master hard to read. */
+.feat-detail-benefits {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  list-style: none;
+}
+
+.feat-detail-benefits li {
+  position: relative;
+  margin-top: 8px;
+  font: 400 16px/1.5 var(--sh-body);
+  color: var(--sh-mute);
+}
+
+.feat-detail-benefits li::before {
+  content: "\2666";
+  position: absolute;
+  left: -18px;
+  font-size: 10px;
+  line-height: 2.2;
+  color: var(--sh-gold-deep);
+}

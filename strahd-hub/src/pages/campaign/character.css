@@ -265,12 +265,20 @@
   white-space: normal;
 }
 
-/* ---------- known magic ---------- */
+/* ---------- known magic, and feats ---------- */
+
+/* The two list panels are the same object twice over — a grouped table of
+   named things, each row a button into a detail card — so they share these
+   rules as comma lists rather than each getting a copy that can drift. The
+   -spell- and -feat- names are kept apart on purpose: the day one of them wants
+   a different row height, splitting a selector is a smaller edit than
+   un-merging a block. */
 
 /* Shares .ch-table with the gear list. The name is a button because it opens
    the detail card; these rules put it back to reading as the row's text, and
    the dotted rule under it is the affordance that it opens at all. */
-.ch-spell-name {
+.ch-spell-name,
+.ch-feat-name {
   padding: 0;
   font: 400 17px/1.4 var(--sh-body);
   letter-spacing: 0;
@@ -283,7 +291,8 @@
   cursor: pointer;
 }
 
-.ch-spell-name:hover:not(:disabled) {
+.ch-spell-name:hover:not(:disabled),
+.ch-feat-name:hover:not(:disabled) {
   color: var(--sh-candle);
   background: none;
   border: 0;
@@ -291,8 +300,12 @@
 }
 
 /* "3rd-level evocation", under the name — the same line the card leads with, so
-   a row says what kind of thing it is without being opened. */
-.ch-spell-meta {
+   a row says what kind of thing it is without being opened. The feat version
+   carries the prerequisite instead, and only for the eleven that have one: the
+   category is already the group header directly above the row, and repeating
+   it here would be the same word twice down the whole panel. */
+.ch-spell-meta,
+.ch-feat-meta {
   display: block;
   margin-top: 2px;
   font-size: 12px;
@@ -304,19 +317,23 @@
 /* A known-spell list is read by level at the table ("what have I got at 2nd?"),
    so the rows group under the same headings the picker already uses. The group
    header is a row inside the same table as the spells, which is what keeps it
-   sharing their column structure. */
-.ch-spell-group td {
+   sharing their column structure. Feats group by category on the same argument
+   and with the same markup. */
+.ch-spell-group td,
+.ch-feat-group td {
   padding: 22px 6px 6px;
   border-bottom: 0;
 }
 
-.ch-spell-group:first-child td {
+.ch-spell-group:first-child td,
+.ch-feat-group:first-child td {
   padding-top: 4px;
 }
 
 /* Draws its own trailing rule, so the heading reads as a divider across the
    panel rather than a word floating above the first row. */
-.ch-spell-group__label {
+.ch-spell-group__label,
+.ch-feat-group__label {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -326,17 +343,19 @@
   color: var(--sh-gold-deep);
 }
 
-.ch-spell-group__label::after {
+.ch-spell-group__label::after,
+.ch-feat-group__label::after {
   content: "";
   flex: 1;
   height: 1px;
   background: var(--sh-rule-faint);
 }
 
-/* conc / ritual beside the name. The grimoire's .spell-tag in shape, redone
-   here rather than reached for across pages: spells.css arrives on this page
-   only because SpellDetailCard imports it, and a class that depended on that
-   would break the day the card stopped being used. */
+/* conc / ritual beside a spell's name, repeatable beside a feat's. The
+   grimoire's .spell-tag in shape, redone here rather than reached for across
+   pages: spells.css and feats.css arrive on this page only because their detail
+   cards import them, and a class that depended on that would break the day a
+   card stopped being used. */
 .ch-tag {
   display: inline-block;
   margin-left: 8px;

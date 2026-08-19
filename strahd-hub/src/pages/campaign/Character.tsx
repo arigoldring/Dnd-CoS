@@ -2,15 +2,20 @@ import { Fragment, SubmitEvent, useState } from "react";
 import { useCampaign } from "../../components/CampaignLayout";
 import { useCharacter } from "../../hooks/useCharacter";
 import { useCharacterSpells } from "../../hooks/useCharacterSpells";
+import { useCharacterFeats } from "../../hooks/useCharacterFeats";
 import { useSpells } from "../../hooks/useSpells";
+import { useFeats } from "../../hooks/useFeats";
 import { SpellDetailCard } from "../../components/SpellDetailCard";
+import { FeatDetailCard } from "../../components/FeatDetailCard";
 import type { Character as CharacterModel } from "../../services/characters";
 import type { CharacterSpellEntry } from "../../services/characterSpells";
+import type { CharacterFeatEntry } from "../../services/characterFeats";
 import {
   spellLevelGroupLabel,
   spellLevelLine,
   spellsByLevel,
 } from "../../services/spells";
+import { featCategoryLabel, featsByCategory } from "../../services/feats";
 import { errorMessage } from "../../lib/errors";
 import "./character.css";
 
@@ -64,9 +69,10 @@ export function Character() {
   );
 }
 
-// The sheet: identity at the top (owner-only writes), known magic below (owner
-// or DM). The split in this component mirrors the split in 028's policies
-// exactly.
+// The sheet: identity at the top (owner-only writes), then known magic and
+// feats below it (owner or DM). The split in this component mirrors the split
+// in 028's policies exactly — one section per child table, each governed by
+// can_edit_character, all of them under a name only its owner can change.
 //
 // Gear used to sit between the two and now lives on the Inventory page, beside
 // the party's hoard — the two lists a stack can move between belong on one
@@ -133,6 +139,7 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
       </div>
 
       <CharacterSpells characterId={character.id} />
+      <CharacterFeats characterId={character.id} />
     </>
   );
 }
@@ -360,6 +367,245 @@ function RemoveSpellFooter({
     } catch (err) {
       console.error("Problem removing character spell:", err);
       setError(errorMessage(err, "Couldn't remove this spell"));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="ch-card-footer">
+      <button
+        className="ch-button ch-button--danger"
+        onClick={handleRemove}
+        disabled={busy}
+      >
+        {busy ? "Removing..." : "Remove from this character"}
+      </button>
+      {error && <span className="ch-error">{error}</span>}
+    </div>
+  );
+}
+
+// The character's feats. CharacterSpells one table over, with category doing
+// the job level does there — it groups the picker, heads the rows, and is the
+// line under the name on the card.
+//
+// No prerequisite checking and no cap on how many a character may take: 041
+// records that a character has a feat and nothing else, and there is nothing on
+// characters to check "Strength 13 or higher" against. The prerequisite is text
+// the table shows the reader.
+function CharacterFeats({ characterId }: { characterId: string }) {
+  const campaign = useCampaign();
+  const {
+    data: entries = [],
+    isLoading,
+    error,
+    addFeat,
+    removeFeat,
+  } = useCharacterFeats(characterId);
+  const { data: feats = [] } = useFeats(campaign.id);
+
+  const [featId, setFeatId] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  // Held by entryId, not the entry itself — CharacterSpells' reasoning: a
+  // refetch replaces the object, so storing it would leave the card showing a
+  // stale feat beside a fresh row, and a remove would strand a card for a row
+  // that no longer exists.
+  const [panelId, setPanelId] = useState<string | null>(null);
+
+  async function handleAdd(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!featId) return;
+
+    setAdding(true);
+    setAddError(null);
+    try {
+      await addFeat(featId);
+      setFeatId("");
+    } catch (err) {
+      console.error("Problem adding feat to character:", err);
+      setAddError(errorMessage(err, "Couldn't add that feat"));
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  if (isLoading) return <p className="ch-panel">Loading feats...</p>;
+  if (error)
+    return <p className="ch-panel">Couldn't load feats: {error.message}</p>;
+
+  const panel = entries.find((entry) => entry.entryId === panelId) ?? null;
+
+  return (
+    <div className="ch-panel">
+      <h3 className="ch-section">
+        Feats
+        <span className="ch-section__count">{entries.length} taken</span>
+      </h3>
+
+      <form className="ch-add" onSubmit={handleAdd}>
+        <select
+          value={featId}
+          onChange={(e) => setFeatId(e.target.value)}
+          disabled={adding}
+        >
+          <option value="">Choose a feat...</option>
+          {featsByCategory(feats).map((group) => (
+            <optgroup
+              key={group.category}
+              label={featCategoryLabel(group.category)}
+            >
+              {group.feats.map((feat) => (
+                <option key={feat.id} value={feat.id}>
+                  {feat.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <button className="ch-button" type="submit" disabled={adding || !featId}>
+          {adding ? "Adding..." : "Add"}
+        </button>
+        {addError && <span className="ch-error">{addError}</span>}
+      </form>
+
+      {/* Its own backdrop class rather than the spell panel's, so the two cards
+          above can never end up sharing an overlay: feats.css only promotes
+          this div while it has a child, and both sit in the flow otherwise. */}
+      <div className="feat-detail-backdrop" onClick={() => setPanelId(null)}>
+        {panel && (
+          <FeatDetailCard
+            key={panel.entryId}
+            feat={panel}
+            onClose={() => setPanelId(null)}
+            footer={
+              <RemoveFeatFooter
+                entry={panel}
+                onRemove={removeFeat}
+                onRemoved={() => setPanelId(null)}
+              />
+            }
+          />
+        )}
+      </div>
+
+      {/* Group headers are rows inside the same table as the feats, not a table
+          per category — what keeps a heading and the rows under it sharing one
+          column structure, so the Remove buttons stay on a single right edge
+          down the whole panel. colSpan matches FeatRow's two cells. */}
+      {entries.length === 0 ? (
+        <p className="ch-empty">They have taken no feats yet.</p>
+      ) : (
+        <table className="ch-table">
+          <tbody>
+            {featsByCategory(entries).map((group) => (
+              <Fragment key={group.category}>
+                <tr className="ch-feat-group">
+                  <td colSpan={2}>
+                    <span className="ch-feat-group__label">
+                      {featCategoryLabel(group.category)}
+                    </span>
+                  </td>
+                </tr>
+                {group.feats.map((entry) => (
+                  <FeatRow
+                    key={entry.entryId}
+                    entry={entry}
+                    onInspect={() => setPanelId(entry.entryId)}
+                    onRemove={removeFeat}
+                  />
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+// SpellRow's shape: one row owning its own action state, so a failure reports
+// beside the feat it happened to rather than as one page-level message that
+// can't say which. The meta line is the prerequisite rather than a restatement
+// of the category, which the group header above already gave.
+function FeatRow({
+  entry,
+  onInspect,
+  onRemove,
+}: {
+  entry: CharacterFeatEntry;
+  onInspect: () => void;
+  onRemove: (entryId: string) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleRemove() {
+    if (!window.confirm(`Remove ${entry.name} from this character?`)) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      await onRemove(entry.entryId);
+    } catch (err) {
+      console.error("Problem removing character feat:", err);
+      setError(errorMessage(err, "Couldn't remove this feat"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <tr>
+      <td>
+        <button className="ch-feat-name" onClick={onInspect}>
+          {entry.name}
+        </button>
+        {entry.repeatable && <span className="ch-tag">repeatable</span>}
+        {entry.prerequisite && (
+          <span className="ch-feat-meta">{entry.prerequisite}</span>
+        )}
+      </td>
+      <td className="ch-actions">
+        <button
+          className="ch-button ch-button--danger"
+          onClick={handleRemove}
+          disabled={busy}
+          title="Remove from this character"
+          aria-label={`Remove ${entry.name} from this character`}
+        >
+          Remove
+        </button>
+        {error && <span className="ch-error">{error}</span>}
+      </td>
+    </tr>
+  );
+}
+
+// The card's footer slot, RemoveSpellFooter's twin. Removing from inside the
+// card closes it, because the row it described is gone the moment this
+// succeeds.
+function RemoveFeatFooter({
+  entry,
+  onRemove,
+  onRemoved,
+}: {
+  entry: CharacterFeatEntry;
+  onRemove: (entryId: string) => Promise<void>;
+  onRemoved: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleRemove() {
+    setBusy(true);
+    setError(null);
+    try {
+      await onRemove(entry.entryId);
+      onRemoved();
+    } catch (err) {
+      console.error("Problem removing character feat:", err);
+      setError(errorMessage(err, "Couldn't remove this feat"));
       setBusy(false);
     }
   }

@@ -3,6 +3,7 @@ import { Home } from "./pages/campaign/Home";
 import { Shop } from "./pages/campaign/Shop";
 import { Maps } from "./pages/campaign/Maps";
 import { Spells } from "./pages/campaign/Spells";
+import { Feats } from "./pages/campaign/Feats";
 import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/campaign/NPC";
 import { Recaps } from "./pages/campaign/Recaps";
@@ -10,6 +11,7 @@ import { Inventory } from "./pages/campaign/Inventory";
 import { Character } from "./pages/campaign/Character";
 // import { Party } from "./pages/campaign/Party";
 import { CreateItem } from "./pages/campaign/CreateItem";
+import { CreateFeat } from "./pages/campaign/CreateFeat";
 import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
 import { CampaignPicker } from "./pages/onboarding/CampaignPicker";
@@ -66,8 +68,16 @@ function App() {
                     it to the picker. */}
                   {/* <Route path="Party" element={<Party />} /> */}
                   <Route path="CreateItem" element={<CreateItem />} />
+                  {/* Both authoring pages guard themselves on campaign.isDm and
+                    are refused by 025 and 039 behind that. Neither is in the
+                    nav rail: each is linked from the catalogue it writes into,
+                    which is where you are when you want one. */}
+                  <Route path="CreateFeat" element={<CreateFeat />} />
                   <Route path="Maps" element={<Maps />} />
                   <Route path="Spells" element={<Spells />} />
+                  {/* The grimoire's twin. Not DM-gated — 039's read policy is
+                    shared-plus-your-campaign, the same as spells. */}
+                  <Route path="Feats" element={<Feats />} />
                   <Route path="NPC" element={<Npcs />} />
                   <Route path="Recaps" element={<Recaps />} />
                   {/* DM of THIS campaign only, enforced by the page itself and

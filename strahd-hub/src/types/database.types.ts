@@ -90,6 +90,42 @@ export type Database = {
         }
         Relationships: []
       }
+      character_feats: {
+        Row: {
+          character_id: string
+          created_at: string
+          feat_id: string
+          id: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          feat_id: string
+          id?: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          feat_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_feats_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_feats_feat_id_fkey"
+            columns: ["feat_id"]
+            isOneToOne: false
+            referencedRelation: "feats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_inventory: {
         Row: {
           added_by: string | null
@@ -241,6 +277,53 @@ export type Database = {
             columns: ["used_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feats: {
+        Row: {
+          benefits: string[]
+          campaign_id: string | null
+          category: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          prerequisite: string | null
+          repeatable: boolean
+          tags: string[]
+        }
+        Insert: {
+          benefits?: string[]
+          campaign_id?: string | null
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          prerequisite?: string | null
+          repeatable?: boolean
+          tags?: string[]
+        }
+        Update: {
+          benefits?: string[]
+          campaign_id?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          prerequisite?: string | null
+          repeatable?: boolean
+          tags?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feats_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]

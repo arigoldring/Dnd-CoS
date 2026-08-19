@@ -180,14 +180,19 @@ locations.
 **Fix:** `delete from locations where ...` instead of `truncate`, or reseed the
 roster after. Flagged at the bottom of `033_npcs.sql` as well as here.
 
-### Removing a player from a campaign destroys their character, gear and spells (noted 2026-08-12, widened by 037)
+### Removing a player from a campaign destroys their character, gear, spells and feats (noted 2026-08-12, widened by 037 and 041)
 
 `characters` carries a composite FK to `campaign_members (campaign_id, user_id)`
-with `on delete cascade`, and both `character_inventory.character_id` and — since
-037 — `character_spells.character_id` cascade from `characters` in turn. So
-deleting one `campaign_members` row silently deletes that player's PC, every item
-on it and every spell on it, in the same statement, with no intermediate state
-and nothing to restore from.
+with `on delete cascade`, and `character_inventory.character_id`, — since 037 —
+`character_spells.character_id` and — since 041 — `character_feats.character_id`
+all cascade from `characters` in turn. So deleting one `campaign_members` row
+silently deletes that player's PC, every item on it, every spell on it and every
+feat on it, in the same statement, with no intermediate state and nothing to
+restore from.
+
+Each new child table widens this by one list without touching the entry, which
+is the shape of the problem: the cascade is correct and invisible, and the count
+of what it takes only ever goes up.
 
 **Trigger:** any delete against `campaign_members`. There is no kick UI today —
 the only paths are leaving a campaign yourself and a manual delete in the
@@ -307,7 +312,11 @@ can create one today.
 
 **Cost:** currently zero. Note that "unreachable because there's no INSERT
 policy" is exactly the shape that protected `items` until 025 shipped and made it
-reachable — see the Resolved entry below. This is the same bet, one table over.
+reachable — see the Resolved entry below. This is the same bet, one table over,
+and 039 has since lost it for feats: `character_feats` has the identical hole and
+it is live, because feats shipped with DM homebrew in the same migration as the
+table. See "`CharacterFeatRow` asserts the embedded feat is non-null" below for
+what that actually costs.
 
 **Fix when spell homebrew lands:** either scope `character_spells`' FK the way
 `npcs` scopes its location FK (a composite key that makes the cross-campaign row
@@ -349,6 +358,101 @@ Compare `deleteCharacter` and `deleteRecap`, which both use
 
 **Fix:** name the condition in the comment now (one sentence), and add the check
 if the control ever moves.
+
+### `feats.repeatable` is display-only; a sheet can hold each feat once (noted 2026-08-19)
+
+041 gives `character_feats` a `unique (character_id, feat_id)`, copied from 037
+where it is simply true — a spell is known or it is not. Feats are not all like
+that: Elemental Adept and Magic Initiate both say you may take them again, and
+the seed marks them `repeatable = true`. The card and the row print the flag, and
+the second add is silently swallowed by the same `ignoreDuplicates` that makes an
+accidental double-add a no-op. Nothing tells the player the difference.
+
+**Trigger:** taking either of those two feats twice. 041's BLOCK 5 is the case,
+written from the accident side.
+
+**Cost:** two feats out of forty-two, on a sheet that records no level either, so
+"took it at 8 and again at 12" is not expressible in the first place.
+
+**Fix:** a `times_taken int not null default 1 check (times_taken > 0)` and 030's
+insert-or-increment RPC, since PostgREST cannot express increment — which is the
+whole apparatus `character_spells` was designed to avoid. Worth it only if
+someone actually hits this. Cheaper interim: have the picker disable a feat
+already on the sheet, so the no-op is visible rather than silent.
+
+### `feats.prerequisite` is text nothing can check (noted 2026-08-19)
+
+The column holds strings like "Strength 13 or higher" and "Proficiency with heavy
+armor". `characters` stores a name, a campaign and an owner — no level, no class,
+no ability scores, no proficiencies — so there is nothing to evaluate them
+against, in the database or the client. Eleven of the forty-two seeded feats carry
+one and any player can take any of them.
+
+**Cost:** none as a bug; the app is a shared reference sheet, and the DM at the
+table is the enforcement layer. It is written down because "prerequisite" is a
+word that implies a check, and the next person to read the schema will look for
+one.
+
+**Fix:** nothing, unless characters grow stats. If they ever do, the honest
+version is a warning beside the picker rather than a disabled option — a DM
+waiving a prerequisite is a normal thing to do, and a hard block would be wrong.
+
+### `CharacterFeatRow` asserts the embedded feat is non-null (noted 2026-08-19)
+
+The spells version of this entry is above, and is currently unreachable. This one
+is not. `CHARACTER_FEATS_SELECT` is `"*, feats(*)"` with the row type declaring
+`feats: Tables<"feats">`, and 039 ships a working INSERT policy — so a DM who
+belongs to two campaigns can create a homebrew feat in campaign B and attach it to
+a character in campaign A, where 039's SELECT policy filters the embed to null and
+`toCharacterFeatEntry` calls `toFeat(null)` and throws a TypeError. 041's BLOCK 6
+demonstrates exactly this rather than asserting it away.
+
+**Trigger:** a hand-made request. The UI cannot produce it — the picker is fed by
+`getFeats(campaignId)`, which is already scoped to shared-plus-this-campaign — so
+reaching it means calling PostgREST directly with a feat id from elsewhere.
+
+**Cost:** one character's Feats panel throws instead of rendering, for everyone
+who can see that character, until the row is deleted in the SQL editor. Not a
+leak: the feat's contents stay invisible, which is what makes the embed null in
+the first place.
+
+**Fix:** the composite-FK answer the spells entry prefers does not work here —
+shared feats have a null `campaign_id` and would match nothing — so it is either a
+BEFORE INSERT trigger re-deriving the character's campaign and rejecting a
+mismatch, or making the embed nullable in the type and dropping the row from the
+list. The trigger is the right one; the type change is a two-line stopgap.
+
+### `getCharacterFeats` returns rows in no particular order (noted 2026-08-19)
+
+The same gap as `getCharacterSpells` above, made the same way: no `.order()`, no
+post-sort, correct only because every consumer pipes it through
+`featsByCategory`, which sorts. Copied knowingly, so it is copied here too rather
+than left for someone to find twice.
+
+**Fix:** whatever is decided for the spells version, applied to both in one edit.
+
+### `removeFeatFromCharacter` treats a refused delete as success (noted 2026-08-19)
+
+`removeSpellFromCharacter`'s entry above, one table over and with the same
+justification and the same dependency on it: the remove control renders on your
+own sheet and nowhere else, so nobody who can press it can be refused. The Party
+panel is the trigger for both.
+
+**Fix:** whichever way the spells one goes.
+
+### `useCharacterFeats` invalidates only its own key (noted 2026-08-19)
+
+`["characterFeats", characterId]` and nothing else, matching `useCharacterSpells`.
+Today that is complete, because the Feats panel on the sheet is the only thing
+that reads character feats. The Party page's `TeachForm` had to invalidate
+`["party", campaignId]` by hand for exactly this reason, and a feats embed in
+`PARTY_SELECT` would need the same hand-written second invalidation.
+
+**Trigger:** the Party page coming back (its route and nav link are commented out
+as of `6b7dee5`) with feats added to its embed.
+
+**Fix:** the same one the spells entry wants — a mutation that invalidates both
+keys, or a shared invalidator that knows a character belongs to a campaign.
 
 ### `035_npc_desc_fix.sql` has no header comment (noted 2026-08-17)
 
