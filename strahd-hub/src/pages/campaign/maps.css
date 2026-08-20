@@ -355,6 +355,32 @@
   border-left: 3px solid var(--blood-bright);
 }
 
+/* Wraps the DM-notes block + its edit button, and is what draws the rule that
+   sets the whole notes section apart from the description above it. Present
+   in both the read state and (via .loc-edit--notes on the form) the editing
+   state, so the rule holds steady across the switch instead of appearing only
+   in one of the two. */
+.maps .loc-panel__notes {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(160,140,110,.28);
+}
+/* the container already opens the gap above; a nested margin would double it */
+.maps .loc-panel__notes .loc-panel__dm {
+  margin-top: 0;
+}
+.maps .loc-panel__notes .loc-panel__edit--notes {
+  margin-top: 12px;
+}
+
+/* the editor form gets the same rule + spacing as .loc-panel__notes above, so
+   opening the editor doesn't shift the seam it replaces */
+.maps .loc-edit--notes {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(160,140,110,.28);
+}
+
 /* DM-only notes block — set apart from the player-facing description */
 .maps .loc-panel__dm {
   margin: 16px 0 0;

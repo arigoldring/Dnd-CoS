@@ -1,6 +1,7 @@
 import {
   getLocations,
   updateLocationDescription,
+  saveLocationDmNotes,
   updateLocationVisibility,
   Location,
 } from "../services/locations";
@@ -46,13 +47,20 @@ export function useLocations(
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["locations", campaignId] }),
   });
+  const saveDmNotesMutation = useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes: string }) =>
+      saveLocationDmNotes(id, notes),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["locations", campaignId] }),
+  });
   return {
     data,
     isLoading,
     error,
-    // mutateAsync, not mutate: the description editor awaits the save and
-    // relies on rejection to stay open with the draft when the write fails.
+    // mutateAsync, not mutate: both editors await the save and rely on
+    // rejection to stay open with the draft when the write fails.
     saveDescription: saveDescriptionMutation.mutateAsync,
+    saveDmNotes: saveDmNotesMutation.mutateAsync,
     // mutate is right for a bare onClick with no form around it — but only
     // with the error surfaced alongside, or a refused write (RLS, network) is
     // completely silent: onSuccess never fires, nothing invalidates, and the

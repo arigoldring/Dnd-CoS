@@ -124,6 +124,36 @@ export async function updateLocationDescription(
   return data.description;
 }
 
+// Write the DM's private notes. An upsert for the reason 044's comment gives:
+// the first save on a location lands in an empty table (INSERT) and every
+// save after it updates the existing row (UPDATE) -- one button, two
+// statements, which is why 044 grants both. location_id is the primary key,
+// so it is also the default conflict target.
+//
+// An empty string is stored as an empty string, same as saveNpcDmNotes -- no
+// sentinel for "no notes" to strip out first, and clearing a note is a save
+// like any other.
+export async function saveLocationDmNotes(
+  locationId: string,
+  notes: string,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("location_dm_notes")
+    .upsert({ location_id: locationId, notes })
+    .select("notes")
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+  if (!data) {
+    throw new Error("You do not have permission to edit these notes");
+  }
+
+  return data.notes;
+}
+
 export async function updateLocationVisibility(
   id: string,
   isRevealed: boolean,

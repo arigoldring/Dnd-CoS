@@ -55,6 +55,7 @@ export function MapView() {
     isLoading: locationsLoading,
     error: locationsError,
     saveDescription,
+    saveDmNotes,
     toggleVisibility,
     toggleVisibilityError,
   } = useLocations(campaign.id, { asPlayer: previewing });
@@ -86,6 +87,7 @@ export function MapView() {
       map={map}
       pins={pins}
       saveDescription={saveDescription}
+      saveDmNotes={saveDmNotes}
       toggleVisibility={toggleVisibility}
       toggleVisibilityError={toggleVisibilityError}
     />
@@ -96,12 +98,14 @@ function MapViewInner({
   map,
   pins,
   saveDescription,
+  saveDmNotes,
   toggleVisibility,
   toggleVisibilityError,
 }: {
   map: CampaignMap;
   pins: Location[];
   saveDescription: (vars: { id: string; description: string }) => Promise<unknown>;
+  saveDmNotes: (vars: { id: string; notes: string }) => Promise<unknown>;
   toggleVisibility: (vars: { id: string; isRevealed: boolean }) => void;
   toggleVisibilityError: Error | null;
 }) {
@@ -123,6 +127,7 @@ function MapViewInner({
   // instead of a stale snapshot taken at click time.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
   const [peek, setPeek] = useState<Peek | null>(null);
   const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -136,6 +141,7 @@ function MapViewInner({
   const closePanel = useCallback(() => {
     setSelectedId(null);
     setEditing(false);
+    setEditingNotes(false);
   }, []);
 
   const clearPeek = useCallback(() => {
@@ -191,13 +197,15 @@ function MapViewInner({
       if (e.key !== "Escape") return;
       clearPeek();
       // Back out one layer at a time: an open editor first, then the drawer —
-      // so Escape on a half-typed description doesn't also close the panel.
+      // so Escape on a half-typed description or note doesn't also close the
+      // panel.
       if (editing) setEditing(false);
+      else if (editingNotes) setEditingNotes(false);
       else setSelectedId(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clearPeek, editing]);
+  }, [clearPeek, editing, editingNotes]);
 
   // Still no reveal filter here: RLS dropped hidden pin rows from a player's
   // response before it arrived, and useLocations' select dropped them from a
@@ -207,9 +215,11 @@ function MapViewInner({
   // see MapView's mapsAsPlayer comment above and src/data/maps.ts for why, and
   // for the boundary this page is actually relying on instead of RLS.
   //
-  // showDmUi has one job: showing the edit button and the reveal panel. The
-  // hidden-pin styling reads loc.isRevealed, not the role, and dmNotes needs no
-  // check at all — it is absent by the time it gets here.
+  // showDmUi's job: the edit buttons (description and DM notes) and the reveal
+  // panel. The hidden-pin styling reads loc.isRevealed, not the role, and
+  // *displaying* dmNotes needs no check at all — it is absent by the time it
+  // gets here for anyone who shouldn't see it. showDmUi only gates the button
+  // that writes it.
   return (
     <div className="maps has-peek">
       <div className="maps-header">
@@ -285,6 +295,7 @@ function MapViewInner({
                     // Moving to another location drops any open editor with it,
                     // so an unsaved draft can never bleed onto the next panel.
                     setEditing(false);
+                    setEditingNotes(false);
                     setSelectedId((cur) => (cur === loc.id ? null : loc.id));
                   }}
                   onMouseEnter={(e) => startDwell(loc, e.currentTarget)}
@@ -376,8 +387,31 @@ function MapViewInner({
               </>
             )}
 
-            {selected.dmNotes && (
-              <p className="loc-panel__dm">DM notes: {selected.dmNotes}</p>
+            {editingNotes ? (
+              // key: a fresh editor per location, same reasoning as
+              // DescriptionEditor above.
+              <DmNotesEditor
+                key={selected.id}
+                location={selected}
+                onSave={saveDmNotes}
+                onClose={() => setEditingNotes(false)}
+              />
+            ) : (
+              (selected.dmNotes || showDmUi) && (
+                <div className="loc-panel__notes">
+                  {selected.dmNotes && (
+                    <p className="loc-panel__dm">DM notes: {selected.dmNotes}</p>
+                  )}
+                  {showDmUi && (
+                    <button
+                      className="loc-panel__edit loc-panel__edit--notes"
+                      onClick={() => setEditingNotes(true)}
+                    >
+                      {selected.dmNotes ? "Edit DM notes" : "Add DM notes"}
+                    </button>
+                  )}
+                </div>
+              )
             )}
           </aside>
         )}
@@ -487,6 +521,78 @@ function DescriptionEditor({
           disabled={saving}
         >
           {saving ? "Saving..." : "Save"}
+        </button>
+      </div>
+      {error && <p className="loc-edit__error">{error}</p>}
+    </form>
+  );
+}
+
+// Separate from DescriptionEditor because it writes to a different table
+// through a different policy (044): this one can fail on its own while the
+// description saves fine, and the error belongs next to the field that caused
+// it.
+function DmNotesEditor({
+  location,
+  onSave,
+  onClose,
+}: {
+  location: Location;
+  onSave: (vars: { id: string; notes: string }) => Promise<unknown>;
+  onClose: () => void;
+}) {
+  // "" when there is no note yet, which is also what a cleared note stores —
+  // no sentinel to strip out first.
+  const [draft, setDraft] = useState(location.dmNotes ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({ id: location.id, notes: draft });
+      onClose();
+    } catch (err) {
+      // Stay open on failure, holding the draft: closing here would throw away
+      // text the DM just wrote and that the database never took.
+      console.error("Problem saving DM notes:", err);
+      setError(errorMessage(err, "Problem saving DM notes"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="loc-edit loc-edit--notes" onSubmit={handleSubmit}>
+      <label className="loc-edit__label" htmlFor="loc-dm-notes">
+        DM notes
+      </label>
+      <textarea
+        id="loc-dm-notes"
+        className="loc-edit__field"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        disabled={saving}
+        rows={5}
+        autoFocus
+      />
+      <div className="loc-edit__actions">
+        <button
+          type="button"
+          className="loc-edit__btn"
+          onClick={onClose}
+          disabled={saving}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="loc-edit__btn loc-edit__btn--save"
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Save notes"}
         </button>
       </div>
       {error && <p className="loc-edit__error">{error}</p>}
