@@ -507,3 +507,35 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+/* ---------- purse ---------- */
+
+/* Carried's layout again, one line: a total on the left, its gold value
+   beside it in a smaller face, and the door to Inventory pinned to the right
+   edge. */
+.ch-purse {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  padding-top: 14px;
+}
+
+.ch-purse__total {
+  margin: 0;
+  font: 600 20px/1 var(--sh-display);
+  letter-spacing: 0.02em;
+  color: var(--sh-bone);
+}
+
+.ch-purse__value {
+  font: 400 12px/1 var(--sh-mono);
+  color: var(--sh-mute);
+}
+
+.ch-purse__link {
+  margin-left: auto;
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

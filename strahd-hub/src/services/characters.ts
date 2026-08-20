@@ -20,7 +20,20 @@ export interface Character {
   userId: string;
   name: string;
   createdAt: string;
+  // The purse. Rides along on every character read — Character.tsx, Party.tsx
+  // and getPartyCharacters below all get it for free, the same way an entry's
+  // price rides along on an item read.
+  copper: number;
+  silver: number;
+  electrum: number;
+  gold: number;
+  platinum: number;
 }
+
+// 045's five columns, in the order every purse reads in (most to least
+// valuable). Shared with party_currency, whose row has the same five columns
+// under a different key — see services/currency.ts.
+export type Denomination = "copper" | "silver" | "electrum" | "gold" | "platinum";
 
 // Two of Postgres' SQLSTATEs surface here as things a user can cause by typing,
 // so both get turned into sentences rather than shown raw.
@@ -34,6 +47,11 @@ function toCharacter(row: Tables<"characters">): Character {
     userId: row.user_id,
     name: row.name,
     createdAt: row.created_at,
+    copper: row.copper,
+    silver: row.silver,
+    electrum: row.electrum,
+    gold: row.gold,
+    platinum: row.platinum,
   };
 }
 
@@ -170,6 +188,44 @@ export async function deleteCharacter(id: string): Promise<void> {
   if (!data) {
     throw new Error("That character is not yours to delete");
   }
+}
+
+// Adds (positive delta) or spends (negative delta) one denomination in this
+// character's purse. 045's adjust_character_currency does the read, the floor
+// check and the write as one locked statement, so this is never a
+// read-modify-write — the client never computes the new balance itself.
+//
+// Owner-only, the same line renameCharacter and deleteCharacter draw: the RPC
+// runs SECURITY INVOKER against "owner updates own character", so there is no
+// DM path onto a character's purse, unlike character_inventory.
+//
+// A null result covers two cases the RPC can't tell apart — an overdraw, and
+// a target_character that isn't yours — the same ambiguity renameCharacter's
+// zero-row check already lives with.
+export async function adjustCharacterCurrency(
+  characterId: string,
+  denomination: Denomination,
+  delta: number,
+): Promise<number> {
+  const { data, error } = await supabase.rpc("adjust_character_currency", {
+    target_character: characterId,
+    denomination,
+    delta,
+  });
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+  if (data === null) {
+    throw new Error(
+      delta < 0
+        ? `Not enough ${denomination} in that purse`
+        : "That character isn't yours to add to",
+    );
+  }
+
+  return data;
 }
 
 // ---------------------------------------------------------------------------

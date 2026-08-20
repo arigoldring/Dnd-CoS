@@ -5,7 +5,7 @@ size, and written down so they stay decisions rather than becoming discoveries.
 Each entry says what it takes to trigger, what it costs, and what the fix would
 be if the answer ever changes.
 
-**Current through migration 042. Last updated 2026-08-20.**
+**Current through migration 045. Last updated 2026-08-20.**
 
 This is the single source of truth for open work. `CONTEXT.md` holds decisions
 and invariants and deliberately does not duplicate anything below.
@@ -13,6 +13,31 @@ and invariants and deliberately does not duplicate anything below.
 ---
 
 ## Open
+
+### Currency denominations don't auto-convert (noted 2026-08-20)
+
+045 gives a purse five separate integer columns — copper, silver, electrum,
+gold, platinum — and `adjust_character_currency`/`adjust_party_currency` each
+touch exactly one. There is no "break a gold piece into 10 silver" operation
+anywhere: spending 100 cp when a purse holds only gold pieces means manually
+adding copper (or converting by hand) before the spend can succeed, because
+the copper column's own floor check refuses to go negative even though the
+purse's total value would cover it.
+
+**Trigger:** any spend that mismatches the denomination actually held. Common
+at the table — loot rarely arrives in the exact coins a price is written in.
+
+**Cost:** low and mostly friction, not data loss — the refusal is a clean
+"not enough of that denomination", not a crash, and nothing stops a player or
+the DM from doing the conversion by hand with two Add/Spend calls. What it
+costs is convenience: nothing in the app currently prices anything to spend
+*against*, so it hasn't bitten yet, but it will the day a shop or a service
+charge is priced in gold and a party is holding platinum.
+
+**Fix if the answer changes:** a `convert_currency` RPC taking a purse target,
+a source denomination, an amount, and a target denomination, doing the spend
+and the add as one transaction at fixed 5e rates (1 sp = 10 cp, 1 ep = 5 sp,
+1 gp = 2 ep, 1 pp = 10 gp). Not hard, just not written yet.
 
 ### `locations` has no `campaign_id`-pinning trigger (noted 2026-08-12)
 

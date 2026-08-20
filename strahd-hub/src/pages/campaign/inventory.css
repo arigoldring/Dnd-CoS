@@ -125,6 +125,61 @@
   color: var(--sh-dim);
 }
 
+/* --- the purse ------------------------------------------------------------ */
+
+/* Sits at the head of either column: a total, then the add/spend form on the
+   line under it. Its own bottom rule so it reads as a strip above whatever
+   list follows, the same join .inv-section draws with its own border. */
+.inv-purse {
+  padding: 14px 22px 16px;
+  border-bottom: 1px solid var(--sh-rule);
+}
+
+.inv-rail .inv-purse {
+  padding: 12px 0 14px;
+}
+
+.inv-purse__total {
+  margin: 0 0 4px;
+  font: 600 20px/1 var(--sh-display);
+  letter-spacing: 0.02em;
+  color: var(--sh-gold);
+}
+
+.inv-purse__value {
+  margin: 0 0 10px;
+  font: 400 12px/1 var(--sh-mono);
+  color: var(--sh-mute);
+}
+
+.inv-purse__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.inv-purse__form select {
+  flex: 0 0 auto;
+  padding: 7px 8px;
+}
+
+.inv-purse__amount {
+  flex: 0 1 100px;
+  min-width: 0;
+  padding: 7px 10px;
+  font: 400 15px/1 var(--sh-body);
+  color: var(--sh-bone);
+  background: var(--sh-panel-sunk);
+  border: 1px solid rgba(160, 140, 110, 0.35);
+  box-shadow: var(--sh-inset);
+}
+
+.inv-purse__amount:focus {
+  outline: none;
+  border-color: rgba(199, 154, 90, 0.7);
+}
+
 .inv-table {
   width: 100%;
   border-collapse: collapse;

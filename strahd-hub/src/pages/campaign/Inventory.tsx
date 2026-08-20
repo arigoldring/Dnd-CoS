@@ -5,13 +5,15 @@ import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useCharacter } from "../../hooks/useCharacter";
 import { useCharacterInventory } from "../../hooks/useCharacterInventory";
 import { usePartyInventory } from "../../hooks/usePartyInventory";
+import { usePartyCurrency } from "../../hooks/usePartyCurrency";
 import { useInventoryTransfer } from "../../hooks/useInventoryTransfer";
 import { useItems } from "../../hooks/useItems";
 import { useSearchBar } from "../../hooks/useSearchBar";
 import { ItemDetailCard } from "../../components/ItemDetailCard";
-import type { Character as CharacterModel } from "../../services/characters";
+import type { Character as CharacterModel, Denomination } from "../../services/characters";
 import type { CharacterInventoryEntry } from "../../services/characterInventory";
 import type { PartyInventoryEntry } from "../../services/partyInventory";
+import { EMPTY_PURSE, formatGoldValue, formatPurse, type Purse } from "../../services/currency";
 import { errorMessage } from "../../lib/errors";
 import "./inventory.css";
 
@@ -34,7 +36,7 @@ export function Inventory() {
   // Non-null by construction — this route sits under CampaignLayout, which has
   // already resolved :campaignId against the campaigns this user can see.
   const campaign = useCampaign();
-  const { data: character, isLoading, error } = useCharacter(campaign.id);
+  const { data: character, isLoading, error, adjustCurrency } = useCharacter(campaign.id);
 
   // Only the character query gates the page. The two lists below carry their own
   // loading and error states, so a slow hoard does not hold up the pack and a
@@ -59,9 +61,104 @@ export function Inventory() {
       {/* Pack first in the DOM as well as on screen, so the page reads "yours,
           then the party's" to a screen reader too. */}
       <div className="inv-columns">
-        {character ? <MyPack character={character} /> : <NoCharacter />}
+        {character ? (
+          <MyPack character={character} adjustCurrency={adjustCurrency} />
+        ) : (
+          <NoCharacter />
+        )}
         <Hoard campaignId={campaign.id} characterId={character?.id} />
       </div>
+    </div>
+  );
+}
+
+// One purse control, used at the head of both columns: a total plus a
+// denomination picker, an amount, and Add/Spend. `onAdjust` is the only thing
+// that differs between the two calls — MyPack passes useCharacter's
+// adjustCurrency (owner-only, enforced by RLS, not by this component), Hoard
+// passes usePartyCurrency's (any campaign member) — so the control itself
+// doesn't know or care which purse it's spending from.
+//
+// Add and Spend are two buttons rather than one signed amount, matching this
+// page's other verbs (Take/Stow, +/−1): the amount field only ever holds a
+// positive number, and which button was pressed decides the sign.
+function PurseWidget({
+  purse,
+  onAdjust,
+}: {
+  purse: Purse;
+  onAdjust: (denomination: Denomination, delta: number) => Promise<number>;
+}) {
+  const [denomination, setDenomination] = useState<Denomination>("gold");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const parsedAmount = Number.parseInt(amount, 10);
+  const validAmount = Number.isInteger(parsedAmount) && parsedAmount > 0;
+
+  async function handleAdjust(sign: 1 | -1) {
+    if (!validAmount) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      await onAdjust(denomination, sign * parsedAmount);
+      setAmount("");
+    } catch (err) {
+      console.error("Problem adjusting currency:", err);
+      setError(errorMessage(err, "Couldn't update the purse"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="inv-purse">
+      <p className="inv-purse__total">{formatPurse(purse)}</p>
+      <p className="inv-purse__value">Gold Value: {formatGoldValue(purse)}</p>
+      <div className="inv-purse__form">
+        <select
+          value={denomination}
+          onChange={(e) => setDenomination(e.target.value as Denomination)}
+          disabled={busy}
+          aria-label="Denomination"
+        >
+          <option value="platinum">pp</option>
+          <option value="gold">gp</option>
+          <option value="electrum">ep</option>
+          <option value="silver">sp</option>
+          <option value="copper">cp</option>
+        </select>
+        <input
+          className="inv-purse__amount"
+          type="number"
+          min="1"
+          step="1"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          disabled={busy}
+          placeholder="amount"
+          aria-label="Amount"
+        />
+        <button
+          className="inv-button"
+          type="button"
+          onClick={() => handleAdjust(1)}
+          disabled={busy || !validAmount}
+        >
+          Add
+        </button>
+        <button
+          className="inv-button"
+          type="button"
+          onClick={() => handleAdjust(-1)}
+          disabled={busy || !validAmount}
+        >
+          Spend
+        </button>
+      </div>
+      {error && <span className="inv-error">{error}</span>}
     </div>
   );
 }
@@ -73,7 +170,13 @@ export function Inventory() {
 //
 // Character.tsx's CharacterGear, moved here with a search over the entries and a
 // Stow button on each row.
-function MyPack({ character }: { character: CharacterModel }) {
+function MyPack({
+  character,
+  adjustCurrency,
+}: {
+  character: CharacterModel;
+  adjustCurrency: (denomination: Denomination, delta: number) => Promise<number>;
+}) {
   const campaign = useCampaign();
   const {
     data: entries = [],
@@ -122,6 +225,8 @@ function MyPack({ character }: { character: CharacterModel }) {
         Carried
         <span className="inv-section__count">{entries.length} stacks</span>
       </h3>
+
+      <PurseWidget purse={character} onAdjust={adjustCurrency} />
 
       <form className="inv-add" onSubmit={handleAdd}>
         <select
@@ -322,6 +427,10 @@ function Hoard({
     removeItem,
   } = usePartyInventory(campaignId);
   const { take } = useInventoryTransfer(campaignId, characterId);
+  // Soft-fetched, Home.tsx's `party` treatment: not in the isLoading/error gate
+  // below, so a slow or failed currency read costs only the widget, not the
+  // whole rail — the rest of the hoard has nothing to do with the pool's gold.
+  const { data: currency = EMPTY_PURSE, adjustCurrency } = usePartyCurrency(campaignId);
 
   // Held by entryId, not the entry object — the list refetches after every
   // decrement, remove and transfer, replacing every entry object, so a card
@@ -345,6 +454,8 @@ function Hoard({
         The Party's Hoard
         <span className="inv-rail__count">{entries.length}</span>
       </h3>
+
+      <PurseWidget purse={currency} onAdjust={adjustCurrency} />
 
       <input
         className="inv-search"

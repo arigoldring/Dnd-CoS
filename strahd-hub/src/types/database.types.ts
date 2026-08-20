@@ -240,23 +240,38 @@ export type Database = {
       characters: {
         Row: {
           campaign_id: string
+          copper: number
           created_at: string
+          electrum: number
+          gold: number
           id: string
           name: string
+          platinum: number
+          silver: number
           user_id: string
         }
         Insert: {
           campaign_id: string
+          copper?: number
           created_at?: string
+          electrum?: number
+          gold?: number
           id?: string
           name: string
+          platinum?: number
+          silver?: number
           user_id: string
         }
         Update: {
           campaign_id?: string
+          copper?: number
           created_at?: string
+          electrum?: number
+          gold?: number
           id?: string
           name?: string
+          platinum?: number
+          silver?: number
           user_id?: string
         }
         Relationships: [
@@ -566,6 +581,41 @@ export type Database = {
           },
         ]
       }
+      party_currency: {
+        Row: {
+          campaign_id: string
+          copper: number
+          electrum: number
+          gold: number
+          platinum: number
+          silver: number
+        }
+        Insert: {
+          campaign_id: string
+          copper?: number
+          electrum?: number
+          gold?: number
+          platinum?: number
+          silver?: number
+        }
+        Update: {
+          campaign_id?: string
+          copper?: number
+          electrum?: number
+          gold?: number
+          platinum?: number
+          silver?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_currency_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_inventory: {
         Row: {
           added_by: string | null
@@ -833,6 +883,14 @@ export type Database = {
       add_party_inventory_item: {
         Args: { target_campaign: string; target_item: string }
         Returns: string
+      }
+      adjust_character_currency: {
+        Args: { delta: number; denomination: string; target_character: string }
+        Returns: number
+      }
+      adjust_party_currency: {
+        Args: { delta: number; denomination: string; target_campaign: string }
+        Returns: number
       }
       can_edit_character: {
         Args: { target_character: string }

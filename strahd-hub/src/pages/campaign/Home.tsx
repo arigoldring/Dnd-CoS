@@ -4,8 +4,14 @@ import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useRecaps } from "../../hooks/useRecaps";
 import { useLocations } from "../../hooks/useLocations";
 import { usePartyInventory } from "../../hooks/usePartyInventory";
+import { usePartyCurrency } from "../../hooks/usePartyCurrency";
 import { useParty } from "../../hooks/useParty";
 import { Recap } from "../../services/recaps";
+import {
+  EMPTY_PURSE,
+  formatGoldValue,
+  purseEntries,
+} from "../../services/currency";
 import { REGION_MAP } from "../../data/maps";
 import "./home.css";
 // After home.css: the band is a .desk-panel and this sheet only adds the seat
@@ -60,6 +66,10 @@ export function Home() {
   // and fill in after, and a failed one should cost the band, not the page.
   // The empty default is what makes that safe: `[]` hides the band entirely.
   const { data: party = [] } = useParty(campaign.id);
+  // Same soft treatment as `party` just above, for the same reason: this is
+  // the Hoard panel's coin total, not a fact the rest of the desk depends on,
+  // so a slow or failed read costs only that line, not the dashboard.
+  const { data: currency = EMPTY_PURSE } = usePartyCurrency(campaign.id);
 
   if (recapsLoading || locationsLoading || hoardLoading)
     return <p>Loading...</p>;
@@ -84,6 +94,7 @@ export function Home() {
   // today the two readings agree, and this is the only thing stopping the next
   // reader from "fixing" one of them to match the other.
   const regionPins = locations.filter((loc) => loc.mapKey === REGION_MAP.id);
+  const coins = purseEntries(currency);
 
   return (
     <div className="desk">
@@ -150,9 +161,7 @@ export function Home() {
                 select drops them again from a previewing DM's — so in both
                 cases `hidden` is 0 and there is nothing to say. */}
             {showDmUi && hidden > 0 && (
-              <p className="desk-map__hidden">
-                {hidden} hidden from the party
-              </p>
+              <p className="desk-map__hidden">{hidden} hidden from the party</p>
             )}
           </div>
         </section>
@@ -163,6 +172,28 @@ export function Home() {
             <p className="desk-panel__title">The Party's Hoard</p>
             <span className="desk-panel__count">{entries.length} stacks</span>
           </div>
+          {/* Read-only, like the item list beside it — adding or spending
+              happens on the Inventory page. Soft-fetched above, so an empty
+              purse renders here whether that means "truly nothing" or "the
+              read hasn't landed yet"; both look the same and neither is worth
+              a loading state on a summary line. */}
+          <p className="desk-hoard__coins">
+            {coins.length === 0
+              ? "empty"
+              : coins.map(({ denomination, amount, unit }, i) => (
+                  <span key={denomination}>
+                    {i > 0 && (
+                      <span className="desk-hoard__coins-sep"> · </span>
+                    )}
+                    <span className={`coin coin--${denomination}`}>
+                      {amount} {unit}
+                    </span>
+                  </span>
+                ))}
+          </p>
+          <p className="desk-hoard__value">
+            Total Gold Value: {formatGoldValue(currency)}
+          </p>
           <ul className="desk-hoard__list">
             {/* entryId, not id: the same catalog item can appear as several
                 stacks, so the item id isn't unique here */}

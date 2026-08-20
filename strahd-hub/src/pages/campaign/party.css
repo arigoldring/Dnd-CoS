@@ -105,6 +105,25 @@
   color: var(--sh-dim);
 }
 
+/* Wraps to its own line under the player byline, same trick party__player
+   uses (flex-basis 100% plus an order past it) — the head is name-and-tally
+   on one line, then who plays them, then what they're carrying in coin. */
+.party-sheet__purse {
+  flex: 0 0 100%;
+  order: 4;
+  font: 400 13px/1 var(--sh-mono);
+  color: var(--sh-gold-deep);
+}
+
+/* Same wrap trick, one order past the purse it totals: name-and-tally, who
+   plays them, what they're carrying in coin, then that coin as one number. */
+.party-sheet__value {
+  flex: 0 0 100%;
+  order: 5;
+  font: 400 11px/1 var(--sh-mono);
+  color: var(--sh-dim);
+}
+
 .party-sheet__rule {
   height: 1px;
   margin: 12px 0;

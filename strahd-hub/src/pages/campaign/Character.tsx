@@ -13,6 +13,7 @@ import { FeatDetailCard } from "../../components/FeatDetailCard";
 import type { Character as CharacterModel } from "../../services/characters";
 import type { CharacterSpellEntry } from "../../services/characterSpells";
 import type { CharacterFeatEntry } from "../../services/characterFeats";
+import { formatGoldValue, formatPurse } from "../../services/currency";
 import {
   spellLevelGroupLabel,
   spellLevelLine,
@@ -181,6 +182,7 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
       <CharacterSpells characterId={character.id} />
       <CharacterFeats characterId={character.id} />
       <CharacterCarried characterId={character.id} />
+      <CharacterPurse character={character} />
     </article>
   );
 }
@@ -800,6 +802,29 @@ function CharacterCarried({ characterId }: { characterId: string }) {
         )}
 
         <Link className="ch-carried__link" to="../Inventory">
+          Open the pack →
+        </Link>
+      </div>
+    </>
+  );
+}
+
+// The purse: CharacterCarried's shape reused for money instead of gear, and a
+// fact for the same reason — everything you can *do* to it (add, spend, move
+// it to or from the party's pool) stays on the Inventory page, beside the
+// hoard a coin moves to and from.
+//
+// Reads straight off `character` rather than a hook of its own: 045's five
+// columns ride along on every character fetch, the same way price rides along
+// on an item, so there is nothing here to load or fail.
+function CharacterPurse({ character }: { character: CharacterModel }) {
+  return (
+    <>
+      <Band label="Purse" count="on the Inventory page" />
+      <div className="ch-body ch-purse">
+        <p className="ch-purse__total">{formatPurse(character)}</p>
+        <span className="ch-purse__value">Gold Value: {formatGoldValue(character)}</span>
+        <Link className="ch-purse__link" to="../Inventory">
           Open the pack →
         </Link>
       </div>

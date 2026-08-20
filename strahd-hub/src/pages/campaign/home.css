@@ -257,6 +257,53 @@
 
 /* --- the party's hoard -------------------------------------------------- */
 
+/* The pool's coin total, above the item list — its own line rather than a
+   spot in the header's count slot, which already says how many stacks. Base
+   colour only covers "empty" and the separator dots; each .coin--* below
+   overrides it per denomination. */
+.desk-hoard__coins {
+  margin: 0 0 4px;
+  font: 600 22px/1 var(--sh-display);
+  letter-spacing: 0.02em;
+  color: var(--sh-mute);
+}
+
+.desk-hoard__coins-sep {
+  color: var(--sh-mute);
+}
+
+/* The same total, converted to one number, in a smaller face under it —
+   informational only, no auto-conversion of the stored coins. */
+.desk-hoard__value {
+  margin: 0 0 14px;
+  font: 400 12px/1 var(--sh-mono);
+  color: var(--sh-mute);
+}
+
+/* Coin-metal colours, in the same most-to-least-valuable order purseEntries
+   returns them. Gold keeps the token every other panel's accents already
+   use; the other four are theme.css additions scoped to this per-denomination
+   breakdown. */
+.coin--platinum {
+  color: var(--sh-platinum);
+}
+
+.coin--gold {
+  color: var(--sh-gold);
+}
+
+.coin--electrum {
+  color: var(--sh-electrum);
+}
+
+.coin--silver {
+  color: var(--sh-silver);
+}
+
+.coin--copper {
+  color: var(--sh-copper);
+}
+
 .desk-hoard__list {
   list-style: none;
   margin: 0;

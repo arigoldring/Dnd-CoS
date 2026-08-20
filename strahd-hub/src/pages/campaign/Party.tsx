@@ -10,6 +10,7 @@ import { useCharacterInventory } from "../../hooks/useCharacterInventory";
 import { useCharacterSpells } from "../../hooks/useCharacterSpells";
 import { spellLevelGroupLabel, spellsByLevel } from "../../services/spells";
 import type { PartyCharacter } from "../../services/characters";
+import { formatGoldValue, formatPurse } from "../../services/currency";
 import { errorMessage } from "../../lib/errors";
 import "./party.css";
 
@@ -51,7 +52,8 @@ export function Party() {
   // Yours first: the page is a reference for the table, and the row you check
   // most is your own.
   const sorted = [...party].sort((a, b) => {
-    const mine = Number(b.userId === profile?.id) - Number(a.userId === profile?.id);
+    const mine =
+      Number(b.userId === profile?.id) - Number(a.userId === profile?.id);
     return mine !== 0 ? mine : a.name.localeCompare(b.name);
   });
   const total = party.reduce((n, c) => n + c.carried, 0);
@@ -84,6 +86,18 @@ export function Party() {
                 </span>
                 <span className="party-sheet__count">
                   {sheetTally(character)}
+                </span>
+                {/* Visible to the whole table, same rule as the gear list below
+                    it: 028's SELECT policy on characters is is_campaign_member,
+                    so every purse on this page is already something any player
+                    could read. Read-only — adding or spending happens on the
+                    Inventory page, this character's own or (for the DM) not at
+                    all; there is no Give-style control for currency. */}
+                <span className="party-sheet__purse">
+                  {formatPurse(character)}
+                </span>
+                <span className="party-sheet__value">
+                  Total Gold Value: {formatGoldValue(character)}
                 </span>
               </div>
               <div className="party-sheet__rule" />
@@ -132,7 +146,10 @@ export function Party() {
                         stay readable where twenty rows would bury the gear.
                         Keyed by level, which spellsByLevel makes unique. */}
                     {spellsByLevel(character.spells).map((group) => (
-                      <li className="party-sheet__spell-group" key={group.level}>
+                      <li
+                        className="party-sheet__spell-group"
+                        key={group.level}
+                      >
                         <span className="party-sheet__level">
                           {spellLevelGroupLabel(group.level)}
                         </span>

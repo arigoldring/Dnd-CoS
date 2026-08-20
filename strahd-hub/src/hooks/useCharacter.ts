@@ -1,8 +1,10 @@
 import {
+  adjustCharacterCurrency,
   createCharacter as createCharacterService,
   deleteCharacter,
   getCharacter,
   renameCharacter as renameCharacterService,
+  type Denomination,
 } from "../services/characters";
 import { useAuth } from "../services/AuthContext";
 import { errorMessage } from "../lib/errors";
@@ -98,6 +100,20 @@ export function useCharacter(campaignId: string) {
     onSettled: invalidate,
   });
 
+  // Keyed by denomination and delta rather than a target character id: this
+  // hook already knows which character is "mine", the same reason
+  // renameCharacter above takes an id but every caller in the app is this
+  // hook. Adding delta rejects rather than surfacing through `error`, same
+  // split as every mutation here — a failed spend happens with the sheet
+  // still on screen.
+  const adjustCurrencyMutation = useMutation({
+    mutationFn: ({ denomination, delta }: { denomination: Denomination; delta: number }) => {
+      if (!data) throw new Error("There is no character to adjust");
+      return adjustCharacterCurrency(data.id, denomination, delta);
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     data,
     isLoading,
@@ -106,5 +122,7 @@ export function useCharacter(campaignId: string) {
     renameCharacter: (id: string, name: string) =>
       renameCharacterMutation.mutateAsync({ id, name }),
     resetCharacter: resetCharacterMutation.mutateAsync,
+    adjustCurrency: (denomination: Denomination, delta: number) =>
+      adjustCurrencyMutation.mutateAsync({ denomination, delta }),
   };
 }

@@ -28,6 +28,13 @@
   /* gold + blood */
   --sh-gold: #c79a5a;
   --sh-gold-deep: #9a7a3a;
+
+  /* the other four coins, for wherever a purse breaks out by denomination
+     (the Iron Desk's hoard line) rather than reading as one flat total */
+  --sh-copper: #b3703f;
+  --sh-silver: #b7c2cc;
+  --sh-electrum: #cdc287;
+  --sh-platinum: #e3e6e6;
   --sh-blood: #6a0a0a;
   --sh-blood-bright: #8a0d0d;
   --sh-blood-dark: #3a0606;
