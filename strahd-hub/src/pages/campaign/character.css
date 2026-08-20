@@ -17,7 +17,10 @@
 .ch {
   width: 90%;
   max-width: 720px;
-  margin: 0 auto 80px;
+  /* The 32px of air used to be .ch-eyebrow's margin-top, back when the eyebrow
+     was the first thing on the page. It is inside the frame now, so the page
+     holds its own top margin. */
+  margin: 32px auto 80px;
   font: 400 17px/1.5 var(--sh-body);
   color: var(--sh-bone);
   text-align: left;
@@ -32,38 +35,65 @@
   text-align: left;
 }
 
+/* A line inside the frame's header now rather than a page title above it, so
+   it gives up the centring and the top margin. */
 .ch-eyebrow {
-  margin-top: 32px;
+  margin: 0 0 8px;
   font: 500 11px/1 var(--sh-display);
   letter-spacing: 0.42em;
   text-transform: uppercase;
   color: var(--sh-gold);
-  text-align: center;
 }
 
-.ch-title {
-  margin: 10px auto 24px;
-  font: 600 40px/1 var(--sh-display);
-  letter-spacing: 0.08em;
-  text-align: center;
-  color: var(--sh-bone);
-  text-shadow:
-    0 0 1px rgba(214, 202, 178, 0.5),
-    0 0 28px rgba(138, 13, 13, 0.35);
-}
+/* ---------- the sheet ---------- */
 
-/* ---------- panels ---------- */
+/* One frame around the whole character, where three .ch-panel plates used to
+   float with 22px of dark between them. The gaps were what divided the page;
+   the bands below divide it now, and a single border says these are parts of
+   one thing rather than three things about one person.
 
-.ch-panel {
+   The plates' border and shadow come here, a shade brighter and thrown further
+   — one object this size casts a longer shadow than three small ones did. The
+   `inset 0 1px 0` top highlight does not: it lit the top edge of every plate,
+   and there is one top edge now. */
+.ch-sheet {
   position: relative;
-  margin-bottom: 22px;
-  padding: 24px 28px;
   background: var(--sh-panel-raised), var(--sh-void);
-  border: 1px solid rgba(160, 140, 110, 0.28);
+  border: 1px solid rgba(190, 165, 120, 0.42);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 34px 90px -28px rgba(0, 0, 0, 0.9),
-    inset 0 1px 0 rgba(255, 240, 210, 0.04);
+    0 40px 100px -30px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* The fainter second line just inside the border — a ledger's double rule, and
+   what makes the frame read as drawn rather than as a box the content sits in.
+   It crosses the bands, which is the point: one rule down the whole sheet.
+   Inert, so it never eats a click meant for a row beneath it. */
+.ch-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(160, 140, 110, 0.16);
+  pointer-events: none;
+}
+
+/* Identity: the one part of the sheet no band introduces, because the name is
+   what the frame is around. */
+.ch-head {
+  padding: 26px 30px 20px;
+}
+
+/* What sits under a band. Its top padding is nearly nothing — the 44px strip
+   above is already the space, where a panel had to hold its own 24px. */
+.ch-body {
+  padding: 4px 30px 20px;
+}
+
+/* A failed add, evicted from a band that cannot grow to hold a sentence. It
+   lands directly under the control that raised it, which is the only thing the
+   message needed from where it used to sit. */
+.ch-body > .ch-error:first-child {
+  margin: 10px 0 2px;
 }
 
 .ch-blurb {
@@ -72,28 +102,41 @@
   color: var(--sh-mute);
 }
 
-/* A flex header with a rule and a right-hand count, matching the Hoard's
-   .desk-panel__head. It works with nothing but text in it — the rule simply
-   fills the space to the right of the label. */
-.ch-section {
+/* ---------- bands ---------- */
+
+/* The divider between two parts of the sheet, and the home of that part's one
+   control. Full bleed on purpose: a padded heading floats above its content,
+   while a strip that runs edge to edge reads as a join. Its top border is the
+   bright rule and its bottom the faint one, so the eye takes it as the head of
+   what follows rather than the foot of what came before.
+
+   A fixed height, because the picker sits in it and a band that grew with its
+   contents would stop being a rule across the sheet. */
+.ch-band {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin: 0 0 16px;
-  padding-bottom: 10px;
-  font: 500 13px/1 var(--sh-display);
-  font-variant: normal;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--sh-gold);
-  border-bottom: 1px dashed var(--sh-rule-faint);
+  align-items: center;
+  gap: 14px;
+  height: 44px;
+  padding: 0 30px;
+  background: rgba(106, 10, 10, 0.1);
+  border-top: 1px solid rgba(190, 165, 120, 0.34);
+  border-bottom: 1px solid var(--sh-rule);
 }
 
-.ch-section__count {
-  margin-left: auto;
+.ch-band__label {
+  font: 500 11px/1 var(--sh-display);
+  /* theme.css gives every h2 small-caps, which does nothing good to a word
+     already uppercased and tracked out this far. */
+  font-variant: normal;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+/* Beside the label, not opposite it: the count is part of what the band says,
+   and the right end of the strip belongs to the control. */
+.ch-band__count {
   font: 400 12px/1 var(--sh-mono);
-  letter-spacing: 0;
-  text-transform: none;
   color: var(--sh-dim);
 }
 
@@ -106,13 +149,28 @@
   gap: 12px;
 }
 
+/* The page's title since the redraw dropped the word "Character" from above the
+   frame, and sized accordingly. It keeps h1's blood-glow text-shadow from
+   theme.css, which is what .ch-title used to carry. */
 .ch-name {
   flex: 1 1 auto;
   margin: 0;
-  font: 600 28px/1.15 var(--sh-display);
+  font: 600 34px/1.1 var(--sh-display);
   font-variant: normal;
   letter-spacing: 0.05em;
   color: var(--sh-bone);
+}
+
+/* One italic line under the name: who plays them, when they were rolled up,
+   and whose alone they are to unmake. That last clause is the only place the
+   sheet says out loud what 028 enforces — the Rename and Reset buttons beside
+   the name cannot, and the DM who eventually reads someone else's sheet will
+   want to know before trying. */
+.ch-byline {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--sh-dim);
 }
 
 .ch-reset {
@@ -137,8 +195,23 @@
   gap: 10px;
 }
 
-.ch-add {
-  margin-bottom: 18px;
+/* The picker rides the right end of its band. It used to be a row of its own
+   above the table — ~50px of sheet for a control used a few times a level.
+   Shrunk to clear a 44px strip, and kept from wrapping: the error span that
+   used to force a second line renders in the body below now. */
+.ch-band .ch-add {
+  flex-wrap: nowrap;
+  margin-left: auto;
+}
+
+.ch-band .ch-add select {
+  flex: 0 1 210px;
+  padding: 6px 10px;
+}
+
+.ch-band .ch-add .ch-button {
+  padding: 7px 12px;
+  font-size: 9.5px;
 }
 
 .ch-form input[type="text"],
@@ -220,13 +293,6 @@
   padding: 10px 6px;
   border-bottom: 1px solid var(--sh-rule-faint);
   vertical-align: middle;
-}
-
-.ch-byline {
-  display: block;
-  font-size: 12px;
-  font-style: italic;
-  color: var(--sh-dim);
 }
 
 .ch-qty {
@@ -325,9 +391,12 @@
   border-bottom: 0;
 }
 
+/* The 22px above a group was tuned against a panel carrying 24px of its own
+   padding, where the first group needed almost none. A body has 4px, so the
+   first heading now has to find its own air. */
 .ch-spell-group:first-child td,
 .ch-feat-group:first-child td {
-  padding-top: 4px;
+  padding-top: 10px;
 }
 
 /* Draws its own trailing rule, so the heading reads as a divider across the
@@ -377,4 +446,64 @@
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--sh-rule);
+}
+
+/* ---------- carried ---------- */
+
+/* The one part of the sheet that summarises rather than lists. Gear lives on
+   the Inventory page — this is a count and a door, so nothing in here is a
+   control except the link out.
+
+   Laid out as one line where it fits: the two numbers, then the first few
+   things by name, then the link pushed to the right edge. The names give the
+   numbers something to mean; without them "3 stacks" is a fact about a page
+   you are not on. */
+.ch-carried {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 22px;
+  padding-top: 14px;
+}
+
+.ch-carried__counts {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+
+/* Display type, and large: the number is the answer, and the word beside it is
+   the unit rather than a label the number belongs to. */
+.ch-carried__num {
+  font: 600 26px/1 var(--sh-display);
+  letter-spacing: 0.02em;
+  color: var(--sh-bone);
+}
+
+.ch-carried__unit {
+  margin-right: 10px;
+  color: var(--sh-mute);
+}
+
+.ch-carried__names {
+  flex: 1 1 240px;
+  margin: 0;
+  color: var(--sh-mute);
+}
+
+.ch-carried__empty {
+  margin: 0;
+  font-style: italic;
+  color: var(--sh-mute);
+}
+
+/* Always rendered, even with nothing to count and even when the read failed —
+   it is the one thing this strip can be sure of. */
+.ch-carried__link {
+  margin-left: auto;
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }

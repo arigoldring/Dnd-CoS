@@ -1,8 +1,11 @@
-import { Fragment, SubmitEvent, useState } from "react";
+import { Fragment, ReactNode, SubmitEvent, useState } from "react";
+import { Link } from "react-router-dom";
 import { useCampaign } from "../../components/CampaignLayout";
+import { useAuth } from "../../services/AuthContext";
 import { useCharacter } from "../../hooks/useCharacter";
 import { useCharacterSpells } from "../../hooks/useCharacterSpells";
 import { useCharacterFeats } from "../../hooks/useCharacterFeats";
+import { useCharacterInventory } from "../../hooks/useCharacterInventory";
 import { useSpells } from "../../hooks/useSpells";
 import { useFeats } from "../../hooks/useFeats";
 import { SpellDetailCard } from "../../components/SpellDetailCard";
@@ -45,47 +48,66 @@ export function Character() {
   if (error) return <p>Couldn't load your character: {error.message}</p>;
 
   return (
-    // One wrapper, because character.css scopes its palette to `.ch` the same
-    // way shop.css scopes its own to `.shop` — those custom properties are not
-    // on :root, so a panel rendered outside this element would lose every colour.
+    // One wrapper, the way shop.css has its own .shop: it is the page's column
+    // — width, measure and body type — and every rule in character.css hangs
+    // off it. The colours it uses are theme.css's, read off :root, so this
+    // element scopes layout rather than a palette.
     <div className="ch">
-      <p className="ch-eyebrow">— Your Own Tale —</p>
-      <h1 className="ch-title">Character</h1>
       {character ? (
         <CharacterSheet character={character} />
       ) : (
-        <div className="ch-panel">
-          <p className="ch-blurb">
-            No one of yours walks Barovia yet. Name them, and the mists will
-            take note.
-          </p>
-          <CharacterNameForm
-            submitLabel="Create character"
-            onSubmit={(name) => createCharacter(name)}
-          />
-        </div>
+        // The create state is the same frame with nothing yet to divide: a
+        // header and the form, and no bands at all. There are no sections to
+        // rule off until there is a character to hang them on.
+        <article className="ch-sheet">
+          <header className="ch-head">
+            <p className="ch-eyebrow">— Your Own Tale —</p>
+            <p className="ch-blurb">
+              No one of yours walks Barovia yet. Name them, and the mists will
+              take note.
+            </p>
+            <CharacterNameForm
+              submitLabel="Create character"
+              onSubmit={(name) => createCharacter(name)}
+            />
+          </header>
+        </article>
       )}
     </div>
   );
 }
 
-// The sheet: identity at the top (owner-only writes), then known magic and
-// feats below it (owner or DM). The split in this component mirrors the split
-// in 028's policies exactly — one section per child table, each governed by
-// can_edit_character, all of them under a name only its owner can change.
+// The sheet: one framed page rather than three plates that happen to be
+// stacked. Identity heads it (owner-only writes), then Known Magic, Feats and
+// what they are carrying, each introduced by a ruled band. The bands are the
+// only dividers — nothing inside the frame draws a border of its own, which is
+// the whole of the redraw.
 //
-// Gear used to sit between the two and now lives on the Inventory page, beside
-// the party's hoard — the two lists a stack can move between belong on one
-// screen more than what you carry belongs under your name.
+// 028's permission split is unchanged and still one section per child table:
+// the name is the owner's alone, the two lists are the owner's or the DM's
+// through can_edit_character. What changed is that the page no longer says so
+// by boxing them apart — a permission boundary was never what a border between
+// two parts of one character means to the reader.
+//
+// Gear itself still lives on the Inventory page, beside the party's hoard: the
+// two lists a stack can move between belong on one screen. What comes back
+// here is a count and a door, not a control.
 function CharacterSheet({ character }: { character: CharacterModel }) {
   const campaign = useCampaign();
+  const { profile } = useAuth();
   const { renameCharacter, resetCharacter } = useCharacter(campaign.id);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
   return (
-    <>
-      <div className="ch-panel">
+    <article className="ch-sheet">
+      <header className="ch-head">
+        {/* Small, and inside the frame. The rail already says which page this
+            is, so the loudest type on it goes to the name — a sheet whose
+            largest words are "Character" spends it on what the reader knew
+            before they arrived. */}
+        <p className="ch-eyebrow">— Your Own Tale —</p>
+
         {isRenaming ? (
           <CharacterNameForm
             initialName={character.name}
@@ -97,24 +119,39 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
             onCancel={() => setIsRenaming(false)}
           />
         ) : (
-          <div className="ch-identity">
-            <h2 className="ch-name">{character.name}</h2>
-            <button className="ch-button" onClick={() => setIsRenaming(true)}>
-              Rename
-            </button>
-            {/* The DM cannot reach this control, and not because it is hidden:
-                028's UPDATE and DELETE policies on characters are owner-only,
-                so a DM's rename matches zero rows at the database. */}
-            <button
-              className="ch-button ch-button--danger"
-              onClick={() => setIsResetting(true)}
-              disabled={isResetting}
-            >
-              Reset
-            </button>
-          </div>
+          <>
+            <div className="ch-identity">
+              <h1 className="ch-name">{character.name}</h1>
+              <button className="ch-button" onClick={() => setIsRenaming(true)}>
+                Rename
+              </button>
+              {/* The DM cannot reach this control, and not because it is
+                  hidden: 028's UPDATE and DELETE policies on characters are
+                  owner-only, so a DM's rename matches zero rows at the
+                  database. */}
+              <button
+                className="ch-button ch-button--danger"
+                onClick={() => setIsResetting(true)}
+                disabled={isResetting}
+              >
+                Reset
+              </button>
+            </div>
+            {/* profile is non-null under AuthGate, which does not render a
+                campaign page until there is a display name — and this sheet is
+                only ever the viewer's own character, since getCharacter filters
+                by user. So the player named here is always the reader. */}
+            <p className="ch-byline">
+              Played by {profile?.displayName ?? "their player"} · rolled up{" "}
+              {new Date(character.createdAt).toLocaleDateString()} · yours alone
+              to rename or unmake.
+            </p>
+          </>
         )}
 
+        {/* Stays in the header, and deliberately not a band: a destructive
+            confirm is a thing that happened to the identity above it, not a
+            fourth section of the sheet. */}
         {isResetting && (
           <div className="ch-reset">
             <p className="ch-warning">
@@ -136,11 +173,37 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
             />
           </div>
         )}
-      </div>
+      </header>
 
+      {/* Each of these renders a band and a body into the frame, and none of
+          them an <article> of its own — they are sections of this sheet, not
+          three sheets in a row. Their queries and their state stay theirs. */}
       <CharacterSpells characterId={character.id} />
       <CharacterFeats characterId={character.id} />
-    </>
+      <CharacterCarried characterId={character.id} />
+    </article>
+  );
+}
+
+// The divider between two parts of the sheet, and the home of that part's one
+// control. Shared by all three sections because they differ only in what sits
+// at its right end — a picker, a picker, and nothing, Carried's door being a
+// line in its body rather than a button on the strip.
+function Band({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="ch-band">
+      <h2 className="ch-band__label">{label}</h2>
+      {count && <span className="ch-band__count">{count}</span>}
+      {children}
+    </div>
   );
 }
 
@@ -190,98 +253,126 @@ function CharacterSpells({ characterId }: { characterId: string }) {
     }
   }
 
-  if (isLoading) return <p className="ch-panel">Loading spells...</p>;
+  // Both of these keep the band, so a slow or broken spell read leaves a hole
+  // in the sheet rather than a section that vanished: the frame still says
+  // Known Magic, and the body below it says why there is nothing under it.
+  if (isLoading)
+    return (
+      <>
+        <Band label="Known Magic" />
+        <div className="ch-body">
+          <p className="ch-empty">Loading spells...</p>
+        </div>
+      </>
+    );
   if (error)
-    return <p className="ch-panel">Couldn't load spells: {error.message}</p>;
+    return (
+      <>
+        <Band label="Known Magic" />
+        <div className="ch-body">
+          <p className="ch-error">Couldn't load spells: {error.message}</p>
+        </div>
+      </>
+    );
 
   const panel = entries.find((entry) => entry.entryId === panelId) ?? null;
 
   return (
-    <div className="ch-panel">
-      <h3 className="ch-section">
-        Known Magic
-        <span className="ch-section__count">{entries.length} known</span>
-      </h3>
+    <>
+      {/* The picker rides the band rather than taking a row of its own above
+          the table. It is used a few times a level and cost ~50px of the sheet
+          every time it wasn't. */}
+      <Band label="Known Magic" count={`${entries.length} known`}>
+        <form className="ch-add" onSubmit={handleAdd}>
+          <select
+            value={spellId}
+            onChange={(e) => setSpellId(e.target.value)}
+            disabled={adding}
+          >
+            <option value="">Choose a spell...</option>
+            {spellsByLevel(spells).map((group) => (
+              <optgroup
+                key={group.level}
+                label={spellLevelGroupLabel(group.level)}
+              >
+                {group.spells.map((spell) => (
+                  <option key={spell.id} value={spell.id}>
+                    {spell.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <button
+            className="ch-button"
+            type="submit"
+            disabled={adding || !spellId}
+          >
+            {adding ? "Adding..." : "Add"}
+          </button>
+        </form>
+      </Band>
 
-      <form className="ch-add" onSubmit={handleAdd}>
-        <select
-          value={spellId}
-          onChange={(e) => setSpellId(e.target.value)}
-          disabled={adding}
-        >
-          <option value="">Choose a spell...</option>
-          {spellsByLevel(spells).map((group) => (
-            <optgroup
-              key={group.level}
-              label={spellLevelGroupLabel(group.level)}
-            >
-              {group.spells.map((spell) => (
-                <option key={spell.id} value={spell.id}>
-                  {spell.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <button className="ch-button" type="submit" disabled={adding || !spellId}>
-          {adding ? "Adding..." : "Add"}
-        </button>
+      <div className="ch-body">
+        {/* Out of the form and into the body, because a 44px strip cannot grow
+            a sentence without becoming a different shape. It still reports
+            under the control that failed, which is what the message is for. */}
         {addError && <span className="ch-error">{addError}</span>}
-      </form>
 
-      {/* Click-outside backdrop, the same shape Shop and PartyInventory use.
-          spells.css only promotes it to a fixed overlay while it has a child, so
-          with nothing selected it stays an inert empty div; the card itself
-          stops propagation so clicking inside doesn't dismiss it. */}
-      <div className="spell-detail-backdrop" onClick={() => setPanelId(null)}>
-        {panel && (
-          <SpellDetailCard
-            key={panel.entryId}
-            spell={panel}
-            onClose={() => setPanelId(null)}
-            footer={
-              <RemoveSpellFooter
-                entry={panel}
-                onRemove={removeSpell}
-                onRemoved={() => setPanelId(null)}
-              />
-            }
-          />
+        {/* Click-outside backdrop, the same shape Shop and PartyInventory use.
+            spells.css only promotes it to a fixed overlay while it has a child,
+            so with nothing selected it stays an inert empty div; the card
+            itself stops propagation so clicking inside doesn't dismiss it. */}
+        <div className="spell-detail-backdrop" onClick={() => setPanelId(null)}>
+          {panel && (
+            <SpellDetailCard
+              key={panel.entryId}
+              spell={panel}
+              onClose={() => setPanelId(null)}
+              footer={
+                <RemoveSpellFooter
+                  entry={panel}
+                  onRemove={removeSpell}
+                  onRemoved={() => setPanelId(null)}
+                />
+              }
+            />
+          )}
+        </div>
+
+        {/* Group headers are rows inside the same table as the spells, not a
+            table per level: that is what keeps a heading and the rows under it
+            sharing one column structure, so the Remove buttons stay on a single
+            right edge down the section. colSpan matches SpellRow's two cells. */}
+        {entries.length === 0 ? (
+          <p className="ch-empty">They know no magic yet.</p>
+        ) : (
+          <table className="ch-table">
+            <tbody>
+              {spellsByLevel(entries).map((group) => (
+                <Fragment key={group.level}>
+                  <tr className="ch-spell-group">
+                    <td colSpan={2}>
+                      <span className="ch-spell-group__label">
+                        {spellLevelGroupLabel(group.level)}
+                      </span>
+                    </td>
+                  </tr>
+                  {group.spells.map((entry) => (
+                    <SpellRow
+                      key={entry.entryId}
+                      entry={entry}
+                      onInspect={() => setPanelId(entry.entryId)}
+                      onRemove={removeSpell}
+                    />
+                  ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
-
-      {/* Group headers are rows inside the same table as the spells, not a
-          table per level: that is what keeps a heading and the rows under it
-          sharing one column structure, so the Remove buttons stay on a single
-          right edge down the whole panel. colSpan matches SpellRow's two cells. */}
-      {entries.length === 0 ? (
-        <p className="ch-empty">They know no magic yet.</p>
-      ) : (
-        <table className="ch-table">
-          <tbody>
-            {spellsByLevel(entries).map((group) => (
-              <Fragment key={group.level}>
-                <tr className="ch-spell-group">
-                  <td colSpan={2}>
-                    <span className="ch-spell-group__label">
-                      {spellLevelGroupLabel(group.level)}
-                    </span>
-                  </td>
-                </tr>
-                {group.spells.map((entry) => (
-                  <SpellRow
-                    key={entry.entryId}
-                    entry={entry}
-                    onInspect={() => setPanelId(entry.entryId)}
-                    onRemove={removeSpell}
-                  />
-                ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -430,97 +521,120 @@ function CharacterFeats({ characterId }: { characterId: string }) {
     }
   }
 
-  if (isLoading) return <p className="ch-panel">Loading feats...</p>;
+  // CharacterSpells' reasoning: keep the band so a slow or broken read leaves a
+  // labelled hole in the sheet rather than a section that quietly vanished.
+  if (isLoading)
+    return (
+      <>
+        <Band label="Feats" />
+        <div className="ch-body">
+          <p className="ch-empty">Loading feats...</p>
+        </div>
+      </>
+    );
   if (error)
-    return <p className="ch-panel">Couldn't load feats: {error.message}</p>;
+    return (
+      <>
+        <Band label="Feats" />
+        <div className="ch-body">
+          <p className="ch-error">Couldn't load feats: {error.message}</p>
+        </div>
+      </>
+    );
 
   const panel = entries.find((entry) => entry.entryId === panelId) ?? null;
 
   return (
-    <div className="ch-panel">
-      <h3 className="ch-section">
-        Feats
-        <span className="ch-section__count">{entries.length} taken</span>
-      </h3>
+    <>
+      <Band label="Feats" count={`${entries.length} taken`}>
+        <form className="ch-add" onSubmit={handleAdd}>
+          <select
+            value={featId}
+            onChange={(e) => setFeatId(e.target.value)}
+            disabled={adding}
+          >
+            <option value="">Choose a feat...</option>
+            {featsByCategory(feats).map((group) => (
+              <optgroup
+                key={group.category}
+                label={featCategoryLabel(group.category)}
+              >
+                {group.feats.map((feat) => (
+                  <option key={feat.id} value={feat.id}>
+                    {feat.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <button
+            className="ch-button"
+            type="submit"
+            disabled={adding || !featId}
+          >
+            {adding ? "Adding..." : "Add"}
+          </button>
+        </form>
+      </Band>
 
-      <form className="ch-add" onSubmit={handleAdd}>
-        <select
-          value={featId}
-          onChange={(e) => setFeatId(e.target.value)}
-          disabled={adding}
-        >
-          <option value="">Choose a feat...</option>
-          {featsByCategory(feats).map((group) => (
-            <optgroup
-              key={group.category}
-              label={featCategoryLabel(group.category)}
-            >
-              {group.feats.map((feat) => (
-                <option key={feat.id} value={feat.id}>
-                  {feat.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <button className="ch-button" type="submit" disabled={adding || !featId}>
-          {adding ? "Adding..." : "Add"}
-        </button>
+      <div className="ch-body">
+        {/* In the body rather than the band, for the reason CharacterSpells
+            gives: the strip is 44px and a sentence is not. */}
         {addError && <span className="ch-error">{addError}</span>}
-      </form>
 
-      {/* Its own backdrop class rather than the spell panel's, so the two cards
-          above can never end up sharing an overlay: feats.css only promotes
-          this div while it has a child, and both sit in the flow otherwise. */}
-      <div className="feat-detail-backdrop" onClick={() => setPanelId(null)}>
-        {panel && (
-          <FeatDetailCard
-            key={panel.entryId}
-            feat={panel}
-            onClose={() => setPanelId(null)}
-            footer={
-              <RemoveFeatFooter
-                entry={panel}
-                onRemove={removeFeat}
-                onRemoved={() => setPanelId(null)}
-              />
-            }
-          />
+        {/* Its own backdrop class rather than the spell section's, so the two
+            cards can never end up sharing an overlay: feats.css only promotes
+            this div while it has a child, and both sit in the flow otherwise. */}
+        <div className="feat-detail-backdrop" onClick={() => setPanelId(null)}>
+          {panel && (
+            <FeatDetailCard
+              key={panel.entryId}
+              feat={panel}
+              onClose={() => setPanelId(null)}
+              footer={
+                <RemoveFeatFooter
+                  entry={panel}
+                  onRemove={removeFeat}
+                  onRemoved={() => setPanelId(null)}
+                />
+              }
+            />
+          )}
+        </div>
+
+        {/* Group headers are rows inside the same table as the feats, not a
+            table per category — what keeps a heading and the rows under it
+            sharing one column structure, so the Remove buttons stay on a single
+            right edge down the section. colSpan matches FeatRow's two cells. */}
+        {entries.length === 0 ? (
+          <p className="ch-empty">They have taken no feats yet.</p>
+        ) : (
+          <table className="ch-table">
+            <tbody>
+              {featsByCategory(entries).map((group) => (
+                <Fragment key={group.category}>
+                  <tr className="ch-feat-group">
+                    <td colSpan={2}>
+                      <span className="ch-feat-group__label">
+                        {featCategoryLabel(group.category)}
+                      </span>
+                    </td>
+                  </tr>
+                  {group.feats.map((entry) => (
+                    <FeatRow
+                      key={entry.entryId}
+                      entry={entry}
+                      onInspect={() => setPanelId(entry.entryId)}
+                      onRemove={removeFeat}
+                    />
+                  ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
-
-      {/* Group headers are rows inside the same table as the feats, not a table
-          per category — what keeps a heading and the rows under it sharing one
-          column structure, so the Remove buttons stay on a single right edge
-          down the whole panel. colSpan matches FeatRow's two cells. */}
-      {entries.length === 0 ? (
-        <p className="ch-empty">They have taken no feats yet.</p>
-      ) : (
-        <table className="ch-table">
-          <tbody>
-            {featsByCategory(entries).map((group) => (
-              <Fragment key={group.category}>
-                <tr className="ch-feat-group">
-                  <td colSpan={2}>
-                    <span className="ch-feat-group__label">
-                      {featCategoryLabel(group.category)}
-                    </span>
-                  </td>
-                </tr>
-                {group.feats.map((entry) => (
-                  <FeatRow
-                    key={entry.entryId}
-                    entry={entry}
-                    onInspect={() => setPanelId(entry.entryId)}
-                    onRemove={removeFeat}
-                  />
-                ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -621,6 +735,75 @@ function RemoveFeatFooter({
       </button>
       {error && <span className="ch-error">{error}</span>}
     </div>
+  );
+}
+
+// What the character is hauling, as a fact rather than a control: two counts,
+// the first few things by name, and a door to the page where any of it can be
+// changed. No Remove, no quantity, no transfer — everything you can *do* to a
+// stack stays on the Inventory page, beside the hoard it moves to and from.
+//
+// Read with useCharacterInventory, the hook Inventory.tsx already uses, on the
+// same query key — so following the link finds this list in the cache.
+//
+// It gates nothing. Home.tsx makes exactly this argument for the At the Table
+// band: a slow read should let the rest of the page paint and fill in after,
+// and a failed one should cost the strip, not the page. Hence no isLoading
+// branch and no error line — only the `[]` default, which is what makes that
+// safe.
+function CharacterCarried({ characterId }: { characterId: string }) {
+  const { data: entries = [], error } = useCharacterInventory(characterId);
+
+  const stacks = entries.length;
+  const things = entries.reduce((n, entry) => n + entry.quantity, 0);
+  // Sorted, because getCharacterInventory has no ORDER BY: "the first four"
+  // needs to mean something the reader can predict twice running, and
+  // Postgres' row order is not that. Quantities print the way the Hoard rail
+  // writes them, so ×3 means the same thing on both pages.
+  const named = [...entries]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, 4);
+
+  return (
+    <>
+      <Band label="Carried" count="on the Inventory page" />
+      <div className="ch-body ch-carried">
+        {stacks > 0 ? (
+          <>
+            <p className="ch-carried__counts">
+              <span className="ch-carried__num">{stacks}</span>
+              <span className="ch-carried__unit">
+                {stacks === 1 ? "stack" : "stacks"}
+              </span>
+              <span className="ch-carried__num">{things}</span>
+              <span className="ch-carried__unit">
+                {things === 1 ? "thing" : "things"}
+              </span>
+            </p>
+            <p className="ch-carried__names">
+              {named
+                .map((entry) =>
+                  entry.quantity > 1
+                    ? `${entry.name} ×${entry.quantity}`
+                    : entry.name,
+                )
+                .join(", ")}
+              {stacks > named.length && " …"}
+            </p>
+          </>
+        ) : (
+          // A failed read and an empty pack both arrive here as an empty list,
+          // and they are not the same fact — so the failure says nothing at
+          // all rather than claiming the pack is empty. The link stays either
+          // way: it is the one thing this strip can always be sure of.
+          !error && <p className="ch-carried__empty">Nothing in the pack yet.</p>
+        )}
+
+        <Link className="ch-carried__link" to="../Inventory">
+          Open the pack →
+        </Link>
+      </div>
+    </>
   );
 }
 
