@@ -454,6 +454,63 @@ as of `6b7dee5`) with feats added to its embed.
 **Fix:** the same one the spells entry wants — a mutation that invalidates both
 keys, or a shared invalidator that knows a character belongs to a campaign.
 
+### Player preview is a per-page discipline with nothing enforcing it (noted 2026-08-19)
+
+Preview is two independent opt-ins that every page has to remember separately:
+`asPlayer: previewing` on each reveal-gated read, and `showDmUi` in place of
+`campaign.isDm` on each DM control. Nothing checks that a page did either. A new
+page is preview-blind by default, and a preview-blind page looks completely
+normal — the leak is only visible to someone who knows what the row should have
+said.
+
+That is how three of them accumulated on Home.tsx, the page a DM lands on
+straight after toggling: an unfiltered `useLocations` drawing a pin at the true
+coordinates of every unrevealed location, a "Roads Known" count reading 4 / 17
+where a player sees 4 / 4, and a band captioned "For the DM's eyes only" still
+standing in player view. All three fixed 2026-08-19, along with the same gate on
+Inventory's forge link, Recaps' New-recap form and Delete, and Party's Give and
+Teach footers.
+
+**Trigger:** adding a page, or adding a reveal-gated read to an existing one.
+
+**Cost:** the mode exists to be trusted. A DM who has checked the dashboard in
+preview and found it clean has been told something false about their table.
+
+**Fix:** the two halves want different answers. The reads could stop being
+opt-in — a `useRevealGated` wrapper, or the preview flag moving into the query
+layer — but the hooks deliberately take `asPlayer` as an argument rather than
+reading the context, so that they stay data and work outside the provider, and
+that is worth keeping. The controls are the more tractable half: `showDmUi` is
+recomputed identically in six files now, and belongs on the campaign context
+beside `isDm` where a page gets it without knowing to ask.
+
+Note the coupling, which is what makes this worse than a checklist item: fixing
+only the read half is a **regression**, not a partial fix. Home's DM band counts
+`hidden` and `annotated` off the location list, so filtering the list without
+also hiding the band leaves it confidently reporting "Every road revealed" while
+ten locations are hidden. Any page doing both must change both in one edit.
+
+### `asPlayerView` cannot filter a field that came from another table (noted 2026-08-19)
+
+`asPlayerView` filters `isRevealed` and strips `dmNotes` — both fields of the row
+it is given. `Npc.locationName` is neither: it is denormalised out of
+`locations ( name )` in NPC_SELECT, so it answers to **locations'** RLS, not
+npcs'. A player's copy of an NPC standing somewhere unrevealed arrives with
+`locations: null`; a previewing DM's still carried the name until 2026-08-19.
+
+Fixed by `hideUnseenLocationNames` in `lib/playerView.ts`, called from NPC.tsx
+because that page is the only place the NPC list and the previewed location list
+meet.
+
+**Trigger:** any future embed of a reveal-gated table into a differently-gated
+one. The pattern to watch for is a field whose null-ness is decided by a policy
+on a table other than the row's own.
+
+**Cost:** currently zero — the one case is fixed. Recorded because the general
+shape is invisible: nothing about `locationName: string | null` says the null is
+load-bearing, and `Npc`'s own comment describing it ("the home is a location this
+viewer cannot see") was already correct while the preview path quietly wasn't.
+
 ### `035_npc_desc_fix.sql` has no header comment (noted 2026-08-17)
 
 Two bare lines of SQL. Every other file in `db/` opens with a paragraph

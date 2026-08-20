@@ -14,7 +14,17 @@
 
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  /* Fill what is left of #root, rather than demanding a viewport of its own.
+     #root is already a flex column at min-height: 100svh (index.css), and the
+     preview banner is a sibling above this — so `min-height: 100vh` here meant
+     banner + 100vh on every page a DM previewed, which always produced a
+     scrollbar and pushed Sign out at the foot of the rail below the fold. It
+     was also 100vh against a parent measured in 100svh, which overflows on its
+     own wherever a mobile toolbar makes the two differ.
+
+     1 0 auto, not 1: flex-basis stays auto and shrink stays off, so a long page
+     still grows past the viewport instead of being squashed to fit it. */
+  flex: 1 0 auto;
   align-items: stretch;
 }
 

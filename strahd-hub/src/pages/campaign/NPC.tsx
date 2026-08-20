@@ -1,4 +1,4 @@
-import { SubmitEvent, useEffect, useState } from "react";
+import { SubmitEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../services/AuthContext";
 import { useCampaign } from "../../components/CampaignLayout";
 import { usePlayerPreview } from "../../components/PlayerPreviewContext";
@@ -6,6 +6,7 @@ import { useNpcs } from "../../hooks/useNpcs";
 import { useLocations } from "../../hooks/useLocations";
 import { Npc, NpcEdit } from "../../services/npcs";
 import { errorMessage } from "../../lib/errors";
+import { hideUnseenLocationNames } from "../../lib/playerView";
 import "./npc.css";
 
 // Portraits are bundled, not served from a public path: the glob gives every
@@ -38,7 +39,7 @@ export function Npcs() {
   // database may be gated on this.
   const showDmUi = campaign.isDm && !previewing;
   const {
-    data: npcs = [],
+    data: allNpcs = [],
     isLoading: npcsLoading,
     error,
     saveNpc,
@@ -46,13 +47,27 @@ export function Npcs() {
     toggleVisibility,
     toggleVisibilityError,
   } = useNpcs(campaign.id, { asPlayer: previewing });
-  // Only for the DM's location picker. Players never open the editor, and the
-  // list renders the location name that came back on the NPC itself. Passed the
-  // flag anyway, so that every reveal-gated read on the page answers to it —
-  // the picker is hidden in preview, so this is consistency, not effect.
+  // Two jobs, not one. The obvious one is the DM's location picker in the
+  // editor. The other is below: this is the previewed list of locations, and it
+  // is what decides which NPCs are allowed to name their home.
   const { data: locations = [] } = useLocations(campaign.id, {
     asPlayer: previewing,
   });
+
+  // The second half of the preview filter, and the half asPlayerView cannot do
+  // from inside useNpcs: locationName is denormalised out of an embed that
+  // answers to locations' RLS, so a player's copy is already null wherever the
+  // location is unrevealed, while a previewing DM's still carries the name.
+  // Only the page holds both lists, so the call is here — the function itself
+  // lives in playerView.ts beside asPlayerView, where the next reveal-gated
+  // table will look for it.
+  //
+  // useMemo because this feeds a mapped render and the inputs are cache arrays
+  // that change identity only on refetch.
+  const npcs = useMemo(
+    () => (previewing ? hideUnseenLocationNames(allNpcs, locations) : allNpcs),
+    [previewing, allNpcs, locations],
+  );
 
   // Held by id rather than as a copied object, so an open editor re-renders
   // from the list and shows the saved value instead of a stale snapshot.
@@ -84,6 +99,11 @@ export function Npcs() {
   // rendered, and dmNotes is already absent from every row that shouldn't carry
   // it. The two do different jobs: RLS is the boundary, select is the DM's own
   // view of their own data.
+  //
+  // The one thing the page does filter is the location name above, and only
+  // because that field comes from a different table's RLS than the row it is
+  // attached to. It is the exception that says what the rule is: a page filters
+  // when the data it holds is the only place both halves of the answer meet.
   return (
     <div className="npcs">
       <div className="npcs-header">

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useCampaign } from "../../components/CampaignLayout";
+import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useRecaps } from "../../hooks/useRecaps";
 import { useLocations } from "../../hooks/useLocations";
 import { usePartyInventory } from "../../hooks/usePartyInventory";
@@ -23,6 +24,21 @@ function byline(recap: Recap): string {
 
 export function Home() {
   const campaign = useCampaign();
+  const { previewing } = usePlayerPreview();
+  // The dashboard is the page a DM lands on after toggling, which makes it the
+  // page a leak is least likely to be noticed on. Two things have to move
+  // together here, and neither is correct alone:
+  //
+  //   asPlayer below   without it the map thumbnail draws a pin at the true
+  //                    coordinates of every unrevealed location, and Roads
+  //                    Known reads 4 / 17 where a player sees 4 / 4.
+  //
+  //   showDmUi         with asPlayer but without this, `hidden` and `annotated`
+  //                    both collapse to 0 — because the rows they count are no
+  //                    longer in the list — and the DM band starts reporting
+  //                    "Every road revealed" while ten locations are hidden.
+  //                    A confident lie is worse than the leak it replaced.
+  const showDmUi = campaign.isDm && !previewing;
   const {
     data: recaps = [],
     isLoading: recapsLoading,
@@ -32,7 +48,7 @@ export function Home() {
     data: locations = [],
     isLoading: locationsLoading,
     error: locationsError,
-  } = useLocations(campaign.id);
+  } = useLocations(campaign.id, { asPlayer: previewing });
   const {
     data: entries = [],
     isLoading: hoardLoading,
@@ -121,7 +137,11 @@ export function Home() {
               {revealed}
               <span> / {locations.length}</span>
             </p>
-            {campaign.isDm && hidden > 0 && (
+            {/* Only ever non-zero for a DM who is not previewing: a player's
+                response never carried the unrevealed rows, and useLocations'
+                select drops them again from a previewing DM's — so in both
+                cases `hidden` is 0 and there is nothing to say. */}
+            {showDmUi && hidden > 0 && (
               <p className="desk-map__hidden">
                 {hidden} hidden from the party
               </p>
@@ -179,7 +199,12 @@ export function Home() {
           </section>
         )}
 
-        {campaign.isDm && (
+        {/* showDmUi, not campaign.isDm. The band is captioned "For the DM's
+            eyes only" and would otherwise stay up in player view — and worse,
+            it reads its two numbers off a list that preview has already
+            filtered, so it would sit there under that caption stating the
+            opposite of the truth. */}
+        {showDmUi && (
           <section className="desk-dm">
             <p className="desk-dm__label">
               For the DM's

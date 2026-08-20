@@ -1,6 +1,7 @@
 import { SubmitEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCampaign } from "../../components/CampaignLayout";
+import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useCharacter } from "../../hooks/useCharacter";
 import { useCharacterInventory } from "../../hooks/useCharacterInventory";
 import { usePartyInventory } from "../../hooks/usePartyInventory";
@@ -308,6 +309,11 @@ function Hoard({
   characterId?: string;
 }) {
   const campaign = useCampaign();
+  const { previewing } = usePlayerPreview();
+  // Nothing else on this page is reveal-gated — gear has no is_revealed and
+  // never has — so this exists for exactly one line: the forge link at the foot
+  // of the rail. Maps and NPC define it the same way for the same reason.
+  const showDmUi = campaign.isDm && !previewing;
   const {
     data: entries = [],
     isLoading,
@@ -384,8 +390,12 @@ function Hoard({
 
       {/* The only place New Item still surfaces from this page — the old full
           page had no link to it either, but the rail is where a DM now stands
-          when they notice the hoard is missing something. */}
-      {campaign.isDm && (
+          when they notice the hoard is missing something.
+
+          showDmUi, not campaign.isDm: an authoring door is a DM affordance, and
+          preview hides those. CreateItem's own route guard stays on bare isDm,
+          so a DM already standing on that page is not thrown off it mid-draft. */}
+      {showDmUi && (
         <p className="inv-rail__foot">
           <Link to="../CreateItem">Forge a new item</Link>
         </p>

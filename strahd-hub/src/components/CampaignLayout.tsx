@@ -64,9 +64,13 @@ function PlayerPreviewBanner() {
   return (
     <div className="preview-banner" role="status">
       <span className="preview-banner__label">Player view</span>
+      {/* States the whole contract, because a partial promise is what let the
+          gaps hide: the old copy named only the hidden rows and the notes, so a
+          DM band still standing on the dashboard read as intended rather than
+          as a leak. Three clauses, one per thing preview actually does. */}
       <span className="preview-banner__note">
-        Unrevealed NPCs and locations are hidden here, along with your DM notes.
-        Nothing about the campaign has changed.
+        Unrevealed NPCs and locations are hidden, your DM notes are gone, and
+        your DM controls are put away. Nothing about the campaign has changed.
       </span>
       <button
         className="preview-banner__exit"

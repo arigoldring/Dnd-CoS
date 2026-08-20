@@ -129,11 +129,19 @@ export function featsByCategory<T extends { name: string; category: FeatCategory
 // passes that check for both campaigns' homebrew — the query itself has to
 // narrow to the campaign being viewed. Unlike spells, this is load-bearing from
 // day one: 039 ships an INSERT policy, so homebrew feats exist immediately.
+// Ordered here rather than left to the caller, the way getNpcs and getRecaps
+// both order their own reads. The character sheet pipes this through
+// featsByCategory, which sorts — but the catalogue page renders `filtered`
+// straight into a table, so it is the consumer with nothing between it and the
+// response. Unordered, it looks fine only for as long as Postgres happens to
+// return the seed in insert order, and a DM's homebrew lands at the bottom of
+// the book instead of among its neighbours.
 export async function getFeats(campaignId: string): Promise<Feat[]> {
   const { data, error } = await supabase
     .from("feats")
     .select("*")
-    .or(`campaign_id.is.null,campaign_id.eq.${campaignId}`);
+    .or(`campaign_id.is.null,campaign_id.eq.${campaignId}`)
+    .order("name");
   if (error) {
     console.error(error);
     throw error;

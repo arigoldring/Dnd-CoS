@@ -1,6 +1,7 @@
-import { SubmitEvent, useState } from "react";
+import { SubmitEvent, useEffect, useState } from "react";
 import { useAuth } from "../../services/AuthContext";
 import { useCampaign } from "../../components/CampaignLayout";
+import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useRecaps } from "../../hooks/useRecaps";
 import { Recap } from "../../services/recaps";
 import { errorMessage } from "../../lib/errors";
@@ -23,11 +24,18 @@ export function Recaps() {
   // already resolved the :campaignId param against the campaigns this user can
   // see. A new recap is filed against this one.
   const campaign = useCampaign();
+  const { previewing } = usePlayerPreview();
   // campaign.isDm, not profile.role — after 019 the "dms create recaps" and
   // "dms delete recaps" policies check is_campaign_dm(campaign_id), so a global
   // DM who's only a player in this campaign must not see the New-recap form or
   // Delete button the database would then refuse. This gate and the RLS agree.
-  const isDm = campaign.isDm;
+  //
+  // And !previewing on top of it, the same weaker question Maps and NPC ask.
+  // Nothing on this page is reveal-gated — every recap is visible to the whole
+  // table — so preview costs the DM nothing here but the two controls only they
+  // have, which is exactly what preview is for. It gates controls, never a
+  // write: 019 is still the thing that refuses.
+  const showDmUi = campaign.isDm && !previewing;
   const {
     data: recaps = [],
     isLoading: loading,
@@ -44,6 +52,19 @@ export function Recaps() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
+  // Maps and NPC both do this, and for the reason they give: preview changes
+  // which affordances exist, not merely which are visible. A New-recap form
+  // opened before the switch would otherwise ride straight through it and sit
+  // there as a DM control on the page meant to be showing what a player sees.
+  //
+  // editingId is cleared too, even though editing is open to every player: the
+  // draft belongs to the mode it was started in, and leaving an editor open
+  // across the toggle is the kind of thing that gets saved by accident.
+  useEffect(() => {
+    setCreating(false);
+    setEditingId(null);
+  }, [previewing]);
+
   if (authLoading || loading) return <p>Loading...</p>;
   if (error) return <p>{error.message}</p>;
 
@@ -56,7 +77,7 @@ export function Recaps() {
     <div className="recaps">
       <h1 className="recaps__heading">Session Recaps</h1>
 
-      {isDm &&
+      {showDmUi &&
         (creating ? (
           <NewRecapForm
             suggestedNumber={suggestedNumber}
@@ -77,14 +98,14 @@ export function Recaps() {
 
       {recaps.length === 0 ? (
         <p className="recaps__empty">
-          No recaps yet.{isDm && " Write up the first session above."}
+          No recaps yet.{showDmUi && " Write up the first session above."}
         </p>
       ) : (
         recaps.map((recap) => (
           <RecapCard
             key={recap.id}
             recap={recap}
-            isDm={isDm}
+            showDmUi={showDmUi}
             isOpen={openId === recap.id}
             isEditing={editingId === recap.id}
             onToggle={() => {
@@ -106,7 +127,7 @@ export function Recaps() {
 
 function RecapCard({
   recap,
-  isDm,
+  showDmUi,
   isOpen,
   isEditing,
   onToggle,
@@ -116,7 +137,7 @@ function RecapCard({
   onDelete,
 }: {
   recap: Recap;
-  isDm: boolean;
+  showDmUi: boolean;
   isOpen: boolean;
   isEditing: boolean;
   onToggle: () => void;
@@ -187,7 +208,7 @@ function RecapCard({
               <button className="recap__btn" onClick={onEdit}>
                 Edit
               </button>
-              {isDm && (
+              {showDmUi && (
                 <button
                   className="recap__btn recap__btn--danger"
                   onClick={handleDelete}

@@ -2,6 +2,7 @@ import { SubmitEvent, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../services/AuthContext";
 import { useCampaign } from "../../components/CampaignLayout";
+import { usePlayerPreview } from "../../components/PlayerPreviewContext";
 import { useParty } from "../../hooks/useParty";
 import { useItems } from "../../hooks/useItems";
 import { useSpells } from "../../hooks/useSpells";
@@ -34,6 +35,13 @@ import "./party.css";
 export function Party() {
   const campaign = useCampaign();
   const { profile } = useAuth();
+  const { previewing } = usePlayerPreview();
+  // Nothing on this page is reveal-gated — every character is visible to every
+  // member — so this gates the Give and Teach footers and nothing else. Defined
+  // even though the route is currently commented out in App.tsx: the file is
+  // still typechecked, and a page that comes back with the old gate is a
+  // regression nobody would be looking for.
+  const showDmUi = campaign.isDm && !previewing;
   const { data: party = [], isLoading, error } = useParty(campaign.id);
 
   if (isLoading) return <p>Consulting the ledger...</p>;
@@ -140,7 +148,7 @@ export function Party() {
               {/* One rule over both controls rather than one apiece: they are
                   the same permission (can_edit_character) spent on two tables,
                   and reading as two separate footers would suggest otherwise. */}
-              {campaign.isDm && (
+              {showDmUi && (
                 <div className="party-dm">
                   <GiveForm
                     characterId={character.id}

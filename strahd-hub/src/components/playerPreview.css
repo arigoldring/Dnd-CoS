@@ -13,6 +13,10 @@
   position: sticky;
   top: 0;
   z-index: 60;
+  /* A flex item of #root's column. none, so the shell growing to fill the rest
+     can never squeeze the banner's own height — the way out of preview is the
+     one thing on screen that must not be compressible. */
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
