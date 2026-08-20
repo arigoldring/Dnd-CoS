@@ -21,6 +21,9 @@ export interface Location {
   y: number;
   description: string | null;
   isRevealed: boolean;
+  // Which map (src/data/maps.ts) this pin belongs to. Non-optional: the column
+  // is not null, so unlike dmNotes there is no absent case to model.
+  mapKey: string;
   // Present only for DMs, and only for locations that actually have a note.
   // Missing notes are the normal case, not an error — so this is optional,
   // never a requireField throw.
@@ -75,6 +78,7 @@ export async function getLocations(campaignId: string): Promise<Location[]> {
       y: row.y,
       description: row.description,
       isRevealed: row.is_revealed,
+      mapKey: row.map_key,
     };
     // Only attach dmNotes when a note actually exists, so the key is genuinely
     // ABSENT otherwise — never present-but-undefined. That keeps the object

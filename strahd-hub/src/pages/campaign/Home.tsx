@@ -6,7 +6,7 @@ import { useLocations } from "../../hooks/useLocations";
 import { usePartyInventory } from "../../hooks/usePartyInventory";
 import { useParty } from "../../hooks/useParty";
 import { Recap } from "../../services/recaps";
-import barovia from "../../assets/Maps/barovia.webp";
+import { REGION_MAP } from "../../data/maps";
 import "./home.css";
 // After home.css: the band is a .desk-panel and this sheet only adds the seat
 // grid inside it, so the panel has to be declared first.
@@ -76,6 +76,14 @@ export function Home() {
   const revealed = locations.filter((l) => l.isRevealed).length;
   const hidden = locations.length - revealed;
   const annotated = locations.filter((l) => l.dmNotes).length;
+  // The thumbnail is one specific map, so only that map's pins may be drawn on
+  // it: a village pin's percentages are measured against a different image and
+  // would land in the mountains here. The counts below stay campaign-wide on
+  // purpose — "Roads Known" and the DM band are statements about the
+  // campaign's locations, not about one image — so with zero village pins
+  // today the two readings agree, and this is the only thing stopping the next
+  // reader from "fixing" one of them to match the other.
+  const regionPins = locations.filter((loc) => loc.mapKey === REGION_MAP.id);
 
   return (
     <div className="desk">
@@ -122,8 +130,8 @@ export function Home() {
         {/* roads known — map thumbnail over a count */}
         <section className="desk-panel desk-map">
           <Link className="desk-map__thumb" to="Maps">
-            <img src={barovia} alt="" />
-            {locations.map((loc) => (
+            <img src={REGION_MAP.image} alt="" />
+            {regionPins.map((loc) => (
               <span
                 key={loc.id}
                 className={`desk-map__pin${loc.isRevealed ? "" : " desk-map__pin--hidden"}`}

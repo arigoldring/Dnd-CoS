@@ -5,7 +5,7 @@ size, and written down so they stay decisions rather than becoming discoveries.
 Each entry says what it takes to trigger, what it costs, and what the fix would
 be if the answer ever changes.
 
-**Current through migration 037. Last updated 2026-08-17.**
+**Current through migration 042. Last updated 2026-08-20.**
 
 This is the single source of truth for open work. `CONTEXT.md` holds decisions
 and invariants and deliberately does not duplicate anything below.
@@ -34,6 +34,60 @@ rule isn't enforced, and the exception is invisible until someone goes looking.
 
 **Fix if the answer changes:** the same trigger shape recaps uses. Four lines,
 plus a `create trigger`.
+
+`locations.map_key` (042) is unpinned the same way and for the same reason —
+042 gave the table no BEFORE-UPDATE trigger of its own, so a two-campaign DM
+can also move a location's map assignment cross-campaign with an ordinary
+update. Same cost, same fix, one trigger doing both jobs if it's ever added.
+
+### Maps have no RLS boundary — the reveal flag does, the image does not (noted 2026-08-20)
+
+042 added multi-map support: `campaign_map_reveals` gates whether a campaign
+has revealed a given map, and that table is real, RLS-protected data — a
+player cannot flip or forge it. What it gates is not protected by anything.
+`src/data/maps.ts` is a plain module compiled into the JS bundle every
+authenticated user downloads, images included by reference; `MapView.tsx`'s
+`mapsAsPlayer` flag is the only thing standing between a hidden map and a
+player's screen, and it is a client-side `if`, not a database policy. Every
+other reveal-gated thing in this app (locations, NPCs, their DM notes) is
+hidden by RLS before it ever leaves Postgres; this is the first feature where
+that is not true.
+
+**Trigger:** none needed for the flag itself — `is_campaign_member`/
+`is_campaign_dm` on `campaign_map_reveals` are exactly as solid as every other
+policy in this app (042's verification blocks 2 and 3 cover the read and the
+write). The gap is reaching the image directly: devtools, a saved page, or
+simply reading `src/data/maps.ts` in the deployed bundle.
+
+**Cost:** a picture. Concretely narrower than it sounds, for two reasons
+worth keeping rather than hand-waving away: Vite emits each map as a separate
+hashed asset referenced by URL, so the bytes are not inlined into the parsed
+JS and nothing on a player's screen requests them unless `MapView` actually
+renders an `<img>` for that map — reachable, not served. And every pin on
+every map stays fully RLS-gated regardless: an unrevealed location's
+existence, description and DM notes never leave the database for a real
+player, on any map. What could leak is the map art; the DM's actual secrets
+about it do not.
+
+Accepted at this size — the threat model is a player glancing at a map on
+screen before the DM means them to, not someone deliberately dumping the
+bundle, and these are published Curse of Strahd images findable in five
+seconds regardless.
+
+**Related gap, same entry:** `Home.tsx`'s dashboard thumbnail always renders
+`REGION_MAP.image` unconditionally — it never checks that map's own reveal
+flag. Today `REGION_MAP.defaultRevealed` is `true` and realistically stays
+that way, so this is currently theoretical, but it means hiding the region
+map would not actually remove it from a player's dashboard. Left alone rather
+than gated, on the same "not worth it for a picture" reasoning above.
+
+**Fix if the answer changes:** move map images into a Supabase Storage bucket
+behind signed URLs, with a storage policy joining `campaign_map_reveals` and
+`is_campaign_member` — the real boundary, turning `MapDef.image` into an async
+fetch. A day of work and a new failure mode (expiring URLs) to protect a
+picture; worth it only if the calculus above changes. If it's ever done, fix
+the Home thumbnail gap in the same change rather than leaving it as a second
+trip through this reasoning.
 
 ### The pin triggers are blocklists, so new columns are writable by default (noted 2026-08-14)
 

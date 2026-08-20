@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Home } from "./pages/campaign/Home";
 import { Shop } from "./pages/campaign/Shop";
 import { Maps } from "./pages/campaign/Maps";
+import { MapView } from "./pages/campaign/MapView";
 import { Spells } from "./pages/campaign/Spells";
 import { Feats } from "./pages/campaign/Feats";
 import { Layout } from "./components/Layout";
@@ -73,7 +74,16 @@ function App() {
                     nav rail: each is linked from the catalogue it writes into,
                     which is where you are when you want one. */}
                   <Route path="CreateFeat" element={<CreateFeat />} />
+                  {/* The app's first route with a second dynamic segment. Maps
+                    is an index of map cards; Maps/:mapId is the viewer for
+                    one. :mapId is a key from src/data/maps.ts, not a database
+                    id — MapView sends you back here when it names no map this
+                    viewer may open. Flat, not nested, so a bare
+                    <Link to=".."> from the viewer can't climb past Maps to
+                    campaign home; back-links use the absolute
+                    `/campaign/${campaign.id}/Maps` instead. */}
                   <Route path="Maps" element={<Maps />} />
+                  <Route path="Maps/:mapId" element={<MapView />} />
                   <Route path="Spells" element={<Spells />} />
                   {/* The grimoire's twin. Not DM-gated — 039's read policy is
                     shared-plus-your-campaign, the same as spells. */}

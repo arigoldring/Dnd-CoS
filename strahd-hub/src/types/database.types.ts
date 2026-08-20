@@ -39,6 +39,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_map_reveals: {
+        Row: {
+          campaign_id: string
+          is_revealed: boolean
+          map_key: string
+        }
+        Insert: {
+          campaign_id: string
+          is_revealed: boolean
+          map_key: string
+        }
+        Update: {
+          campaign_id?: string
+          is_revealed?: boolean
+          map_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_map_reveals_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_members: {
         Row: {
           campaign_id: string
@@ -432,6 +458,7 @@ export type Database = {
           description: string | null
           id: string
           is_revealed: boolean
+          map_key: string
           name: string
           x: number
           y: number
@@ -442,6 +469,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_revealed?: boolean
+          map_key?: string
           name: string
           x: number
           y: number
@@ -452,6 +480,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_revealed?: boolean
+          map_key?: string
           name?: string
           x?: number
           y?: number

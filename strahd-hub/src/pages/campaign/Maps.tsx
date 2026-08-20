@@ -1,408 +1,99 @@
-import { SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
-import barovia_map from "../../assets/Maps/barovia.webp";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../services/AuthContext";
 import { useCampaign } from "../../components/CampaignLayout";
 import { usePlayerPreview } from "../../components/PlayerPreviewContext";
-import { useLocations } from "../../hooks/useLocations";
-import { Location } from "../../services/locations";
+import { useMaps } from "../../hooks/useMaps";
 import { errorMessage } from "../../lib/errors";
 import "./maps.css";
 
-const DWELL = 600; // ms of hover before the peek appears
-// Vertical room the peek needs above a marker (panel height + tether gap).
-// Below this, the peek flips to render underneath the marker instead.
-const PEEK_CLEARANCE = 150;
-// Half the peek's width (230px in maps.css) plus a small edge margin. The
-// inline `left` is a CENTRE, not an edge — .loc-panel--popover translates
-// itself -50% — so this is how far the centre must stay from either side.
-const PEEK_HALF_WIDTH = 140;
-
-type Peek = { loc: Location; left: number; top: number; below: boolean };
-
+/**
+ * The map shelf: every map this campaign has, one card each, DM reveal
+ * controls included. Opening a card moves to MapView.tsx, its own route —
+ * this page only ever decides which maps exist to open.
+ */
 export function Maps() {
   const { loading: authLoading } = useAuth();
-  // Non-null by construction — this route sits under CampaignLayout. Scopes the
-  // pin fetch to this campaign so a DM in two of them doesn't get both maps'
-  // pins merged onto one Barovia.
+  // Non-null by construction — this route sits under CampaignLayout.
   const campaign = useCampaign();
   const { previewing } = usePlayerPreview();
-  // campaign.isDm, not profile.role — after 018 "dms update locations" checks
-  // is_campaign_dm(campaign_id), so a global DM who's only a player in this
-  // campaign must not see the Edit button the update behind it would then
-  // refuse. That gate and the RLS agree, and campaign.isDm still means only
-  // that.
-  //
-  // showDmUi is the weaker, presentation-only question the markup below asks:
-  // is the DM currently asking to see their own tools. It gates controls, never
-  // a write — see PlayerPreviewContext.
   const showDmUi = campaign.isDm && !previewing;
+  // See MapView.tsx's identical comment: the registry has no RLS behind it, so
+  // this flag is the only thing keeping a hidden map's card off a player's
+  // screen.
+  const mapsAsPlayer = !campaign.isDm || previewing;
   const {
-    data: locations = [],
-    isLoading: locationsLoading,
+    data: maps = [],
+    isLoading: mapsLoading,
     error,
-    saveDescription,
-    toggleVisibility,
-    toggleVisibilityError,
-  } = useLocations(campaign.id, { asPlayer: previewing });
-  // The open location is held by id, not as a copied Location object: the
-  // drawer then re-renders straight from the list, so a saved edit shows up
-  // instead of a stale snapshot taken at click time.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [peek, setPeek] = useState<Peek | null>(null);
-  const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const dwell = useRef<number | undefined>(undefined);
+    toggleReveal,
+    toggleRevealError,
+  } = useMaps(campaign.id, { asPlayer: mapsAsPlayer });
 
-  const selected = locations.find((loc) => loc.id === selectedId) ?? null;
-
-  const closePanel = useCallback(() => {
-    setSelectedId(null);
-    setEditing(false);
-  }, []);
-
-  const clearPeek = useCallback(() => {
-    window.clearTimeout(dwell.current);
-    setPeek(null);
-  }, []);
-
-  // Preview changes which affordances exist, not merely which are visible. A
-  // drawer, an open editor, a peek or the reveal panel left over from the other
-  // mode would otherwise ride through the switch and sit there as a DM control
-  // on the page that is meant to be showing what a player sees. The peek goes
-  // through clearPeek so the pending dwell timer dies with it.
-  useEffect(() => {
-    closePanel();
-    clearPeek();
-    setShowVisibilityPanel(false);
-  }, [previewing, closePanel, clearPeek]);
-
-  // The peek is rendered OUTSIDE the zoom transform and positioned from the
-  // marker's live screen rect, so it stays a constant size at any zoom level
-  // while still pointing at the right spot.
-  const startDwell = (loc: Location, el: HTMLElement) => {
-    window.clearTimeout(dwell.current);
-    dwell.current = window.setTimeout(() => {
-      const stage = stageRef.current;
-      if (!stage) return;
-      const s = stage.getBoundingClientRect();
-      const m = el.getBoundingClientRect();
-      // Keep the panel inside the stage by clamping its centre. Guard the
-      // narrow-stage case first: below twice the margin the bounds cross
-      // (min > max) and a bare min/max would pin the peek hard left — or
-      // negative — instead of clipping evenly. Centring is the graceful answer.
-      const centre = m.left + m.width / 2 - s.left;
-      const left =
-        s.width < PEEK_HALF_WIDTH * 2
-          ? s.width / 2
-          : Math.min(
-              Math.max(centre, PEEK_HALF_WIDTH),
-              s.width - PEEK_HALF_WIDTH,
-            );
-      // The peek renders above the marker by default. For markers near the top
-      // of the stage there isn't room — it would be clipped by the stage's
-      // overflow:hidden — so flip it below the marker instead.
-      const top = m.top - s.top;
-      const bottom = m.bottom - s.top;
-      const below = top < PEEK_CLEARANCE;
-      setPeek({ loc, left, top: below ? bottom : top, below });
-    }, DWELL);
-  };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      clearPeek();
-      // Back out one layer at a time: an open editor first, then the drawer —
-      // so Escape on a half-typed description doesn't also close the panel.
-      if (editing) setEditing(false);
-      else setSelectedId(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [clearPeek, editing]);
-
-  if (authLoading || locationsLoading) return <p>Loading...</p>;
+  if (authLoading || mapsLoading) return <p>Loading...</p>;
   if (error) return <p>{error.message}</p>;
 
-  // Still no reveal filter here: RLS dropped hidden rows from a player's
-  // response before it arrived, and useLocations' select dropped them from a
-  // previewing DM's, so `locations` is already exactly what should be drawn.
-  // The two are not the same mechanism — RLS is the boundary, select is the
-  // DM's own view of data they are entitled to either way.
-  //
-  // showDmUi has one job: showing the edit button and the reveal panel. The
-  // hidden-pin styling reads loc.isRevealed, not the role, and dmNotes needs no
-  // check at all — it is absent by the time it gets here.
+  // Only ever non-zero for a DM who isn't previewing: a player's response
+  // never carried a hidden map's card at all, and the asPlayer select drops it
+  // again from a previewing DM's — so in both cases there's nothing to count.
+  const hidden = maps.filter((m) => !m.isRevealed).length;
+
   return (
-    <div className="maps has-peek">
+    <div className="maps maps-index">
       <div className="maps-header">
-        <p>Maps</p>
-        {showDmUi && (
-          <button
-            className="maps-visibility-toggle"
-            onClick={() => setShowVisibilityPanel(!showVisibilityPanel)}
-            title={showVisibilityPanel ? "Hide visibility panel" : "Show visibility panel"}
-          >
-            👁️ Visibility
-          </button>
-        )}
+        <p className="maps-title">Maps</p>
+        <p className="maps-count">
+          {maps.length} {maps.length === 1 ? "map" : "maps"}
+          {showDmUi && hidden > 0 && (
+            <>
+              {" · "}
+              <b>{hidden} not yet revealed</b>
+            </>
+          )}
+        </p>
       </div>
-      <div className="map-stage" ref={stageRef}>
-        <TransformWrapper
-          minScale={1}
-          maxScale={3}
-          doubleClick={{ disabled: true }}
-          onPanningStart={clearPeek}
-          onZoomStart={clearPeek}
-        >
-          <TransformComponent
-            wrapperStyle={{ width: "100%" }}
-            contentStyle={{
-              width: "100%",
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{ position: "relative", display: "inline-block" }}
-              // TEMP: uncomment to find the next hotspot's x%/y% in the console.
-              // onMouseDownCapture={(e) => {
-              //   const img = imgRef.current;
-              //   if (!img) return;
-              //   const r = img.getBoundingClientRect();
-              //   const x = ((e.clientX - r.left) / r.width) * 100;
-              //   const y = ((e.clientY - r.top) / r.height) * 100;
-              //   console.log("MAP COORDS:", x.toFixed(1), y.toFixed(1));
-              // }}
-            >
-              <img
-                ref={imgRef}
-                src={barovia_map}
-                alt="Map of Barovia"
-                style={{
-                  display: "block",
-                  maxWidth: "100%",
-                  maxHeight: "82vh",
-                  width: "auto",
-                  height: "auto",
-                }}
-              />
-              {locations.map((loc) => (
-                <button
-                  key={loc.id}
-                  onClick={() => {
-                    clearPeek();
-                    // Moving to another location drops any open editor with it,
-                    // so an unsaved draft can never bleed onto the next panel.
-                    setEditing(false);
-                    setSelectedId((cur) => (cur === loc.id ? null : loc.id));
-                  }}
-                  onMouseEnter={(e) => startDwell(loc, e.currentTarget)}
-                  onMouseLeave={clearPeek}
-                  onFocus={(e) => startDwell(loc, e.currentTarget)}
-                  onBlur={clearPeek}
-                  aria-label={loc.name}
-                  title={loc.name}
-                  className={
-                    "map-hotspot" +
-                    (selected?.id === loc.id ? " is-active" : "") +
-                    (!loc.isRevealed ? " is-hidden" : "")
-                  }
-                  style={{
-                    position: "absolute",
-                    left: `${loc.x}%`,
-                    top: `${loc.y}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                />
-              ))}
-            </div>
-          </TransformComponent>
-        </TransformWrapper>
 
-        {peek && peek.loc.id !== selected?.id && (
-          <aside
-            className={
-              "loc-panel loc-panel--popover loc-panel--peek" +
-              (peek.below ? " loc-panel--below" : "")
-            }
-            style={{ left: peek.left, top: peek.top }}
-            aria-hidden="true"
+      <div className="map-list">
+        {maps.map((m) => (
+          <article
+            key={m.id}
+            className={"map-card" + (!m.isRevealed ? " is-hidden" : "")}
           >
-            <h2 className="loc-panel__name">{peek.loc.name}</h2>
-            <div className="loc-panel__rule"></div>
-            <p className="loc-panel__desc">{peek.loc.description}</p>
-            <span className="loc-panel__more">click to read on</span>
-          </aside>
-        )}
-
-        {selected && (
-          <aside
-            // Open on the side away from the marker so the drawer never covers
-            // the pin you just clicked (and its gold is-active ring).
-            className={
-              "loc-panel loc-panel--drawer" +
-              (selected.x > 50 ? " loc-panel--left" : "")
-            }
-            role="dialog"
-            aria-label={selected.name}
-          >
-            <button
-              className="loc-panel__close"
-              aria-label="Close"
-              onClick={closePanel}
-            >
-              ×
-            </button>
-            <h2 className="loc-panel__name">{selected.name}</h2>
-            <div className="loc-panel__rule"></div>
-
-            {editing ? (
-              // key: a fresh editor per location, so its draft can never carry
-              // over from the last one it was opened on.
-              <DescriptionEditor
-                key={selected.id}
-                location={selected}
-                onSave={saveDescription}
-                onClose={() => setEditing(false)}
-              />
-            ) : (
-              <>
-                <p className="loc-panel__desc">
-                  {selected.description ?? (
-                    <span className="loc-panel__empty">
-                      No description yet.
-                    </span>
-                  )}
-                </p>
-                {showDmUi && (
-                  <button
-                    className="loc-panel__edit"
-                    onClick={() => setEditing(true)}
-                  >
-                    Edit description
-                  </button>
+            {/* A link, not a button with navigate(): this is a destination, so
+                it should open in a new tab and show its URL on hover, the same
+                reasoning CampaignPicker gives its campaign-row links. */}
+            <Link className="map-card__open" to={m.id}>
+              <img className="map-card__thumb" src={m.image} alt="" />
+              <h3 className="map-card__title">
+                {m.title}
+                {!m.isRevealed && (
+                  <span className="map-card__hidden-tag">hidden</span>
                 )}
-              </>
-            )}
-
-            {selected.dmNotes && (
-              <p className="loc-panel__dm">DM notes: {selected.dmNotes}</p>
-            )}
-          </aside>
-        )}
-
-        {showDmUi && showVisibilityPanel && (
-          <aside className="visibility-panel">
-            <div className="visibility-panel__header">
-              <h3>Location Visibility</h3>
+              </h3>
+              <div className="map-card__rule"></div>
+              <p className="map-card__subtitle">{m.subtitle}</p>
+            </Link>
+            {/* Sibling of the Link, never inside it — a <button> nested in an
+                <a> is invalid markup and the two clicks fight. */}
+            {showDmUi && (
               <button
-                className="visibility-panel__close"
-                aria-label="Close"
-                onClick={() => setShowVisibilityPanel(false)}
+                className="map-card__reveal"
+                onClick={() =>
+                  toggleReveal({ mapKey: m.id, isRevealed: !m.isRevealed })
+                }
+                title={m.isRevealed ? "Hide from players" : "Show to players"}
               >
-                ×
+                {m.isRevealed ? "Shown" : "Hidden"}
               </button>
-            </div>
-            <div className="visibility-panel__list">
-              {locations.map((loc) => (
-                <div key={loc.id} className="visibility-panel__item">
-                  <button
-                    className="visibility-panel__toggle"
-                    onClick={() =>
-                      toggleVisibility({ id: loc.id, isRevealed: !loc.isRevealed })
-                    }
-                    title={loc.isRevealed ? "Hide from players" : "Show to players"}
-                  >
-                    {loc.isRevealed ? "👁️" : "👁️‍🗨️"}
-                  </button>
-                  <span className="visibility-panel__name">{loc.name}</span>
-                </div>
-              ))}
-            </div>
-            {toggleVisibilityError && (
-              <p className="visibility-panel__error">
-                {errorMessage(
-                  toggleVisibilityError,
-                  "Problem updating visibility",
-                )}
-              </p>
             )}
-          </aside>
-        )}
+          </article>
+        ))}
       </div>
+
+      {toggleRevealError && (
+        <p className="maps-error">
+          {errorMessage(toggleRevealError, "Problem updating map visibility")}
+        </p>
+      )}
     </div>
-  );
-}
-
-// The DM's description editor. Draft/saving/error state lives here rather than
-// in Maps so that unmounting it is the whole of "cancel" — nothing to reset —
-// and a keystroke in the textarea re-renders the form, not the map.
-function DescriptionEditor({
-  location,
-  onSave,
-  onClose,
-}: {
-  location: Location;
-  onSave: (vars: { id: string; description: string }) => Promise<unknown>;
-  onClose: () => void;
-}) {
-  const [draft, setDraft] = useState(location.description ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await onSave({ id: location.id, description: draft });
-      onClose();
-    } catch (err) {
-      // Stay open on failure, holding the draft: closing here would throw away
-      // text the DM just wrote and that the database never took.
-      console.error("Problem saving description:", err);
-      setError(errorMessage(err, "Problem saving description"));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form className="loc-edit" onSubmit={handleSubmit}>
-      <label className="loc-edit__label" htmlFor="loc-desc">
-        Description
-      </label>
-      <textarea
-        id="loc-desc"
-        className="loc-edit__field"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        disabled={saving}
-        rows={7}
-        autoFocus
-      />
-      <div className="loc-edit__actions">
-        <button
-          type="button"
-          className="loc-edit__btn"
-          onClick={onClose}
-          disabled={saving}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="loc-edit__btn loc-edit__btn--save"
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save"}
-        </button>
-      </div>
-      {error && <p className="loc-edit__error">{error}</p>}
-    </form>
   );
 }

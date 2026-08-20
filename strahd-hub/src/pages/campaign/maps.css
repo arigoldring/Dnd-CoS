@@ -1,4 +1,10 @@
 
+/* This block predates theme.css and redeclares its own palette, every one a
+   byte-identical duplicate of an --sh-* token (recaps.css already calls this
+   "redundant rather than required" of its own copy). Left as-is rather than
+   migrated: 608 lines of churn with real regression risk and zero visual
+   payoff, and it would bury this feature's diff. New rules below use --sh-*
+   exclusively — --dot/--hit are genuine local geometry and stay regardless. */
 .maps {
   --void:         #07060a;
   --stone:        #1a1518;
@@ -46,6 +52,33 @@
 .maps-visibility-toggle:focus-visible {
   outline: 1px solid var(--tarnish);
   outline-offset: 2px;
+}
+
+/* viewer header: back link + this map's title. .maps-header is already flex
+   with justify-content: space-between, so these plus the optional visibility
+   button lay out without any change to it. */
+.maps .maps-back {
+  font: 400 13px/1 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: .1em;
+  color: var(--sh-gold-deep);
+  text-decoration: none;
+}
+.maps .maps-back:hover {
+  color: var(--sh-bone);
+}
+.maps .maps-back:focus-visible {
+  outline: 1px solid var(--sh-gold-deep);
+  outline-offset: 2px;
+}
+
+.maps .maps-title {
+  margin: 0;
+  font: 500 20px/1.15 var(--sh-display);
+  font-variant: small-caps;
+  letter-spacing: .04em;
+  color: var(--bone);
+  text-shadow: 0 1px 0 rgba(0,0,0,.8);
 }
 
 /* the stage: positioning context for the drawer + peek, and it clips them */
@@ -601,6 +634,151 @@
 @keyframes locSlideLeft { from { translate: -100% 0 } }
 @keyframes locPop       { from { opacity: 0; translate: -50% calc(-100% - 10px) } }
 @keyframes locPopBelow  { from { opacity: 0; translate: -50% 10px } }
+
+/* ============================================================================
+   INDEX — the map shelf. Modelled on npc.css's .npc-list/.npc-card, and using
+   --sh-* tokens exclusively rather than this file's local palette above (see
+   the note on .maps).
+   ========================================================================== */
+
+.maps-index .maps-count {
+  margin: 0;
+  font: 400 13px/1 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+.maps-index .maps-count b {
+  font-weight: 400;
+  font-style: normal;
+  color: var(--sh-blood-ink);
+}
+
+.maps-index .map-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 12px;
+}
+
+.maps-index .map-card {
+  position: relative;
+  padding: 18px 20px;
+  color: var(--sh-bone);
+  background:
+    linear-gradient(180deg, rgba(20, 15, 16, 0.97), rgba(12, 9, 11, 0.99)),
+    repeating-linear-gradient(0deg, rgba(255, 240, 210, 0.012) 0 2px, transparent 2px 4px),
+    var(--sh-void);
+  border: 1px solid rgba(160, 140, 110, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 24px 60px -28px rgba(0, 0, 0, 0.9);
+}
+
+/* not yet revealed — only ever rendered for the DM. Dashed edge and a dimmed
+   card, verbatim from .npc-card.is-hidden, so "hidden" reads identically on
+   both pages. */
+.maps-index .map-card.is-hidden {
+  border-style: dashed;
+  border-color: rgba(154, 122, 58, 0.4);
+  opacity: 0.72;
+}
+
+.maps-index .map-card__open {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.maps-index .map-card__open:focus-visible {
+  outline: 1px solid var(--sh-gold-deep);
+  outline-offset: 2px;
+}
+
+/* fixed aspect ratio + cover is what lets a 2413×1547 landscape and a
+   1008×1279 portrait sit in one grid without one card towering over the
+   other — a trick home.css can't use, because its pins have to stay in
+   percentage register against the image's own native ratio. */
+.maps-index .map-card__thumb {
+  display: block;
+  width: calc(100% + 40px);
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  margin: -18px -20px 14px;
+  filter: saturate(0.45) brightness(0.62) contrast(1.05);
+  transition: filter 0.18s ease;
+}
+.maps-index .map-card:hover .map-card__thumb {
+  filter: saturate(0.6) brightness(0.75) contrast(1.05);
+}
+
+.maps-index .map-card__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font: 500 21px/1.2 var(--sh-display);
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  color: var(--sh-bone);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
+}
+
+.maps-index .map-card__hidden-tag {
+  padding: 1px 6px 0;
+  font: 400 11px/1.4 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.14em;
+  color: var(--sh-gold-deep);
+  border: 1px solid rgba(154, 122, 58, 0.4);
+}
+
+.maps-index .map-card__rule {
+  height: 1px;
+  margin: 10px 0 11px;
+  background: linear-gradient(90deg, rgba(154, 122, 58, 0.55), transparent 85%);
+}
+
+.maps-index .map-card__subtitle {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--sh-mute);
+}
+
+.maps-index .map-card__reveal {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 10px 4px;
+  font: 400 11px/1 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: var(--sh-gold-deep);
+  background: rgba(7, 6, 10, 0.75);
+  border: 1px solid rgba(154, 122, 58, 0.4);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.maps-index .map-card__reveal:hover:not(:disabled) {
+  color: var(--sh-bone);
+  border-color: rgba(154, 122, 58, 0.75);
+  background: rgba(154, 122, 58, 0.1);
+}
+.maps-index .map-card__reveal:focus-visible {
+  outline: 1px solid var(--sh-gold-deep);
+  outline-offset: 2px;
+}
+
+.maps-index .maps-error {
+  margin: 14px 12px 0;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #e2b4b4;
+  background: rgba(106, 10, 10, 0.18);
+  border: 1px solid rgba(138, 13, 13, 0.5);
+  border-left: 3px solid var(--sh-blood-bright);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .maps .map-hotspot::before { animation: none; }
