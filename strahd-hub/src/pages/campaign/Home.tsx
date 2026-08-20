@@ -177,7 +177,13 @@ export function Home() {
             "4 of 5". The denominator would be the campaign's member count, and
             013's SELECT policy on campaign_members is `user_id = auth.uid()` —
             the only membership row anyone can read is their own, so the
-            fraction is a fact we don't have. */}
+            fraction is a fact we don't have.
+
+            Nor does a seat say what anyone is carrying. 5a draws a tally and
+            the first two things in each pack, and getPartyCharacters already
+            hands both over on the row this maps — not spending them is the
+            choice, not an omission. The dashboard answers who is at the
+            table; a pack is read on the Inventory page. */}
         {party.length > 0 && (
           <section className="desk-panel desk-panel--full at-table">
             <div className="at-table__head">
