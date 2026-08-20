@@ -13,7 +13,13 @@ import { ItemDetailCard } from "../../components/ItemDetailCard";
 import type { Character as CharacterModel, Denomination } from "../../services/characters";
 import type { CharacterInventoryEntry } from "../../services/characterInventory";
 import type { PartyInventoryEntry } from "../../services/partyInventory";
-import { EMPTY_PURSE, formatGoldValue, formatPurse, type Purse } from "../../services/currency";
+import {
+  EMPTY_PURSE,
+  formatGoldValue,
+  formatPurse,
+  purseEntries,
+  type Purse,
+} from "../../services/currency";
 import { errorMessage } from "../../lib/errors";
 import "./inventory.css";
 
@@ -79,15 +85,23 @@ export function Inventory() {
 // passes usePartyCurrency's (any campaign member) — so the control itself
 // doesn't know or care which purse it's spending from.
 //
+// `colored` is the one other difference, and it's cosmetic, not behavioral:
+// Home.tsx's dashboard already breaks the party's hoard out by denomination
+// colour, and Hoard passes true so this rail's total matches it. MyPack
+// leaves it off — an individual purse reads fine as one flat gold line, the
+// same way Character.tsx and Party.tsx still show it.
+//
 // Add and Spend are two buttons rather than one signed amount, matching this
 // page's other verbs (Take/Stow, +/−1): the amount field only ever holds a
 // positive number, and which button was pressed decides the sign.
 function PurseWidget({
   purse,
   onAdjust,
+  colored = false,
 }: {
   purse: Purse;
   onAdjust: (denomination: Denomination, delta: number) => Promise<number>;
+  colored?: boolean;
 }) {
   const [denomination, setDenomination] = useState<Denomination>("gold");
   const [amount, setAmount] = useState("");
@@ -113,9 +127,24 @@ function PurseWidget({
     }
   }
 
+  const entries = purseEntries(purse);
+
   return (
     <div className="inv-purse">
-      <p className="inv-purse__total">{formatPurse(purse)}</p>
+      <p className="inv-purse__total">
+        {!colored
+          ? formatPurse(purse)
+          : entries.length === 0
+            ? <span className="inv-purse__coins-empty">empty</span>
+            : entries.map(({ denomination, amount, unit }, i) => (
+                <span key={denomination}>
+                  {i > 0 && <span className="inv-purse__coins-sep"> · </span>}
+                  <span className={`inv-coin inv-coin--${denomination}`}>
+                    {amount} {unit}
+                  </span>
+                </span>
+              ))}
+      </p>
       <p className="inv-purse__value">Gold Value: {formatGoldValue(purse)}</p>
       <div className="inv-purse__form">
         <select
@@ -455,7 +484,7 @@ function Hoard({
         <span className="inv-rail__count">{entries.length}</span>
       </h3>
 
-      <PurseWidget purse={currency} onAdjust={adjustCurrency} />
+      <PurseWidget purse={currency} onAdjust={adjustCurrency} colored />
 
       <input
         className="inv-search"

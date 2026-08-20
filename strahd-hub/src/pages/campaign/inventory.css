@@ -152,6 +152,35 @@
   color: var(--sh-mute);
 }
 
+/* Only reached with colored=true (the Hoard rail's purse) — the coin-metal
+   colours home.css's .desk-hoard__coins already uses, reused here as their
+   own classes rather than shared across files: same tokens, page-local rules,
+   the split this sheet already keeps with .ch/.desk elsewhere. */
+.inv-purse__coins-sep,
+.inv-purse__coins-empty {
+  color: var(--sh-mute);
+}
+
+.inv-coin--platinum {
+  color: var(--sh-platinum);
+}
+
+.inv-coin--gold {
+  color: var(--sh-gold);
+}
+
+.inv-coin--electrum {
+  color: var(--sh-electrum);
+}
+
+.inv-coin--silver {
+  color: var(--sh-silver);
+}
+
+.inv-coin--copper {
+  color: var(--sh-copper);
+}
+
 .inv-purse__form {
   display: flex;
   flex-wrap: wrap;
