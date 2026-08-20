@@ -3,8 +3,10 @@
    home.css: the panel is a .desk-panel and only adds the seat grid inside it,
    so home.css has to have declared the panel first.
 
-   Two named things per seat, and nothing else. The band answers "who's here"
-   at a glance; the Party page it sits above answers what each is hauling.
+   Four things per seat, all of them already on the useParty row: what they are
+   called, who plays them, how much they are hauling, and the first two names
+   of it. The band answers "who's here and roughly what with" at a glance; the
+   Inventory page is where a stack is actually read.
    ========================================================================== */
 
 .at-table__head {
@@ -43,7 +45,7 @@
    is one panel, and a seat is a column of it, not a card of its own. */
 .at-table__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0;
 }
 
@@ -72,6 +74,62 @@
   color: var(--sh-dim);
 }
 
+/* --- what each is hauling ------------------------------------------------ */
+
+/* party.css's .party-sheet__rule at the band's scale: a gold hairline that
+   fades out rather than a full-width border, so it reads as the seat's own
+   underline and not as another column divider. */
+.at-table__rule {
+  height: 1px;
+  margin: 12px 0 10px;
+  background: linear-gradient(90deg, rgba(154, 122, 58, 0.4), transparent 90%);
+}
+
+.at-table__carried {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+
+/* Mono, because it is the one number on the seat and the eye should be able to
+   run down the row comparing them — the same reason .at-table__count is mono. */
+.at-table__carried-count {
+  font: 400 20px/1 var(--sh-mono);
+  color: var(--sh-bone);
+}
+
+/* A 0 is still worth printing, but it should not be the brightest thing in the
+   column: an empty pack is information, not an alarm. */
+.at-table__carried-count--none {
+  color: var(--sh-dim);
+}
+
+.at-table__carried-label {
+  font: 400 14px/1 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+.at-table__items {
+  margin: 8px 0 0;
+  font: 400 15px/1.5 var(--sh-body);
+  color: var(--sh-mute);
+}
+
+/* The remainder drops a step so the two named things stay the line's subject. */
+.at-table__more {
+  color: var(--sh-dim);
+}
+
+.at-table__nothing {
+  margin: 8px 0 0;
+  font: 400 15px/1.5 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-dim);
+  text-wrap: pretty;
+}
+
 /* --- a member with no character ----------------------------------------- */
 
 /* Not rendered yet — 013's SELECT policy on campaign_members is
@@ -83,6 +141,6 @@
 
 @media (max-width: 1240px) {
   .at-table__grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
 }

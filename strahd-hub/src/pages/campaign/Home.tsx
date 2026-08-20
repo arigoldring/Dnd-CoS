@@ -167,11 +167,12 @@ export function Home() {
           </ul>
         </section>
 
-        {/* At the table — one column per character, below the Hoard. Just who
-            is here and who plays them; the gear each is hauling is the Party
-            page's job, not the band's. Hidden entirely on a campaign nobody
-            has rolled up in: an empty band on a fresh campaign is a gap, not
-            information.
+        {/* At the table — one column per character, below the Hoard. Who is
+            here, who plays them, and how much each is hauling: the three
+            things the row already carries, and nothing this band has to go
+            and ask for. What each stack actually is stays the Inventory
+            page's job. Hidden entirely on a campaign nobody has rolled up
+            in: an empty band on a fresh campaign is a gap, not information.
 
             The count is a plain character count rather than the design's
             "4 of 5". The denominator would be the campaign's member count, and
@@ -193,6 +194,51 @@ export function Home() {
                   <p className="at-table__player">
                     played by {character.playerName ?? "someone since departed"}
                   </p>
+                  <div className="at-table__rule" />
+                  {/* carried, not stacks: the seat leads with how many things
+                      they are hauling, not how many kinds of thing. Both come
+                      off the one useParty read — getPartyCharacters computes
+                      them side by side for exactly this, and the band was the
+                      only caller that never spent them. A seat with nothing
+                      still shows its 0, dimmed: an empty pack on a Tuesday
+                      night is the useful fact, not a gap to hide. */}
+                  <p className="at-table__carried">
+                    <span
+                      className={
+                        character.carried === 0
+                          ? "at-table__carried-count at-table__carried-count--none"
+                          : "at-table__carried-count"
+                      }
+                    >
+                      {character.carried}
+                    </span>
+                    <span className="at-table__carried-label">
+                      {character.carried === 1
+                        ? "thing carried"
+                        : "things carried"}
+                    </span>
+                  </p>
+                  {/* Two names and a remainder, not the pack: the band answers
+                      who is here and roughly what with, and the Inventory page
+                      is where a stack is actually read. items arrives sorted by
+                      name, so the two shown are stable between renders rather
+                      than whichever the embed happened to return first. */}
+                  {character.stacks === 0 ? (
+                    <p className="at-table__nothing">Carries nothing yet.</p>
+                  ) : (
+                    <p className="at-table__items">
+                      {character.items
+                        .slice(0, 2)
+                        .map((item) => item.name)
+                        .join(", ")}
+                      {character.stacks > 2 && (
+                        <span className="at-table__more">
+                          {" "}
+                          +{character.stacks - 2} more
+                        </span>
+                      )}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
