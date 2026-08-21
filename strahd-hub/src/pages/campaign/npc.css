@@ -7,86 +7,83 @@
    first — main.tsx imports it before index.css.
    ========================================================================== */
 
+/* the roster is the positioning context for the reveals drawer */
 .npcs {
-  /* the roster is the positioning context for the visibility panel, which
-     slides in over it the way it does over the map stage */
   position: relative;
-  font: 400 18px/1.5 var(--sh-body);
   color: var(--sh-bone);
+  font-family: var(--sh-body);
 }
-
-/* --- header: the title, the count, and the DM's drawer ------------------- */
 
 .npcs-header {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 16px;
-  padding: 0 12px 14px;
-  margin-bottom: 18px;
+  align-items: flex-end;
+  gap: 20px;
+  padding-bottom: 22px;
   border-bottom: 1px solid rgba(160, 140, 110, 0.2);
+}
+
+/* optional, above the title — matches Recaps and the Forge */
+.npcs-eyebrow {
+  margin: 0 0 12px;
+  font: 500 11px/1 var(--sh-display);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
 }
 
 .npcs-title {
   margin: 0;
-  font: 500 26px/1.15 var(--sh-display);
-  font-variant: small-caps;
-  letter-spacing: 0.04em;
+  font: 600 40px/1 var(--sh-display);
+  letter-spacing: 0.05em;
   color: var(--sh-bone);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0 28px rgba(138, 13, 13, 0.35);
 }
 
+/* count of what the party can see, beside the toggle */
 .npcs-count {
-  margin: 0;
-  font: 400 13px/1 var(--sh-body);
+  margin: 0 0 0 auto;
+  font: 400 14px/1 var(--sh-body);
   font-style: italic;
   color: var(--sh-dim);
 }
 
-/* the hidden tally inside the count — a fact only the DM has */
 .npcs-count b {
   font-weight: 400;
-  font-style: normal;
   color: var(--sh-blood-ink);
 }
 
 .npcs-visibility-toggle {
-  margin-left: auto;
-  padding: 6px 12px;
+  flex: none;
+  padding: 8px 14px 7px;
   font: 400 13px/1 var(--sh-body);
   font-variant: small-caps;
   letter-spacing: 0.12em;
-  text-transform: none;
-  color: var(--sh-gold-deep);
+  color: var(--sh-gold);
   background: none;
   border: 1px solid rgba(154, 122, 58, 0.4);
   cursor: pointer;
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
-.npcs-visibility-toggle:hover:not(:disabled) {
+.npcs-visibility-toggle:hover {
   color: var(--sh-bone);
   border-color: rgba(154, 122, 58, 0.75);
   background: rgba(154, 122, 58, 0.1);
 }
 
 .npcs-visibility-toggle:focus-visible {
-  outline: 1px solid var(--sh-gold-deep);
+  outline: 1px solid var(--sh-gold);
   outline-offset: 2px;
 }
 
-/* ---------------------------------------------------------
-   ROSTER
-   --------------------------------------------------------- */
+/* ---------- roster ---------- */
 
 .npcs .npc-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  padding: 0 12px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  align-items: start;
+  gap: 22px;
+  margin: 26px 0 0;
 }
 
 .npcs .npc-card {
@@ -98,18 +95,18 @@
     linear-gradient(180deg, rgba(20, 15, 16, 0.97), rgba(12, 9, 11, 0.99)),
     repeating-linear-gradient(0deg, rgba(255, 240, 210, 0.012) 0 2px, transparent 2px 4px),
     var(--sh-void);
-  border: 1px solid rgba(160, 140, 110, 0.28);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 24px 60px -28px rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--sh-rule-strong);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 24px 60px -28px rgba(0, 0, 0, 0.9);
 }
 
-/* not yet revealed — only ever rendered for the DM. Dashed edge and a dimmed
-   card so it reads as "the party cannot see this one" at a glance. */
+/* not yet revealed — DM-only by construction (RLS drops the row for players).
+   Dashed edge and a lifted card so it reads as "the party cannot see this one". */
 .npcs .npc-card.is-hidden {
+  position: relative;
+  background: linear-gradient(180deg, rgba(20, 15, 16, 0.72), rgba(12, 9, 11, 0.86));
   border-style: dashed;
-  border-color: rgba(154, 122, 58, 0.4);
-  opacity: 0.72;
+  border-color: rgba(154, 122, 58, 0.42);
+  opacity: 0.86;
 }
 
 .npcs .npc-card__portrait {
@@ -136,16 +133,23 @@
   font-variant: small-caps;
   letter-spacing: 0.04em;
   color: var(--sh-bone);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
 }
 
-.npcs .npc-card__hidden-tag {
-  padding: 1px 6px 0;
-  font: 400 11px/1.4 var(--sh-body);
-  font-variant: small-caps;
-  letter-spacing: 0.14em;
-  color: var(--sh-gold-deep);
-  border: 1px solid rgba(154, 122, 58, 0.4);
+/* the tag sits on the card's top edge, where a wax seal would sit on a sealed
+   page — absolute against .npc-card.is-hidden, so it doesn't matter where in
+   the card's markup the span lives */
+.npcs .npc-card.is-hidden .npc-card__hidden-tag {
+  position: absolute;
+  top: -11px;
+  right: 16px;
+  font: 500 9px/1 var(--sh-display);
+  font-variant: normal;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sh-blood-ink);
+  background: #0f0c10;
+  border: 1px solid rgba(138, 13, 13, 0.5);
+  padding: 6px 10px 5px;
 }
 
 .npcs .npc-card__rule {
@@ -170,28 +174,24 @@
   text-wrap: pretty;
 }
 
-/* stands in for a description that hasn't been written yet — dimmer and italic
-   so it reads as absence, not as the NPC's actual blurb */
+/* absence, not the NPC's actual blurb */
 .npcs .npc-card__empty {
   color: var(--sh-dim);
   font-style: italic;
 }
 
-/* DM-only notes block — set apart from the player-facing description */
+/* the DM's own ink, on the page the players also see */
 .npcs .npc-card__dm {
   margin: 14px 0 0;
   padding: 11px 13px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--sh-mute);
+  font: 400 14px/1.5 var(--sh-body);
+  font-style: italic;
+  color: #e2b4b4;
   background: rgba(106, 10, 10, 0.14);
   border: 1px solid rgba(138, 13, 13, 0.4);
   border-left: 3px solid var(--sh-blood-bright);
 }
 
-/* A label line rather than an inline "DM notes:" prefix — the block already
-   announces itself with the red edge, and the label gives the note its own
-   first line to start on. */
 .npcs .npc-card__dm-label {
   display: block;
   margin-bottom: 6px;
@@ -202,11 +202,7 @@
   color: var(--sh-blood-ink);
 }
 
-/* ---------------------------------------------------------
-   DM EDITING
-   Only ever rendered for a DM (NPC.tsx gates it). RLS is the
-   real gate; this is the door.
-   --------------------------------------------------------- */
+/* ---------- DM controls ---------- */
 
 .npcs .npc-card__actions {
   display: flex;
@@ -214,42 +210,47 @@
   margin-top: 14px;
 }
 
-.npcs .npc-card__edit {
+.npcs .npc-card__edit,
+.npcs .npc-edit__btn {
   padding: 5px 12px 4px;
   font: 400 13px/1 var(--sh-body);
   font-variant: small-caps;
   letter-spacing: 0.12em;
-  text-transform: none;
-  color: var(--sh-gold-deep);
+  color: var(--sh-gold);
   background: none;
   border: 1px solid rgba(154, 122, 58, 0.4);
   cursor: pointer;
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
-.npcs .npc-card__edit:hover:not(:disabled) {
+.npcs .npc-card__edit:hover,
+.npcs .npc-edit__btn:hover:not(:disabled) {
   color: var(--sh-bone);
   border-color: rgba(154, 122, 58, 0.75);
   background: rgba(154, 122, 58, 0.1);
 }
 
-.npcs .npc-card__edit:focus-visible {
-  outline: 1px solid var(--sh-gold-deep);
+.npcs .npc-card__edit:focus-visible,
+.npcs .npc-edit__btn:focus-visible {
+  outline: 1px solid var(--sh-gold);
   outline-offset: 2px;
+}
+
+/* an open editor is the lit card on the page */
+.npcs .npc-card:has(.npc-edit) {
+  background: linear-gradient(180deg, rgba(22, 17, 18, 0.98), rgba(12, 9, 11, 0.99));
+  border-color: rgba(199, 154, 90, 0.5);
 }
 
 .npcs .npc-edit--notes {
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid var(--sh-rule);
+  border-top: 1px solid rgba(160, 140, 110, 0.22);
 }
 
 .npcs .npc-edit__label {
   display: block;
-  margin: 10px 0 6px;
+  margin: 12px 0 6px;
   font: 400 12px/1 var(--sh-body);
   font-variant: small-caps;
   letter-spacing: 0.14em;
@@ -266,9 +267,8 @@
   padding: 8px 11px;
   font: 400 15px/1.5 var(--sh-body);
   color: var(--sh-bone);
-  background: var(--sh-panel-sunk);
-  border: 1px solid rgba(160, 140, 110, 0.28);
-  box-shadow: none;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--sh-rule);
   resize: vertical;
   /* keep the field inside the card's padding — default box-sizing would put its
      border outside the 100% width and force a horizontal scrollbar */
@@ -285,17 +285,16 @@
   color: var(--sh-dim);
 }
 
-/* the select inherits the field styling but not the arrow, which the browser
-   paints in its own colour against the dark background */
+/* the browser paints a select's arrow in its own colour against dark */
 .npcs select.npc-edit__field {
   appearance: none;
+  padding-right: 30px;
   background-image:
     linear-gradient(45deg, transparent 50%, var(--sh-gold-deep) 50%),
     linear-gradient(135deg, var(--sh-gold-deep) 50%, transparent 50%);
   background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
-  padding-right: 30px;
 }
 
 .npcs select.npc-edit__field option {
@@ -310,28 +309,6 @@
   margin-top: 12px;
 }
 
-.npcs .npc-edit__btn {
-  padding: 6px 14px 5px;
-  font: 400 13px/1 var(--sh-body);
-  font-variant: small-caps;
-  letter-spacing: 0.12em;
-  text-transform: none;
-  color: var(--sh-mute);
-  background: none;
-  border: 1px solid rgba(160, 140, 110, 0.28);
-  cursor: pointer;
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease;
-}
-
-.npcs .npc-edit__btn:hover:not(:disabled) {
-  color: var(--sh-bone);
-  border-color: rgba(154, 122, 58, 0.6);
-  background: rgba(154, 122, 58, 0.08);
-}
-
 .npcs .npc-edit__btn--save {
   color: var(--sh-bone);
   border-color: rgba(154, 122, 58, 0.55);
@@ -342,20 +319,16 @@
   background: rgba(138, 13, 13, 0.42);
 }
 
-.npcs .npc-edit__btn:focus-visible {
-  outline: 1px solid var(--sh-gold-deep);
-  outline-offset: 2px;
-}
-
 .npcs .npc-edit__btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.npcs .npc-edit__error {
+.npcs .npc-edit__error,
+.npcs .visibility-panel__error {
   margin: 12px 0 0;
   padding: 9px 12px;
-  font-size: 14px;
+  font: 400 14px/1.5 var(--sh-body);
   color: #e2b4b4;
   background: rgba(106, 10, 10, 0.18);
   border: 1px solid rgba(138, 13, 13, 0.5);
@@ -363,22 +336,17 @@
 }
 
 /* ---------------------------------------------------------
-   VISIBILITY PANEL — the roster's reveal toggles.
-   Same panel as the map's, anchored to .npcs instead of the
-   map stage.
+   VISIBILITY PANEL — the roster's reveal toggles ("the reveals drawer").
+   Same panel as the map's, anchored to .npcs instead of the map stage.
 
-   Every rule here is scoped under .npcs, and that is not
-   decoration: maps.css declares .visibility-panel unscoped,
-   so its rules reach this panel too. The scoped selector
-   wins on specificity, but only for properties it actually
-   names — hence height below, which would otherwise inherit
-   the map's full-height panel and stretch an eight-item list
-   down the whole roster.
+   Every rule here is scoped under .npcs, and that is not decoration:
+   maps.css declares .visibility-panel unscoped, so its rules reach this
+   panel too. The scoped selector wins on specificity, but only for
+   properties it actually names.
 
-   Anchored right, not left: on the left it opened over the
-   first two cards, which are the rows the DM is most likely
-   toggling. From this edge the list and the cards it changes
-   are both on screen.
+   Anchored right, not left: on the left it opened over the first two
+   cards, which are the rows the DM is most likely toggling. From this
+   edge the list and the cards it changes are both on screen.
    --------------------------------------------------------- */
 
 .npcs .visibility-panel {
@@ -387,53 +355,51 @@
   right: 0;
   left: auto;
   z-index: 40;
-  width: min(280px, 75%);
+  width: min(290px, 80%);
   height: auto;
   max-height: 100%;
-  padding: 20px;
+  padding: 20px 22px 22px;
   overflow-y: auto;
   background:
-    linear-gradient(180deg, rgba(20, 15, 16, 0.97), rgba(12, 9, 11, 0.99)),
+    linear-gradient(180deg, rgba(20, 15, 16, 0.98), rgba(12, 9, 11, 0.995)),
     repeating-linear-gradient(0deg, rgba(255, 240, 210, 0.012) 0 2px, transparent 2px 4px),
     var(--sh-void);
-  border: 1px solid rgba(160, 140, 110, 0.28);
+  border: 1px solid rgba(160, 140, 110, 0.32);
   box-shadow: -30px 0 70px -30px rgba(0, 0, 0, 0.95);
   animation: npcPanelSlideIn 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 .npcs .visibility-panel__header {
-  position: relative;
-  margin-bottom: 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
 }
 
 .npcs .visibility-panel__header h3 {
   margin: 0;
-  font: 500 18px/1.2 var(--sh-display);
+  font: 500 15px/1.2 var(--sh-display);
   font-variant: small-caps;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--sh-bone);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
+}
+
+.npcs .visibility-panel__blurb {
+  margin: 8px 0 16px;
+  font: 400 13px/1.5 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-dim);
 }
 
 .npcs .visibility-panel__close {
-  position: absolute;
-  top: -4px;
-  right: -8px;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  font: 400 20px/1 var(--sh-body);
+  margin-left: auto;
+  padding: 0 2px;
+  font: 400 18px/1 var(--sh-body);
   letter-spacing: 0;
   color: var(--sh-dim);
   background: none;
   border: 1px solid transparent;
   cursor: pointer;
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
 .npcs .visibility-panel__close:hover:not(:disabled) {
@@ -450,28 +416,28 @@
 .npcs .visibility-panel__list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 /* Name first, state second: the list reads as names with a state beside each,
-   and the buttons line up on one edge. */
+   and the buttons line up on one edge. Divided by a hairline rather than a
+   gap, so a longer roster still reads as one list. */
 .npcs .visibility-panel__item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 9px 10px;
+  border-bottom: 1px dashed rgba(160, 140, 110, 0.14);
   transition: background 0.18s ease;
 }
 
-.npcs .visibility-panel__item:hover {
-  background: rgba(154, 122, 58, 0.08);
+.npcs .visibility-panel__item:last-child {
+  border-bottom: 0;
 }
 
-/* the row carries the state too, so a scan down the list finds the hidden ones
-   without reading every button */
-.npcs .visibility-panel__item.is-hidden .visibility-panel__name {
-  color: var(--sh-dim);
-  font-style: italic;
+/* the row itself carries the state, so a scan down the list finds the hidden
+   ones without reading every button */
+.npcs .visibility-panel__item.is-hidden {
+  background: rgba(106, 10, 10, 0.12);
 }
 
 .npcs .visibility-panel__name {
@@ -481,61 +447,49 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 15px;
+  color: var(--sh-bone);
+}
+
+.npcs .visibility-panel__item.is-hidden .visibility-panel__name {
   color: var(--sh-mute);
 }
 
 /* Words, not a glyph: 👁️ and 👁️‍🗨️ are two states of the same icon, which is a
    coin-flip to read, and the second is an emoji ZWJ sequence that renders as
-   two characters on Windows. */
+   two characters on Windows. "Shown" / "Hidden" say which state the row IS. */
 .npcs .visibility-panel__toggle {
-  flex: 0 0 auto;
-  width: auto;
-  height: auto;
-  min-width: 68px;
-  padding: 5px 10px 4px;
-  font: 500 9px/1 var(--sh-display);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--sh-gold);
+  flex: none;
+  padding: 5px 9px 4px;
+  font: 400 11px/1 var(--sh-body);
+  font-variant: small-caps;
+  letter-spacing: 0.14em;
+  color: var(--sh-gold-deep);
   background: none;
   border: 1px solid rgba(154, 122, 58, 0.4);
   cursor: pointer;
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
 .npcs .visibility-panel__toggle:hover:not(:disabled) {
-  color: var(--sh-candle);
+  color: var(--sh-bone);
   border-color: rgba(154, 122, 58, 0.75);
   background: rgba(154, 122, 58, 0.1);
 }
 
 .npcs .visibility-panel__item.is-hidden .visibility-panel__toggle {
-  color: var(--sh-dim);
-  border-color: rgba(160, 140, 110, 0.22);
-  border-style: dashed;
+  color: #e7b7a0;
+  border-color: rgba(138, 13, 13, 0.55);
 }
 
 .npcs .visibility-panel__item.is-hidden .visibility-panel__toggle:hover:not(:disabled) {
-  color: var(--sh-bone);
-  border-color: rgba(154, 122, 58, 0.6);
+  color: #ffd9c4;
+  border-color: var(--sh-blood-bright);
+  background: rgba(106, 10, 10, 0.3);
 }
 
 .npcs .visibility-panel__toggle:focus-visible {
   outline: 1px solid var(--sh-gold-deep);
   outline-offset: 1px;
-}
-
-.npcs .visibility-panel__error {
-  margin: 10px 0 0;
-  padding: 9px 12px;
-  font-size: 14px;
-  color: #e2b4b4;
-  background: rgba(106, 10, 10, 0.18);
-  border: 1px solid rgba(138, 13, 13, 0.5);
-  border-left: 3px solid var(--sh-blood-bright);
 }
 
 @keyframes npcPanelSlideIn {

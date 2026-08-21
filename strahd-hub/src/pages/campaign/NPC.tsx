@@ -107,7 +107,10 @@ export function Npcs() {
   return (
     <div className="npcs">
       <div className="npcs-header">
-        <h2 className="npcs-title">Characters of Barovia</h2>
+        <div>
+          <p className="npcs-eyebrow">The Living and the Dead</p>
+          <h2 className="npcs-title">Characters of Barovia</h2>
+        </div>
         <p className="npcs-count">
           {npcs.length} in the roster
           {showDmUi && hidden > 0 && (
@@ -227,7 +230,7 @@ export function Npcs() {
       {showDmUi && showVisibilityPanel && (
         <aside className="visibility-panel">
           <div className="visibility-panel__header">
-            <h3>NPC Visibility</h3>
+            <h3>Who the party knows</h3>
             <button
               className="visibility-panel__close"
               aria-label="Close"
@@ -236,6 +239,9 @@ export function Npcs() {
               ×
             </button>
           </div>
+          <p className="visibility-panel__blurb">
+            Hidden rows never reach a player's screen at all.
+          </p>
           <div className="visibility-panel__list">
             {/* Words rather than the two states of one glyph, which is a
                 coin-flip to read — and the hidden one was an emoji ZWJ sequence
