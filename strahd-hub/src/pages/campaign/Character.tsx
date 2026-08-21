@@ -1,15 +1,19 @@
 import { Fragment, ReactNode, SubmitEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCampaign } from "../../components/CampaignLayout";
 import { useAuth } from "../../services/AuthContext";
 import { useCharacter } from "../../hooks/useCharacter";
+import { useParty } from "../../hooks/useParty";
 import { useCharacterSpells } from "../../hooks/useCharacterSpells";
 import { useCharacterFeats } from "../../hooks/useCharacterFeats";
 import { useCharacterInventory } from "../../hooks/useCharacterInventory";
 import { useSpells } from "../../hooks/useSpells";
 import { useFeats } from "../../hooks/useFeats";
+import { useItems } from "../../hooks/useItems";
 import { SpellDetailCard } from "../../components/SpellDetailCard";
 import { FeatDetailCard } from "../../components/FeatDetailCard";
+import { CharacterRoster } from "./CharacterRoster";
 import type { Character as CharacterModel } from "../../services/characters";
 import type { CharacterSpellEntry } from "../../services/characterSpells";
 import type { CharacterFeatEntry } from "../../services/characterFeats";
@@ -24,6 +28,19 @@ import { errorMessage } from "../../lib/errors";
 import "./character.css";
 
 /**
+ * The nav rail's "Character" destination. A DM has no PC of their own in the
+ * campaign, so for them this is the roster of every player's character
+ * (CharacterRoster) rather than the create/own-sheet flow below — isDm is the
+ * whole branch, unaffected by player preview, the same as the nav rail's own
+ * DM-only links (New Item, Invites) already are: this is a fact about who is
+ * signed in, not something preview puts away.
+ */
+export function Character() {
+  const campaign = useCampaign();
+  return campaign.isDm ? <CharacterRoster /> : <OwnCharacter />;
+}
+
+/**
  * The viewer's own character in this campaign: a create form when they have
  * none, the sheet when they do. Two states, one query — the same shape
  * AuthGate uses for the display name, one level down.
@@ -34,10 +51,11 @@ import "./character.css";
  * a sheet is free to grow sections without counting siblings. Inventory.tsx,
  * which replaced that page, made the same choice for the same reason.
  */
-export function Character() {
+function OwnCharacter() {
   // Non-null by construction: this route sits under CampaignLayout, which has
   // already resolved :campaignId against the campaigns this user can see.
   const campaign = useCampaign();
+  const { profile } = useAuth();
   const {
     data: character,
     isLoading,
@@ -55,7 +73,11 @@ export function Character() {
     // element scopes layout rather than a palette.
     <div className="ch">
       {character ? (
-        <CharacterSheet character={character} />
+        <CharacterSheet
+          character={character}
+          isOwn
+          playerName={profile?.displayName ?? null}
+        />
       ) : (
         // The create state is the same frame with nothing yet to divide: a
         // header and the form, and no bands at all. There are no sections to
@@ -78,6 +100,48 @@ export function Character() {
   );
 }
 
+/**
+ * The DM's view of one picked player's character, reached from
+ * CharacterRoster. Reuses useParty rather than a query of its own: the
+ * roster just populated the same ["party", campaignId] cache entry, so
+ * following a card into here is a cache hit, and there is no owner-filtered
+ * "mine" read that would apply to someone else's character anyway.
+ *
+ * isOwn is computed from userId rather than hardcoded false — a DM who has
+ * also rolled up their own character (an edge case, not the norm) still gets
+ * the owner controls when they land on their own row.
+ */
+export function CharacterDetail() {
+  const campaign = useCampaign();
+  const { profile } = useAuth();
+  const { characterId } = useParams();
+  const { data: party, isLoading, error } = useParty(campaign.id);
+
+  if (isLoading) return <p>Consulting the ledger...</p>;
+  if (error) return <p>{error.message}</p>;
+
+  // No character in this campaign matches the id — a stale link, a typo, or a
+  // character the DM no longer has read access to. MapView's fallback for an
+  // unresolved :mapId is the same shape: send the viewer back to the index
+  // rather than rendering a page about nothing.
+  const character = party?.find((c) => c.id === characterId);
+  if (!character) {
+    return <Navigate to={`/campaign/${campaign.id}/Character`} replace />;
+  }
+
+  const isOwn = character.userId === profile?.id;
+
+  return (
+    <div className="ch">
+      <CharacterSheet
+        character={character}
+        isOwn={isOwn}
+        playerName={character.playerName}
+      />
+    </div>
+  );
+}
+
 // The sheet: one framed page rather than three plates that happen to be
 // stacked. Identity heads it (owner-only writes), then Known Magic, Feats and
 // what they are carrying, each introduced by a ruled band. The bands are the
@@ -93,9 +157,20 @@ export function Character() {
 // Gear itself still lives on the Inventory page, beside the party's hoard: the
 // two lists a stack can move between belong on one screen. What comes back
 // here is a count and a door, not a control.
-function CharacterSheet({ character }: { character: CharacterModel }) {
+function CharacterSheet({
+  character,
+  isOwn,
+  playerName,
+}: {
+  character: CharacterModel;
+  isOwn: boolean;
+  playerName: string | null;
+}) {
   const campaign = useCampaign();
-  const { profile } = useAuth();
+  // Fetched regardless of isOwn — hooks can't be conditional — but the
+  // rename/reset mutations below are only ever invoked from the isOwn
+  // branch. When a DM is viewing someone else's sheet this is a harmless
+  // extra read of the DM's own (usually absent) character.
   const { renameCharacter, resetCharacter } = useCharacter(campaign.id);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -109,7 +184,7 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
             before they arrived. */}
         <p className="ch-eyebrow">— Your Own Tale —</p>
 
-        {isRenaming ? (
+        {isOwn && isRenaming ? (
           <CharacterNameForm
             initialName={character.name}
             submitLabel="Save"
@@ -123,29 +198,32 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
           <>
             <div className="ch-identity">
               <h1 className="ch-name">{character.name}</h1>
-              <button className="ch-button" onClick={() => setIsRenaming(true)}>
-                Rename
-              </button>
-              {/* The DM cannot reach this control, and not because it is
-                  hidden: 028's UPDATE and DELETE policies on characters are
-                  owner-only, so a DM's rename matches zero rows at the
-                  database. */}
-              <button
-                className="ch-button ch-button--danger"
-                onClick={() => setIsResetting(true)}
-                disabled={isResetting}
-              >
-                Reset
-              </button>
+              {/* Rename/Reset are owner-only at 028's UPDATE and DELETE
+                  policies — a DM's rename or delete would match zero rows at
+                  the database — so they render only for isOwn rather than
+                  being offered and left to silently no-op. */}
+              {isOwn && (
+                <>
+                  <button
+                    className="ch-button"
+                    onClick={() => setIsRenaming(true)}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    className="ch-button ch-button--danger"
+                    onClick={() => setIsResetting(true)}
+                    disabled={isResetting}
+                  >
+                    Reset
+                  </button>
+                </>
+              )}
             </div>
-            {/* profile is non-null under AuthGate, which does not render a
-                campaign page until there is a display name — and this sheet is
-                only ever the viewer's own character, since getCharacter filters
-                by user. So the player named here is always the reader. */}
             <p className="ch-byline">
-              Played by {profile?.displayName ?? "their player"} · rolled up{" "}
-              {new Date(character.createdAt).toLocaleDateString()} · yours alone
-              to rename or unmake.
+              Played by {playerName ?? "their player"} · rolled up{" "}
+              {new Date(character.createdAt).toLocaleDateString()}
+              {isOwn && " · yours alone to rename or unmake"}.
             </p>
           </>
         )}
@@ -153,7 +231,7 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
         {/* Stays in the header, and deliberately not a band: a destructive
             confirm is a thing that happened to the identity above it, not a
             fourth section of the sheet. */}
-        {isResetting && (
+        {isOwn && isResetting && (
           <div className="ch-reset">
             <p className="ch-warning">
               Resetting deletes {character.name} and everything they carry. This
@@ -179,9 +257,9 @@ function CharacterSheet({ character }: { character: CharacterModel }) {
       {/* Each of these renders a band and a body into the frame, and none of
           them an <article> of its own — they are sections of this sheet, not
           three sheets in a row. Their queries and their state stay theirs. */}
-      <CharacterSpells characterId={character.id} />
-      <CharacterFeats characterId={character.id} />
-      <CharacterCarried characterId={character.id} />
+      <CharacterSpells characterId={character.id} isOwn={isOwn} />
+      <CharacterFeats characterId={character.id} isOwn={isOwn} />
+      <CharacterCarried characterId={character.id} isOwn={isOwn} />
       <CharacterPurse character={character} />
     </article>
   );
@@ -218,8 +296,20 @@ function Band({
 // No slots, no prepared/known split, no per-day usage — 037 records that a
 // character has a spell and nothing else, and this panel shows exactly that
 // plus a way to read what the spell does.
-function CharacterSpells({ characterId }: { characterId: string }) {
+//
+// isOwn drives canEdit here rather than reading campaign.isDm alone, because
+// this component is also mounted for a player browsing someone else's sheet
+// by URL — can_edit_character is owner-or-DM, and canEdit mirrors that
+// exactly.
+function CharacterSpells({
+  characterId,
+  isOwn,
+}: {
+  characterId: string;
+  isOwn: boolean;
+}) {
   const campaign = useCampaign();
+  const canEdit = isOwn || campaign.isDm;
   const {
     data: entries = [],
     isLoading,
@@ -285,34 +375,36 @@ function CharacterSpells({ characterId }: { characterId: string }) {
           the table. It is used a few times a level and cost ~50px of the sheet
           every time it wasn't. */}
       <Band label="Known Magic" count={`${entries.length} known`}>
-        <form className="ch-add" onSubmit={handleAdd}>
-          <select
-            value={spellId}
-            onChange={(e) => setSpellId(e.target.value)}
-            disabled={adding}
-          >
-            <option value="">Choose a spell...</option>
-            {spellsByLevel(spells).map((group) => (
-              <optgroup
-                key={group.level}
-                label={spellLevelGroupLabel(group.level)}
-              >
-                {group.spells.map((spell) => (
-                  <option key={spell.id} value={spell.id}>
-                    {spell.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-          <button
-            className="ch-button"
-            type="submit"
-            disabled={adding || !spellId}
-          >
-            {adding ? "Adding..." : "Add"}
-          </button>
-        </form>
+        {canEdit && (
+          <form className="ch-add" onSubmit={handleAdd}>
+            <select
+              value={spellId}
+              onChange={(e) => setSpellId(e.target.value)}
+              disabled={adding}
+            >
+              <option value="">Choose a spell...</option>
+              {spellsByLevel(spells).map((group) => (
+                <optgroup
+                  key={group.level}
+                  label={spellLevelGroupLabel(group.level)}
+                >
+                  {group.spells.map((spell) => (
+                    <option key={spell.id} value={spell.id}>
+                      {spell.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              className="ch-button"
+              type="submit"
+              disabled={adding || !spellId}
+            >
+              {adding ? "Adding..." : "Add"}
+            </button>
+          </form>
+        )}
       </Band>
 
       <div className="ch-body">
@@ -332,11 +424,13 @@ function CharacterSpells({ characterId }: { characterId: string }) {
               spell={panel}
               onClose={() => setPanelId(null)}
               footer={
-                <RemoveSpellFooter
-                  entry={panel}
-                  onRemove={removeSpell}
-                  onRemoved={() => setPanelId(null)}
-                />
+                canEdit && (
+                  <RemoveSpellFooter
+                    entry={panel}
+                    onRemove={removeSpell}
+                    onRemoved={() => setPanelId(null)}
+                  />
+                )
               }
             />
           )}
@@ -364,6 +458,7 @@ function CharacterSpells({ characterId }: { characterId: string }) {
                     <SpellRow
                       key={entry.entryId}
                       entry={entry}
+                      showRemove={canEdit}
                       onInspect={() => setPanelId(entry.entryId)}
                       onRemove={removeSpell}
                     />
@@ -385,10 +480,12 @@ function CharacterSpells({ characterId }: { characterId: string }) {
 // beside it.
 function SpellRow({
   entry,
+  showRemove,
   onInspect,
   onRemove,
 }: {
   entry: CharacterSpellEntry;
+  showRemove: boolean;
   onInspect: () => void;
   onRemove: (entryId: string) => Promise<void>;
 }) {
@@ -421,15 +518,17 @@ function SpellRow({
         <span className="ch-spell-meta">{spellLevelLine(entry)}</span>
       </td>
       <td className="ch-actions">
-        <button
-          className="ch-button ch-button--danger"
-          onClick={handleRemove}
-          disabled={busy}
-          title="Remove from this character"
-          aria-label={`Remove ${entry.name} from this character`}
-        >
-          Remove
-        </button>
+        {showRemove && (
+          <button
+            className="ch-button ch-button--danger"
+            onClick={handleRemove}
+            disabled={busy}
+            title="Remove from this character"
+            aria-label={`Remove ${entry.name} from this character`}
+          >
+            Remove
+          </button>
+        )}
         {error && <span className="ch-error">{error}</span>}
       </td>
     </tr>
@@ -486,8 +585,19 @@ function RemoveSpellFooter({
 // records that a character has a feat and nothing else, and there is nothing on
 // characters to check "Strength 13 or higher" against. The prerequisite is text
 // the table shows the reader.
-function CharacterFeats({ characterId }: { characterId: string }) {
+//
+// isOwn drives canEdit the same way CharacterSpells does — can_edit_character
+// is owner-or-DM, and this component is also mounted read-only for a player
+// browsing someone else's sheet.
+function CharacterFeats({
+  characterId,
+  isOwn,
+}: {
+  characterId: string;
+  isOwn: boolean;
+}) {
   const campaign = useCampaign();
+  const canEdit = isOwn || campaign.isDm;
   const {
     data: entries = [],
     isLoading,
@@ -549,34 +659,36 @@ function CharacterFeats({ characterId }: { characterId: string }) {
   return (
     <>
       <Band label="Feats" count={`${entries.length} taken`}>
-        <form className="ch-add" onSubmit={handleAdd}>
-          <select
-            value={featId}
-            onChange={(e) => setFeatId(e.target.value)}
-            disabled={adding}
-          >
-            <option value="">Choose a feat...</option>
-            {featsByCategory(feats).map((group) => (
-              <optgroup
-                key={group.category}
-                label={featCategoryLabel(group.category)}
-              >
-                {group.feats.map((feat) => (
-                  <option key={feat.id} value={feat.id}>
-                    {feat.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-          <button
-            className="ch-button"
-            type="submit"
-            disabled={adding || !featId}
-          >
-            {adding ? "Adding..." : "Add"}
-          </button>
-        </form>
+        {canEdit && (
+          <form className="ch-add" onSubmit={handleAdd}>
+            <select
+              value={featId}
+              onChange={(e) => setFeatId(e.target.value)}
+              disabled={adding}
+            >
+              <option value="">Choose a feat...</option>
+              {featsByCategory(feats).map((group) => (
+                <optgroup
+                  key={group.category}
+                  label={featCategoryLabel(group.category)}
+                >
+                  {group.feats.map((feat) => (
+                    <option key={feat.id} value={feat.id}>
+                      {feat.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              className="ch-button"
+              type="submit"
+              disabled={adding || !featId}
+            >
+              {adding ? "Adding..." : "Add"}
+            </button>
+          </form>
+        )}
       </Band>
 
       <div className="ch-body">
@@ -594,11 +706,13 @@ function CharacterFeats({ characterId }: { characterId: string }) {
               feat={panel}
               onClose={() => setPanelId(null)}
               footer={
-                <RemoveFeatFooter
-                  entry={panel}
-                  onRemove={removeFeat}
-                  onRemoved={() => setPanelId(null)}
-                />
+                canEdit && (
+                  <RemoveFeatFooter
+                    entry={panel}
+                    onRemove={removeFeat}
+                    onRemoved={() => setPanelId(null)}
+                  />
+                )
               }
             />
           )}
@@ -626,6 +740,7 @@ function CharacterFeats({ characterId }: { characterId: string }) {
                     <FeatRow
                       key={entry.entryId}
                       entry={entry}
+                      showRemove={canEdit}
                       onInspect={() => setPanelId(entry.entryId)}
                       onRemove={removeFeat}
                     />
@@ -646,10 +761,12 @@ function CharacterFeats({ characterId }: { characterId: string }) {
 // of the category, which the group header above already gave.
 function FeatRow({
   entry,
+  showRemove,
   onInspect,
   onRemove,
 }: {
   entry: CharacterFeatEntry;
+  showRemove: boolean;
   onInspect: () => void;
   onRemove: (entryId: string) => Promise<void>;
 }) {
@@ -683,15 +800,17 @@ function FeatRow({
         )}
       </td>
       <td className="ch-actions">
-        <button
-          className="ch-button ch-button--danger"
-          onClick={handleRemove}
-          disabled={busy}
-          title="Remove from this character"
-          aria-label={`Remove ${entry.name} from this character`}
-        >
-          Remove
-        </button>
+        {showRemove && (
+          <button
+            className="ch-button ch-button--danger"
+            onClick={handleRemove}
+            disabled={busy}
+            title="Remove from this character"
+            aria-label={`Remove ${entry.name} from this character`}
+          >
+            Remove
+          </button>
+        )}
         {error && <span className="ch-error">{error}</span>}
       </td>
     </tr>
@@ -743,7 +862,10 @@ function RemoveFeatFooter({
 // What the character is hauling, as a fact rather than a control: two counts,
 // the first few things by name, and a door to the page where any of it can be
 // changed. No Remove, no quantity, no transfer — everything you can *do* to a
-// stack stays on the Inventory page, beside the hoard it moves to and from.
+// stack stays on the Inventory page, beside the hoard it moves to and from —
+// EXCEPT for the DM case below, which has no Inventory path onto someone
+// else's pack at all (Inventory.tsx is always "mine"), so it gets a Give form
+// here instead rather than a link that would dead-end.
 //
 // Read with useCharacterInventory, the hook Inventory.tsx already uses, on the
 // same query key — so following the link finds this list in the cache.
@@ -753,7 +875,14 @@ function RemoveFeatFooter({
 // and a failed one should cost the strip, not the page. Hence no isLoading
 // branch and no error line — only the `[]` default, which is what makes that
 // safe.
-function CharacterCarried({ characterId }: { characterId: string }) {
+function CharacterCarried({
+  characterId,
+  isOwn,
+}: {
+  characterId: string;
+  isOwn: boolean;
+}) {
+  const campaign = useCampaign();
   const { data: entries = [], error } = useCharacterInventory(characterId);
 
   const stacks = entries.length;
@@ -801,11 +930,83 @@ function CharacterCarried({ characterId }: { characterId: string }) {
           !error && <p className="ch-carried__empty">Nothing in the pack yet.</p>
         )}
 
-        <Link className="ch-carried__link" to="../Inventory">
-          Open the pack →
-        </Link>
+        {isOwn ? (
+          <Link className="ch-carried__link" to="../Inventory">
+            Open the pack →
+          </Link>
+        ) : (
+          campaign.isDm && <GiveItemForm characterId={characterId} />
+        )}
       </div>
     </>
+  );
+}
+
+// The DM's Give control for a picked character's pack, Party.tsx's GiveForm
+// moved onto this sheet: same shape (a picker, a busy/error pair, a Give
+// button), add-only like every other DM-writes-to-someone-else's-gear control
+// in this app — full pack management (Stow/Take/−1/Remove) stays exclusively
+// on Inventory.tsx, which is self-service and untouched by this feature.
+//
+// useCharacterInventory's own addItem already invalidates this character's
+// gear list; the extra invalidate here is for ["party", campaignId], a
+// second cache entry built from the same rows that only CharacterRoster
+// reads — Party.tsx's GiveForm carries the identical comment for the
+// identical reason.
+function GiveItemForm({ characterId }: { characterId: string }) {
+  const campaign = useCampaign();
+  const queryClient = useQueryClient();
+  const { addItem } = useCharacterInventory(characterId);
+  const { data: items = [] } = useItems(campaign.id);
+
+  const [itemId, setItemId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleGive(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!itemId) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      await addItem(itemId);
+      await queryClient.invalidateQueries({
+        queryKey: ["party", campaign.id],
+      });
+      setItemId("");
+    } catch (err) {
+      console.error("Problem giving an item to a character:", err);
+      setError(errorMessage(err, "Couldn't give that item"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="ch-add ch-carried__give" onSubmit={handleGive}>
+      <select
+        value={itemId}
+        onChange={(e) => setItemId(e.target.value)}
+        disabled={busy}
+        aria-label="Give an item"
+      >
+        <option value="">Choose an item...</option>
+        {items.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+      <button
+        className="ch-button"
+        type="submit"
+        disabled={busy || !itemId}
+      >
+        {busy ? "Giving..." : "Give"}
+      </button>
+      {error && <span className="ch-error">{error}</span>}
+    </form>
   );
 }
 

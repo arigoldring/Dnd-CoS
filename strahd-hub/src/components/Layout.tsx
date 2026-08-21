@@ -45,7 +45,13 @@ export function Layout() {
 
         <div className="app-nav">
           <NavLink to="." end>Home</NavLink>
-          <NavLink to="Character">Character</NavLink>
+          {/* A DM has no PC of their own — Character.tsx dispatches to a
+              roster of the campaign's players for them instead of the
+              create/own-sheet flow, so the label says which one this rail
+              is about to open. */}
+          <NavLink to="Character">
+            {campaign.isDm ? "Characters" : "Character"}
+          </NavLink>
           {/* Directly after Character, because Inventory is now half a personal
               page — your own pack, with the party's hoard beside it — rather
               than the shared pile alone. */}

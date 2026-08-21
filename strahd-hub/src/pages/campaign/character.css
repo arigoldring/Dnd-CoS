@@ -508,6 +508,19 @@
   white-space: nowrap;
 }
 
+/* The DM's Give form, pinned to the same right edge ch-carried__link occupies
+   on the owner's own sheet — the two never render together, so they can share
+   the slot. Not nowrap like the band pickers: this one can show an inline
+   error (.ch-error's flex-basis: 100% needs the wrap to drop it to its own
+   line), and nothing here is height-constrained to a 44px strip. */
+.ch-carried__give {
+  margin-left: auto;
+}
+
+.ch-carried__give select {
+  flex: 0 1 200px;
+}
+
 /* ---------- purse ---------- */
 
 /* Carried's layout again, one line: a total on the left, its gold value
@@ -538,4 +551,59 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* ---------- roster (the DM's picker) ---------- */
+
+.ch-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 26px;
+}
+
+.ch-roster__empty {
+  margin-top: 26px;
+  font-style: italic;
+  color: var(--sh-mute);
+}
+
+/* CharacterSheet's frame, at card scale: same border and raised panel, no
+   double inset rule — that reads as a ledger's own page, which one card in a
+   grid of them is not. */
+.ch-roster__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  text-decoration: none;
+  background: var(--sh-panel-raised), var(--sh-void);
+  border: 1px solid rgba(190, 165, 120, 0.42);
+  box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.9);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ch-roster__card:hover {
+  border-color: var(--sh-blood-bright);
+  background: linear-gradient(90deg, rgba(106, 10, 10, 0.16), transparent),
+    var(--sh-panel-raised), var(--sh-void);
+}
+
+.ch-roster__name {
+  font: 600 20px/1.2 var(--sh-display);
+  letter-spacing: 0.03em;
+  color: var(--sh-bone);
+}
+
+.ch-roster__player {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+.ch-roster__tally {
+  margin-top: 4px;
+  font: 400 12px/1 var(--sh-mono);
+  letter-spacing: 0.04em;
+  color: var(--sh-mute);
 }

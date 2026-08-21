@@ -9,7 +9,7 @@ import { Layout } from "./components/Layout";
 import { Npcs } from "./pages/campaign/NPC";
 import { Recaps } from "./pages/campaign/Recaps";
 import { Inventory } from "./pages/campaign/Inventory";
-import { Character } from "./pages/campaign/Character";
+import { Character, CharacterDetail } from "./pages/campaign/Character";
 // import { Party } from "./pages/campaign/Party";
 import { CreateItem } from "./pages/campaign/CreateItem";
 import { CreateFeat } from "./pages/campaign/CreateFeat";
@@ -56,10 +56,19 @@ function App() {
                     the party-only page it replaces, so every existing link and
                     bookmark keeps working. */}
                   <Route path="Inventory" element={<Inventory />} />
-                  {/* The viewer's own PC. No isDm branch and no :userId — the
-                    page is always "mine", and 028's policies make the owner the
-                    only one who can rename or delete it regardless. */}
+                  {/* The viewer's own PC when a player — "mine", and 028's
+                    policies make the owner the only one who can rename or
+                    delete it regardless. A DM has no PC here, so Character
+                    dispatches to a roster of the campaign's characters
+                    instead; picking one goes to Character/:characterId,
+                    Maps/:mapId's shape reused for the same reason: an index
+                    that decides who may be reached, and a detail route that
+                    only has to resolve one id already known to be valid. */}
                   <Route path="Character" element={<Character />} />
+                  <Route
+                    path="Character/:characterId"
+                    element={<CharacterDetail />}
+                  />
                   {/* The same read one level up: every character in the
                     campaign rather than only yours. Not DM-gated — 028 lets any
                     member read the whole table, and the page's one write is.
