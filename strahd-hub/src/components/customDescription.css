@@ -1,0 +1,283 @@
+/* =========================================================
+   CustomDescriptionBlock — 046/047
+
+   The one stylesheet in the repo that belongs to a component rather
+   than a page. SpellDetailCard borrows spells.css and ItemDetailCard
+   borrows shop.css because those classes each came from a page; these
+   didn't, and this block renders inside both cards, so copying the
+   rules into two page sheets would be two places to keep in step.
+
+   Every colour is a --sh-* token from :root. NOT --bone / --blood /
+   --tarnish, which are scoped to .shop and .ch and would resolve to
+   different values depending on which card this landed in — the same
+   trap SpellDetailCard's doc comment names.
+   ========================================================= */
+
+.custom-desc {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--sh-rule);
+}
+
+/* The player's words, set apart from the card's furniture by a rule down
+   the left rather than a box — a box inside a bordered card is one frame
+   too many. */
+.custom-desc__own {
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--sh-gold-deep);
+}
+
+.custom-desc__label {
+  display: block;
+  margin-bottom: 5px;
+  font: 500 8.5px/1 var(--sh-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sh-gold);
+}
+
+.custom-desc__text {
+  margin: 0;
+  font: 400 16px/1.55 var(--sh-body);
+  color: var(--sh-bone-bright);
+  white-space: pre-wrap; /* paragraph breaks the player typed are theirs */
+}
+
+/* The catalogue text appears in two roles, and they get two classes on
+   purpose rather than one class and a specificity fight:
+
+   .custom-desc__original-text  it IS the card's description — nobody has
+                                written over it. Deliberately has no rules
+                                here: shop.css and spells.css each pair it
+                                onto their own .item-detail-text /
+                                .spell-detail-text so a pack card and the
+                                hoard card beside it read identically, drop
+                                cap and all. Adding rules here would mean
+                                fighting those two, and which won would come
+                                down to CSS emission order.
+
+   .custom-desc__revealed       it came out from behind the disclosure, with
+                                the player's words above it. Owned entirely
+                                here, and quieter, because it is no longer
+                                the thing being read first. */
+.custom-desc__revealed {
+  margin: 12px 0 0;
+  font: 400 15px/1.55 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-mute);
+  white-space: pre-wrap;
+}
+
+/* --- the disclosure ----------------------------------------------------- */
+
+/* A real button carrying aria-expanded, with the caret drawn off that
+   attribute — Recaps' accordion. The state is already in the DOM for
+   screen readers, so showing it visually costs no extra markup. */
+.custom-desc__reveal {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+  cursor: pointer;
+}
+
+.custom-desc__reveal:hover:not(:disabled) {
+  color: var(--sh-mute);
+  background: none;
+}
+
+.custom-desc__reveal:focus-visible {
+  outline: 1px solid var(--sh-gold-deep);
+  outline-offset: 3px;
+}
+
+.custom-desc__reveal::before {
+  content: "▸";
+  flex: none;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--sh-gold-deep);
+  transition: rotate 0.2s ease;
+}
+
+.custom-desc__reveal[aria-expanded="true"]::before {
+  rotate: 90deg;
+}
+
+/* --- the way in --------------------------------------------------------- */
+
+.custom-desc__start {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 12px 5px;
+  border: 1px solid var(--sh-rule-strong);
+  background: none;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+  cursor: pointer;
+}
+
+.custom-desc__start:hover:not(:disabled) {
+  color: var(--sh-bone-bright);
+  border-color: var(--sh-gold);
+  background: none;
+}
+
+.custom-desc__start:focus-visible {
+  outline: 1px solid var(--sh-gold-deep);
+  outline-offset: 2px;
+}
+
+/* --- the editor --------------------------------------------------------- */
+
+.custom-desc-edit {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--sh-rule);
+}
+
+.custom-desc-edit__label {
+  display: block;
+  margin-bottom: 5px;
+  font: 500 8.5px/1 var(--sh-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+}
+
+.custom-desc-edit__label + .custom-desc-edit__field,
+.custom-desc-edit__label + .custom-desc-edit__name {
+  margin-bottom: 12px;
+}
+
+.custom-desc-edit__name {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 8px 11px;
+  font: 400 16px/1.4 var(--sh-body);
+  color: var(--sh-bone-bright);
+  background: var(--sh-panel-sunk);
+  border: 1px solid var(--sh-rule-strong);
+  border-radius: 0;
+}
+
+/* UNDO index.css `textarea {}` — the global rule pins every textarea to
+   height: 40px, max-width: 420px, resize: none and a 22px bottom margin,
+   sized for the Spells search box. Height, max-width and resize must all
+   be reset or the `rows` attribute in CustomDescription.tsx does nothing.
+   recaps.css carries the identical note for the identical reason. */
+.custom-desc-edit__field {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  margin: 0;
+  padding: 9px 11px;
+  resize: vertical;
+  font: 400 16px/1.55 var(--sh-body);
+  color: var(--sh-bone-bright);
+  background: var(--sh-panel-sunk);
+  border: 1px solid var(--sh-rule-strong);
+  border-radius: 0;
+}
+
+.custom-desc-edit__name:focus,
+.custom-desc-edit__field:focus {
+  outline: none;
+  border-color: var(--sh-gold-deep);
+}
+
+.custom-desc-edit__name::placeholder,
+.custom-desc-edit__field::placeholder {
+  font-style: italic;
+  color: var(--sh-dim);
+}
+
+.custom-desc-edit__name:disabled,
+.custom-desc-edit__field:disabled {
+  opacity: 0.55;
+}
+
+.custom-desc-edit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Clear sits at the left edge and the other two at the right, so the
+   destructive one is nowhere near the button muscle memory reaches for. */
+.custom-desc-edit__btn--danger {
+  margin-right: auto;
+}
+
+.custom-desc-edit__btn {
+  padding: 7px 13px 6px;
+  border: 1px solid var(--sh-rule-strong);
+  background: none;
+  font: 500 9px/1 var(--sh-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-mute);
+  cursor: pointer;
+}
+
+.custom-desc-edit__btn:hover:not(:disabled) {
+  color: var(--sh-bone-bright);
+  border-color: var(--sh-gold);
+  background: none;
+}
+
+.custom-desc-edit__btn:focus-visible {
+  outline: 1px solid var(--sh-gold-deep);
+  outline-offset: 2px;
+}
+
+.custom-desc-edit__btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.custom-desc-edit__btn--save {
+  color: var(--sh-bone-bright);
+  border-color: var(--sh-gold-deep);
+}
+
+.custom-desc-edit__btn--danger:hover:not(:disabled) {
+  color: var(--sh-blood-ink);
+  border-color: var(--sh-blood-bright);
+}
+
+.custom-desc-edit__error {
+  margin: 10px 0 0;
+  font: 400 14px/1.4 var(--sh-body);
+  font-style: italic;
+  color: var(--sh-blood-ink);
+}
+
+/* --- the catalogue name, under a custom one ----------------------------- */
+
+/* Lives here rather than in either card's sheet because both cards render
+   it and it only exists when this feature is in play. Every list and
+   picker still sorts and searches on the catalogue name, so printing it
+   under the custom one is what keeps the sheet legible to the DM reading
+   over your shoulder. */
+.detail-alias {
+  display: block;
+  margin-top: 2px;
+  font: 500 8.5px/1 var(--sh-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+}
