@@ -31,7 +31,7 @@ at the table — loot rarely arrives in the exact coins a price is written in.
 "not enough of that denomination", not a crash, and nothing stops a player or
 the DM from doing the conversion by hand with two Add/Spend calls. What it
 costs is convenience: nothing in the app currently prices anything to spend
-*against*, so it hasn't bitten yet, but it will the day a shop or a service
+_against_, so it hasn't bitten yet, but it will the day a shop or a service
 charge is priced in gold and a party is holding platinum.
 
 **Fix if the answer changes:** a `convert_currency` RPC taking a purse target,
@@ -147,6 +147,12 @@ end;
 
 Identical behaviour today. This is a convention change rather than one table's
 fix — do all three together or none, so the pattern stays legible.
+
+046 and 047 add two more of the same shape —
+`pin_character_spell_description_row` and `pin_character_item_description_row`,
+each naming its two key columns and `updated_at`. Both say so in their own
+headers. Five blocklists now; the inversion gets one table more expensive every
+time this pattern is copied.
 
 ### `npcs.description` is normalised in the client only (noted 2026-08-14, partly addressed by 035)
 
@@ -271,7 +277,9 @@ restore from.
 
 Each new child table widens this by one list without touching the entry, which
 is the shape of the problem: the cascade is correct and invisible, and the count
-of what it takes only ever goes up.
+of what it takes only ever goes up. 046 and 047 widen it again, and by the thing
+that is least replaceable: both description tables cascade from `characters`, so
+the words a player wrote go with everything else.
 
 **Trigger:** any delete against `campaign_members`. There is no kick UI today —
 the only paths are leaving a campaign yourself and a manual delete in the
@@ -375,7 +383,9 @@ renders — `useParty` already carried both, in one request.
 pay the cost.
 
 **Cost:** eleven redundant requests at a party of six, all small and all cached.
-Real but negligible at this size.
+Real but negligible at this size. 046/047 doubled each of those reads — both
+`getCharacterSpells` and `getCharacterInventory` now fire a second request for
+the override map — so the true figure is twenty-two.
 
 **Why it's like this:** it buys the repo's rule that a mutation lives in a hook
 rather than being wired up ad hoc in a page. That is worth eleven cheap requests.
@@ -635,6 +645,11 @@ spells.
 **Fix:** an optional comparator argument on `spellsByLevel`, defaulted to the
 current one. Cheap, just not yet earned.
 
+⚠ The "the row prints the catalogue name beside the custom one" half of that
+justification is not true of `CharacterCarried`, which is the other half of this
+entry's own example. See "`CharacterCarried` shows the DM only the names a player
+invented" below.
+
 ### The pickers and the grimoire show only catalogue names (noted 2026-08-22)
 
 The "Choose a spell…" and "Choose an item…" selects are fed by `getSpells` /
@@ -667,6 +682,122 @@ can already put the item in the pack; only the words are missing.
 **Fix:** an inspect card on `CharacterCarried`, which is today deliberately a
 summary strip and a link. That is a real design change to that band, not a
 plumbing job — the RLS half already permits it.
+
+⚠ Do not build that door before reading the next entry. Opening it makes the
+authorship problem live for gear as well as spells, and the two changes touch
+the same component.
+
+### The DM's writing is labelled as the player's, and Clear destroys it (noted 2026-08-22)
+
+046 and 047 both widen the write to the campaign's DM, and both headers name the
+reason: so a cursed blade can arrive already carrying its story. Through
+`CharacterDetail` → `CharacterSheet` → `CharacterSpells`, where
+`canEdit = isOwn || campaign.isDm`, that door is open today for spells.
+
+`CustomDescriptionBlock` has no concept of a second author. It labels the text
+**"Your telling"** and the editor labels its field **"What you call it"**,
+whoever wrote them. So a player opens a spell the DM annotated, finds prose they
+do not remember writing under a heading claiming they did, and the Clear button
+— "Go back to the book's own words for this spell?" — deletes it outright, with
+no trace and no signal back to the DM. Saving does the same thing more quietly:
+the editor seeds its draft from the stored row, so a player opening it to adjust
+a rename carries the DM's paragraph forward as their own, or drops it if they
+clear the field first.
+
+Both tables record `updated_at` and nothing else. There is no `written_by`, so
+a DM who suspected has nothing to check.
+
+**Trigger:** the DM writing flavour onto a player's spell — the exact use the
+widening exists for. Gear is safe only by accident, via the missing door in the
+entry above.
+
+**Cost:** currently zero, because nobody has used the DM path yet. The day it is
+used it is a table argument rather than a bug report: prose written for a player
+is gone and the two people involved have different accounts of what was on the
+card.
+
+**Fix:** the honest version is a column —
+`author_id uuid not null default auth.uid()`, named in both pin triggers
+alongside the key columns (they are blocklists; see above), denormalised onto the
+entry the way `addedByName` already is, and the label branching on it. Clear
+should then confirm differently when the words are someone else's. The cheap
+interim is presentational only: the block already knows text exists, it just does
+not know whose.
+
+### `CharacterCarried` shows the DM only the names a player invented (noted 2026-08-22)
+
+The strip prints `entry.customName ?? entry.name` with no alias beside it, unlike
+`PackRow` (`.inv-alias`) and `SpellRow` (`.ch-spell-alias`), which both print the
+catalogue name in small type for the stated reason: hiding it takes the rules'
+own word away from the DM reading over a player's shoulder. This is the one
+surface where that DM is the _only_ reader, and it is the one surface that drops
+it.
+
+It compounds with the sort — see "Lists sort on the catalogue name" above. The
+"first four" are chosen by sorting on `entry.name`, so a DM looking at a renamed
+pack gets four invented words ordered by a key that is not on screen, with no
+inspect card on the band to resolve any of them.
+
+**Trigger:** a DM opening a player's sheet from `CharacterRoster` when that
+player has renamed anything.
+
+**Cost:** the DM's only view of a player's gear becomes unreadable in exactly the
+moment it is wanted — mid-session, checking whether someone is carrying rope.
+
+**Fix:** the band is tight on space, so an alias per name is wrong. Either
+`title={entry.name}` on each, or the parenthetical form for renamed entries only
+(`Grandmother's Hearth (Fireball)`), which costs width only where something was
+actually renamed. Both are a line. Superseded if the inspect card from the
+DM-cannot-write entry ever lands on this band.
+
+### Destructive confirms and the remove `aria-label` name the catalogue item (noted 2026-08-22)
+
+`PackRow.handleRemove` and `SpellRow.handleRemove` both build their confirm from
+`entry.name`, and `SpellRow`'s Remove button carries
+``aria-label={`Remove ${entry.name} from this character`}``. The row above them
+displays `customName ?? name`. So the row reads "Ireena's Braid" and the confirm
+asks about Rope.
+
+The `aria-label` is the unambiguous half: a screen reader announces the row's
+inspect button under the custom name and its Remove button under a different
+one, which reads as a control belonging to some other row.
+
+**Trigger:** removing anything that has been renamed.
+
+**Cost:** small and briefly confusing in the visual case. Larger for a
+screen-reader user, who has no visible row to reconcile the two names against.
+
+**Fix:** `customName ?? name` in the `aria-label` unconditionally — it exists to
+name what is on screen. The confirm is a judgement call rather than an obvious
+swap, since it is the one place the catalogue name is arguably the safer thing to
+say; if both are wanted, say both rather than picking the one the user did not
+click. `HoardRow`'s confirm is correct as it stands — the hoard has no overrides.
+
+### `customName ?? name` is resolved in five places with three alias treatments (noted 2026-08-22)
+
+The display rule lives in `PackRow` (name + `.inv-alias`), `SpellRow` (name +
+`.ch-spell-alias`), `CharacterCarried` (name, no alias), and `ItemDetailCard` /
+`SpellDetailCard` (name + `.detail-alias`). `useSearchBar` matches on both names;
+`spellsByLevel` and the "first four" sort on neither of the displayed ones.
+
+This is the argument already made for `customDescription.css` owning its own
+stylesheet — two places to keep in step is one too many — not applied to the
+thing that stylesheet is about. The `CharacterCarried` entry above is what the
+drift looks like in practice: it is not a considered exception, it is the file
+that was written last.
+
+**Trigger:** any new surface showing a character's gear or spells. It will pick
+one of the four by copying whichever file was open.
+
+**Cost:** nothing functional. What it costs is that "how a renamed thing is
+displayed" is an emergent property of six files rather than a decision anywhere.
+
+**Fix:** a small `<SubjectName entry={…} variant="row" | "compact" />` in
+`components/`, beside `CustomDescription.tsx`, owning the three variants and the
+`.detail-alias` / `.inv-alias` / `.ch-spell-alias` split. A bare
+`displayName(entry)` helper is not enough — the disagreement is about the alias,
+not the primary. Sorting stays on the catalogue name and stays documented as
+such; that part is a deliberate call, not drift.
 
 ### `035_npc_desc_fix.sql` has no header comment (noted 2026-08-17)
 
@@ -705,6 +836,19 @@ Small, understood, not worth an entry of their own.
 - **`characters.ts` casts `data as PartyCharacterRow[]`.** The only hand-written
   row shape left; `PARTY_SELECT`'s three embeds defeat inference. Contained to
   one line, and the type next to it is honest about what it's asserting.
+- **An override row needs no ownership of the item.**
+  `character_item_descriptions` has no FK to `character_inventory` and its
+  policies ask only `can_edit_character`, so a hand-written request can write a
+  description for an item the character has never held. Unreachable from the UI
+  — the card only opens from a pack row — and it is the same property that makes
+  the orphan-row behaviour in "Description rows outlive the gear they describe"
+  work, so it is arguably load-bearing rather than a hole. Recorded because the
+  table reads like it is scoped to a pack and is not.
+- **`CustomDescriptionBlock`'s `custom` prop is typed `CustomDescription | null`
+  and never receives null.** Both callers pass the entry itself (`custom={panel}`),
+  which always has the two keys. The null branch in `hasCustom` is dead. Harmless
+  — the prop is honest about the shape it needs — but the `?.` chains inside read
+  as if absence were reachable.
 
 ---
 
