@@ -201,6 +201,84 @@ export type Database = {
           },
         ]
       }
+      character_item_descriptions: {
+        Row: {
+          character_id: string
+          custom_description: string | null
+          custom_name: string | null
+          item_id: string
+          updated_at: string
+        }
+        Insert: {
+          character_id: string
+          custom_description?: string | null
+          custom_name?: string | null
+          item_id: string
+          updated_at?: string
+        }
+        Update: {
+          character_id?: string
+          custom_description?: string | null
+          custom_name?: string | null
+          item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_item_descriptions_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_item_descriptions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_spell_descriptions: {
+        Row: {
+          character_id: string
+          custom_description: string | null
+          custom_name: string | null
+          spell_id: string
+          updated_at: string
+        }
+        Insert: {
+          character_id: string
+          custom_description?: string | null
+          custom_name?: string | null
+          spell_id: string
+          updated_at?: string
+        }
+        Update: {
+          character_id?: string
+          custom_description?: string | null
+          custom_name?: string | null
+          spell_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_spell_descriptions_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_spell_descriptions_spell_id_fkey"
+            columns: ["spell_id"]
+            isOneToOne: false
+            referencedRelation: "spells"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_spells: {
         Row: {
           character_id: string
