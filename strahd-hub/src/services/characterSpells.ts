@@ -1,5 +1,9 @@
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/database.types";
+import {
+  getCharacterSpellDescriptions,
+  type CustomDescription,
+} from "./characterDescriptions";
 import { toSpell, type Spell } from "./spells";
 
 /**
@@ -39,30 +43,64 @@ export type CharacterSpellEntry = Spell & {
   // unique (character_id, spell_id) means a spell appears at most once on a
   // sheet.
   entryId: string;
+  // 046's override, denormalised onto the entry the way addedByName is on
+  // character_inventory: null when this character has written nothing, which is
+  // the overwhelming majority. Never "" — the service turns a blank draft into a
+  // delete, so absence is the only spelling of "no override".
+  //
+  // NOT keyed on entryId. 046's row is keyed (character_id, spell_id), so it
+  // outlives a remove-and-re-add; entryId would not.
+  customName: string | null;
+  customDescription: string | null;
 };
 
-function toCharacterSpellEntry(row: CharacterSpellRow): CharacterSpellEntry {
-  return { ...toSpell(row.spells), entryId: row.id };
+function toCharacterSpellEntry(
+  row: CharacterSpellRow,
+  custom: CustomDescription | undefined,
+): CharacterSpellEntry {
+  return {
+    ...toSpell(row.spells),
+    entryId: row.id,
+    customName: custom?.customName ?? null,
+    customDescription: custom?.customDescription ?? null,
+  };
 }
 
 // Keyed by character, with no second filter to add: a character id already
 // implies exactly one campaign. 037's SELECT policy lets any member of that
 // campaign read this, so the same call serves a player looking at their own
 // sheet and a DM looking at someone else's.
+// A second request rather than a second embed, and not by choice: PostgREST can
+// only embed across a foreign key, and 046's table references characters and
+// spells separately rather than referencing character_spells — which is the
+// whole point of it, since a character_spells row is disposable and the override
+// is meant to outlive one. So the two reads go out in parallel and are joined
+// here, in the one place that knows both shapes.
+//
+// A failure in either sinks both, deliberately — no catch-and-fall-back-to-empty
+// on the descriptions half. The two requests share a session and a policy
+// family, so they fail together in practice, and the one case where they don't
+// is the table missing from the schema cache — precisely the thing that must not
+// be swallowed into "this character has written nothing".
 export async function getCharacterSpells(
   characterId: string,
 ): Promise<CharacterSpellEntry[]> {
-  const { data, error } = await supabase
-    .from("character_spells")
-    .select(CHARACTER_SPELLS_SELECT)
-    .eq("character_id", characterId);
+  const [{ data, error }, descriptions] = await Promise.all([
+    supabase
+      .from("character_spells")
+      .select(CHARACTER_SPELLS_SELECT)
+      .eq("character_id", characterId),
+    getCharacterSpellDescriptions(characterId),
+  ]);
 
   if (error) {
     console.error(error);
     throw error;
   }
 
-  return data.map(toCharacterSpellEntry);
+  return data.map((row) =>
+    toCharacterSpellEntry(row, descriptions.get(row.spell_id)),
+  );
 }
 
 // An upsert rather than an insert, so adding a spell that is already on the list

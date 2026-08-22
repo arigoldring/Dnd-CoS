@@ -1,5 +1,8 @@
 import { ReactNode } from "react";
 import { spellLevelLine, type Spell } from "../services/spells";
+// .detail-alias — the catalogue name under a custom one — lives with the rest
+// of the 046/047 classes rather than being copied into both card sheets.
+import "./customDescription.css";
 // The card's look lives in spells.css (the spell-detail-* classes). Imported
 // here so the card carries its own styling wherever it's used, rather than
 // depending on each caller to have imported that sheet first. The bundler
@@ -53,15 +56,34 @@ function spellStats(spell: Spell): { label: string; value: string }[] {
  *
  * Stops click propagation so a click inside the card doesn't reach the backdrop
  * that would dismiss it.
+ *
+ * The two optional props are how a character's copy of a spell differs from the
+ * grimoire's, and both default to undefined so the grimoire renders exactly as
+ * it did before 046 existed:
+ *
+ *   customName        what this character calls it. Leads the header, with the
+ *                     catalogue name kept underneath — spellsByLevel still
+ *                     groups and sorts on the catalogue name, so hiding it would
+ *                     leave the list ordered by something invisible.
+ *   descriptionSlot   replaces the catalogue description paragraph. The sheet
+ *                     passes a CustomDescriptionBlock, which puts the player's
+ *                     words here and the book's text behind a disclosure.
+ *                     "At Higher Levels" deliberately stays outside it — short,
+ *                     purely mechanical, and nobody rewrites it in their own
+ *                     voice.
  */
 export function SpellDetailCard({
   spell,
   onClose,
   footer,
+  customName,
+  descriptionSlot,
 }: {
   spell: Spell;
   onClose: () => void;
   footer?: ReactNode;
+  customName?: string | null;
+  descriptionSlot?: ReactNode;
 }) {
   const stats = spellStats(spell);
   return (
@@ -70,7 +92,10 @@ export function SpellDetailCard({
         ×
       </button>
       <div className="spell-detail-header">
-        <span className="spell-detail-name">{spell.name}</span>
+        <span className="spell-detail-name">
+          {customName ?? spell.name}
+          {customName && <span className="detail-alias">{spell.name}</span>}
+        </span>
         {/* Tags, not stat rows: they are one bit each, and a "Concentration: no"
             row would be filler on most of the book. */}
         {spell.concentration && <span className="spell-tag">conc</span>}
@@ -87,7 +112,9 @@ export function SpellDetailCard({
         ))}
       </dl>
 
-      <p className="spell-detail-text">{spell.description}</p>
+      {descriptionSlot ?? (
+        <p className="spell-detail-text">{spell.description}</p>
+      )}
 
       {/* Optional on Spell, and absent from every cantrip, so the heading only
           exists when there is something under it. */}

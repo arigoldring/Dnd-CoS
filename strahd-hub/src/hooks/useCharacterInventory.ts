@@ -4,6 +4,11 @@ import {
   getCharacterInventory,
   removeFromCharacterInventory,
 } from "../services/characterInventory";
+import {
+  clearCharacterItemDescription,
+  saveCharacterItemDescription,
+  type CustomDescription,
+} from "../services/characterDescriptions";
 import { errorMessage } from "../lib/errors";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -57,6 +62,27 @@ export function useCharacterInventory(characterId: string) {
     onSuccess: invalidate,
   });
 
+  // 047's overrides, denormalised onto the entries this hook already owns, so
+  // they invalidate the same key and get no cache entry of their own — the shape
+  // saveDmNotes has on useLocations.
+  //
+  // Keyed by itemId, and this is the one place it would be easy to get wrong:
+  // every other mutation here takes an entryId, because every other one acts on
+  // the stack. These act on what the character thinks of the item, which is
+  // exactly the thing 047 keyed away from the stack so that decrementing to zero
+  // or stowing to the party wouldn't destroy it.
+  const saveDescriptionMutation = useMutation({
+    mutationFn: (vars: { itemId: string; fields: CustomDescription }) =>
+      saveCharacterItemDescription(characterId, vars.itemId, vars.fields),
+    onSuccess: invalidate,
+  });
+
+  const clearDescriptionMutation = useMutation({
+    mutationFn: (itemId: string) =>
+      clearCharacterItemDescription(characterId, itemId),
+    onSuccess: invalidate,
+  });
+
   return {
     data,
     isLoading,
@@ -64,5 +90,7 @@ export function useCharacterInventory(characterId: string) {
     addItem: addItemMutation.mutateAsync,
     decrementItem: decrementItemMutation.mutateAsync,
     removeItem: removeItemMutation.mutateAsync,
+    saveDescription: saveDescriptionMutation.mutateAsync,
+    clearDescription: clearDescriptionMutation.mutateAsync,
   };
 }

@@ -189,22 +189,35 @@ html { overflow-y: scroll; }
   background: rgba(4,3,5,.72);
   backdrop-filter: blur(2px);
 }
-.shop > div:nth-of-type(2) > div {
+/* ---------- the card itself — class-keyed, so it travels ----------
+   These two rules used to be `.shop > div:nth-of-type(2) > div`, which meant
+   the card was styled by where it sat in the tree and had no frame at all
+   anywhere but the Shop — the Hoard rail on Inventory.tsx has been rendering
+   it bare, with the absolutely-positioned × pinned to the corner of the
+   viewport rather than the card, because .inv-backdrop was its nearest
+   positioned ancestor. Keying on the class instead is what SpellDetailCard
+   already does and what its doc comment holds up as the better precedent.
+
+   Every colour below moved from the --bone/--blood/--tarnish properties, which
+   are scoped to .shop and so were undefined on any other page, to the --sh-*
+   tokens on :root. The values are identical; the difference is that they now
+   resolve wherever the card is rendered. */
+.item-detail-card {
   position: relative;
   width: 100%;
   max-width: 420px;
   max-height: 80vh;
   overflow-y: auto;
   padding: 24px 28px 26px;
-  font-family: "Cinzel", serif; font-weight: 600; font-size: 15px; letter-spacing: .06em;
-  color: var(--bone);
+  font-family: var(--sh-display); font-weight: 600; font-size: 15px; letter-spacing: .06em;
+  color: var(--sh-bone);
   background:
     radial-gradient(circle at 50% 0%, rgba(138,13,13,.14), transparent 60%),
     linear-gradient(180deg, rgba(36,29,32,.98), rgba(16,12,14,.99));
   border: 1px solid rgba(160,140,110,.3);
   box-shadow: 0 30px 70px -20px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,240,210,.05);
 }
-.shop > div:nth-of-type(2) > div::before {
+.item-detail-card::before {
   content: ""; position: absolute; inset: 6px;
   border: 1px solid rgba(160,140,110,.12); pointer-events: none;
 }
@@ -214,14 +227,14 @@ html { overflow-y: scroll; }
   top: 10px; right: 10px;
   width: 26px; height: 26px;
   display: flex; align-items: center; justify-content: center;
-  font-family: "Cinzel", serif; font-size: 15px; line-height: 1;
-  color: var(--bone-soft);
+  font-family: var(--sh-display); font-size: 15px; line-height: 1;
+  color: var(--sh-mute);
   background: transparent; border: 1px solid rgba(160,140,110,.3);
   cursor: pointer; padding: 0;
   transition: color .2s, border-color .2s, background .2s;
 }
 .item-detail-close:hover {
-  color: #fbeec9; border-color: var(--blood-bright);
+  color: #fbeec9; border-color: var(--sh-blood-bright);
   background: rgba(106,10,10,.25);
 }
 
@@ -231,8 +244,8 @@ html { overflow-y: scroll; }
 }
 .item-detail-name { font-size: 18px; letter-spacing: .04em; }
 .item-detail-price {
-  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px;
-  font-weight: 400; letter-spacing: .06em; color: var(--tarnish); white-space: nowrap;
+  font-family: var(--sh-mono); font-size: 12px;
+  font-weight: 400; letter-spacing: .06em; color: var(--sh-gold-deep); white-space: nowrap;
 }
 
 .item-detail-stats {
@@ -242,31 +255,43 @@ html { overflow-y: scroll; }
 }
 .item-detail-stat { display: flex; gap: 10px; font-weight: 400; }
 .item-detail-stat dt {
-  min-width: 140px; font-family: "Cinzel", serif; font-size: 10px;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--bone-soft); margin: 0;
+  min-width: 140px; font-family: var(--sh-display); font-size: 10px;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--sh-mute); margin: 0;
 }
-.item-detail-stat dd { margin: 0; font-family: "Cormorant Garamond", serif; font-size: 15px; color: var(--bone); }
+.item-detail-stat dd { margin: 0; font-family: var(--sh-body); font-size: 15px; color: var(--sh-bone); }
 
-.shop > div:nth-of-type(2) p {
+/* Was a bare `.shop > div:nth-of-type(2) p`, which caught every paragraph in
+   the card — including any the feature added later. Now it names the one
+   paragraph it means: the catalogue description, on a card with no player
+   text standing in front of it. When there is player text, the block in
+   customDescription.css owns that space instead and this rule stays out of it. */
+/* The second selector is CustomDescriptionBlock rendering the catalogue text
+   when nobody has written over it — the same paragraph in the same place, so
+   it takes the same rule rather than a near-copy of it in another sheet.
+   Paired here rather than restated there so a pack card and the hoard card
+   beside it cannot drift, drop cap included. */
+.item-detail-text,
+.item-detail-card .custom-desc__original-text {
   margin: 14px 0 0; padding-top: 12px;
   border-top: 1px solid rgba(160,140,110,.18);
-  font-family: "Cormorant Garamond", serif; font-weight: 400; font-style: italic;
-  font-size: 16px; line-height: 1.55; color: var(--bone-soft);
+  font-family: var(--sh-body); font-weight: 400; font-style: italic;
+  font-size: 16px; line-height: 1.55; color: var(--sh-mute);
 }
-.shop > div:nth-of-type(2) p::first-letter {
-  font-family: "Cinzel", serif; font-size: 1.5em; color: var(--blood-bright);
+.item-detail-text::first-letter,
+.item-detail-card .custom-desc__original-text::first-letter {
+  font-family: var(--sh-display); font-size: 1.5em; color: var(--sh-blood-bright);
   padding-right: 2px; font-style: normal;
 }
 
 .item-detail-tags { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
 .item-tag {
-  font-family: "Cinzel", serif; font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--bone-soft); border: 1px solid rgba(160,140,110,.3); padding: 3px 8px;
+  font-family: var(--sh-display); font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--sh-mute); border: 1px solid rgba(160,140,110,.3); padding: 3px 8px;
 }
 
 /* ---------- empty state (no item selected) — inline, not a modal ---------- */
 .item-detail-empty {
-  text-align: center; font-style: italic; color: var(--bone-soft);
+  text-align: center; font-style: italic; color: var(--sh-mute);
   margin: 0 0 18px; padding: 14px 16px;
   border: 1px dashed rgba(160,140,110,.25);
   background: rgba(255,255,255,.015);
@@ -274,38 +299,39 @@ html { overflow-y: scroll; }
 }
 .item-detail-empty .sub {
   display: block; margin-top: 8px; font-size: 11px; letter-spacing: .2em;
-  text-transform: uppercase; color: var(--bone-dim); font-style: normal;
+  text-transform: uppercase; color: var(--sh-dim); font-style: normal;
 }
 
 /* ---------- add-to-party-inventory footer (detail card) ----------
-   Rendered inside the detail card, so the --blood/--tarnish variables scoped
-   to .shop inherit down to it. Not a <p>, so it escapes the card's italic
-   drop-cap paragraph styling above. */
+   Shop-only in practice — it is the one page that passes a footer — but no
+   longer dependent on being inside .shop for its colours, and no longer
+   dependent on not being a <p> to escape the description styling above, since
+   that rule now names its own class. */
 .item-detail-add-row {
   margin-top: 18px; padding-top: 14px;
   border-top: 1px solid rgba(160,140,110,.18);
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
 }
 .item-detail-add {
-  font-family: "Cinzel", serif; font-size: 12px; font-weight: 500;
-  letter-spacing: .16em; text-transform: uppercase; color: #fff2d0;
-  background: linear-gradient(180deg, var(--blood) 0%, var(--blood-deep) 100%);
+  font-family: var(--sh-display); font-size: 12px; font-weight: 500;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--sh-candle);
+  background: linear-gradient(180deg, var(--sh-blood) 0%, var(--sh-blood-dark) 100%);
   border: 1px solid rgba(255,210,180,.5); padding: 9px 16px; cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255,210,180,.2), inset 0 -2px 0 rgba(0,0,0,.4);
   transition: background .2s, color .2s, border-color .2s, box-shadow .2s, transform .05s;
 }
 .item-detail-add:hover:not(:disabled) {
-  border-color: var(--blood-bright);
+  border-color: var(--sh-blood-bright);
   box-shadow: inset 0 1px 0 rgba(255,210,180,.3), inset 0 -2px 0 rgba(0,0,0,.4), 0 0 18px rgba(138,13,13,.5);
 }
 .item-detail-add:active:not(:disabled) { transform: translateY(1px); }
 .item-detail-add:focus { outline: none; }
 .item-detail-add:disabled { opacity: .55; cursor: default; }
 .item-detail-add-note {
-  font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 14px;
-  color: var(--tarnish);
+  font-family: var(--sh-body); font-style: italic; font-size: 14px;
+  color: var(--sh-gold-deep);
 }
 .item-detail-add-error {
-  font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 14px;
+  font-family: var(--sh-body); font-style: italic; font-size: 14px;
   color: #e08a8a;
 }

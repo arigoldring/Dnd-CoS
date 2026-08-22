@@ -10,6 +10,7 @@ import { useInventoryTransfer } from "../../hooks/useInventoryTransfer";
 import { useItems } from "../../hooks/useItems";
 import { useSearchBar } from "../../hooks/useSearchBar";
 import { ItemDetailCard } from "../../components/ItemDetailCard";
+import { CustomDescriptionBlock } from "../../components/CustomDescription";
 import type { Character as CharacterModel, Denomination } from "../../services/characters";
 import type { CharacterInventoryEntry } from "../../services/characterInventory";
 import type { PartyInventoryEntry } from "../../services/partyInventory";
@@ -214,6 +215,8 @@ function MyPack({
     addItem,
     decrementItem,
     removeItem,
+    saveDescription,
+    clearDescription,
   } = useCharacterInventory(character.id);
   const { data: items = [] } = useItems(campaign.id);
   const { stow } = useInventoryTransfer(campaign.id, character.id);
@@ -221,6 +224,10 @@ function MyPack({
   const [itemId, setItemId] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  // Held by entryId rather than the entry object, Hoard's reasoning: every
+  // stow, decrement and remove refetches the list and replaces every object, so
+  // a card pinned to one would describe a stack that no longer exists.
+  const [panelId, setPanelId] = useState<string | null>(null);
   // No matchesFilter: a pack has no kinds worth filtering, and the hook defaults
   // to "everything matches", so the filter half simply goes unused.
   const { setSearch, filtered } = useSearchBar(entries);
@@ -245,6 +252,8 @@ function MyPack({
   if (isLoading) return <p className="inv-panel">Loading your pack...</p>;
   if (error)
     return <p className="inv-panel">Couldn't load your pack: {error.message}</p>;
+
+  const panel = entries.find((entry) => entry.entryId === panelId) ?? null;
 
   return (
     <div className="inv-panel">
@@ -291,6 +300,47 @@ function MyPack({
         {addError && <span className="inv-error">{addError}</span>}
       </form>
 
+      {/* The pack had no inspect card until 047 — rows were plain text and
+          three buttons, so there was nowhere to read what a thing does and
+          nowhere to write what it means to you. The Hoard rail across the page
+          has had one all along, and its own comment makes the argument: "the
+          name is a button because reading what an item does is most of why the
+          pile is on screen." Same backdrop contract as the hoard's: inert while
+          empty, a full overlay once the card is inside it. */}
+      <div className="inv-backdrop" onClick={() => setPanelId(null)}>
+        {panel && (
+          // No footer. Everything you can DO to a stack is on its row, an arm's
+          // length behind the card; the card is for reading and for the one
+          // thing the row cannot hold, which is a paragraph.
+          <ItemDetailCard
+            key={panel.entryId}
+            item={panel}
+            customName={panel.customName}
+            descriptionSlot={
+              <CustomDescriptionBlock
+                // Keyed on the item, not the entry: the editor holds its draft
+                // in local state, and the key has to change when the subject
+                // does. It is also what 047's row is keyed on.
+                key={panel.id}
+                subject="item"
+                original={panel.description}
+                custom={panel}
+                // Inventory.tsx is always "mine" — there is no path here onto
+                // another character's pack — so reaching this at all means you
+                // own it. RLS still allows the campaign's DM, they just have no
+                // door to it from this page.
+                canEdit
+                onSave={(fields) =>
+                  saveDescription({ itemId: panel.id, fields })
+                }
+                onClear={() => clearDescription(panel.id)}
+              />
+            }
+            onClose={() => setPanelId(null)}
+          />
+        )}
+      </div>
+
       {entries.length === 0 ? (
         <p className="inv-empty">They carry nothing yet.</p>
       ) : (
@@ -300,6 +350,7 @@ function MyPack({
               <PackRow
                 key={entry.entryId}
                 entry={entry}
+                onInspect={() => setPanelId(entry.entryId)}
                 onStow={stow}
                 onDecrement={decrementItem}
                 onRemove={removeItem}
@@ -319,11 +370,13 @@ function MyPack({
 // at one stack, which is the write where that would actually cost something.
 function PackRow({
   entry,
+  onInspect,
   onStow,
   onDecrement,
   onRemove,
 }: {
   entry: CharacterInventoryEntry;
+  onInspect: () => void;
   onStow: (entryId: string) => Promise<void>;
   onDecrement: (entryId: string) => Promise<void>;
   onRemove: (entryId: string) => Promise<void>;
@@ -383,7 +436,16 @@ function PackRow({
   return (
     <tr>
       <td>
-        {entry.name}
+        {/* A button since 047, the way the hoard rail's name already was: the
+            row is a link into the card, not just a label with controls beside
+            it. What the player calls the thing leads, with the catalogue name
+            kept beside it — useSearchBar matches on both, and the pack's "first
+            four" summary on the character sheet still sorts on the catalogue
+            name, so hiding it would leave the DM without the word the rules use. */}
+        <button className="inv-name" onClick={onInspect}>
+          {entry.customName ?? entry.name}
+        </button>
+        {entry.customName && <span className="inv-alias">{entry.name}</span>}
         {/* The reason added_by is written at all: on a shared sheet it is the
             difference between what a player picked up and what the DM handed
             them. Null for entries whose adder's profile is gone. */}

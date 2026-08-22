@@ -13,6 +13,7 @@ import { useFeats } from "../../hooks/useFeats";
 import { useItems } from "../../hooks/useItems";
 import { SpellDetailCard } from "../../components/SpellDetailCard";
 import { FeatDetailCard } from "../../components/FeatDetailCard";
+import { CustomDescriptionBlock } from "../../components/CustomDescription";
 import { CharacterRoster } from "./CharacterRoster";
 import type { Character as CharacterModel } from "../../services/characters";
 import type { CharacterSpellEntry } from "../../services/characterSpells";
@@ -316,6 +317,8 @@ function CharacterSpells({
     error,
     addSpell,
     removeSpell,
+    saveDescription,
+    clearDescription,
   } = useCharacterSpells(characterId);
   const { data: spells = [] } = useSpells(campaign.id);
 
@@ -422,6 +425,27 @@ function CharacterSpells({
             <SpellDetailCard
               key={panel.entryId}
               spell={panel}
+              customName={panel.customName}
+              // The card's description paragraph, replaced by 046's block: the
+              // player's telling on top, the book's text behind a disclosure,
+              // and the editor that writes the first. `key` on the block as
+              // well as the card, because the editor holds its draft in local
+              // state and reopening the panel on a different spell must not
+              // find the last one's words still in the textarea — Recaps'
+              // reason for keying its editor.
+              descriptionSlot={
+                <CustomDescriptionBlock
+                  key={panel.id}
+                  subject="spell"
+                  original={panel.description}
+                  custom={panel}
+                  canEdit={canEdit}
+                  onSave={(fields) =>
+                    saveDescription({ spellId: panel.id, fields })
+                  }
+                  onClear={() => clearDescription(panel.id)}
+                />
+              }
               onClose={() => setPanelId(null)}
               footer={
                 canEdit && (
@@ -510,9 +534,16 @@ function SpellRow({
   return (
     <tr>
       <td>
+        {/* What the player calls it, when they have named it — with the
+            catalogue name kept beside it in small type rather than replaced.
+            spellsByLevel still groups and sorts on entry.name, so dropping it
+            would leave this list ordered by something the reader cannot see,
+            and would take the spell's real name away from the DM reading the
+            sheet over their shoulder. */}
         <button className="ch-spell-name" onClick={onInspect}>
-          {entry.name}
+          {entry.customName ?? entry.name}
         </button>
+        {entry.customName && <span className="ch-spell-alias">{entry.name}</span>}
         {entry.concentration && <span className="ch-tag">conc</span>}
         {entry.ritual && <span className="ch-tag">ritual</span>}
         <span className="ch-spell-meta">{spellLevelLine(entry)}</span>
@@ -891,6 +922,11 @@ function CharacterCarried({
   // needs to mean something the reader can predict twice running, and
   // Postgres' row order is not that. Quantities print the way the Hoard rail
   // writes them, so ×3 means the same thing on both pages.
+  //
+  // Sorted on the catalogue name and PRINTED with the custom one (047), which
+  // is a small deliberate mismatch: a comma-joined strip of four has no visible
+  // alphabetical order to violate, and sorting on the displayed name would mean
+  // "the first four" changing under a player who only renamed something.
   const named = [...entries]
     .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, 4);
@@ -913,11 +949,12 @@ function CharacterCarried({
             </p>
             <p className="ch-carried__names">
               {named
-                .map((entry) =>
-                  entry.quantity > 1
-                    ? `${entry.name} ×${entry.quantity}`
-                    : entry.name,
-                )
+                .map((entry) => {
+                  const shown = entry.customName ?? entry.name;
+                  return entry.quantity > 1
+                    ? `${shown} ×${entry.quantity}`
+                    : shown;
+                })
                 .join(", ")}
               {stacks > named.length && " …"}
             </p>

@@ -5,7 +5,7 @@ size, and written down so they stay decisions rather than becoming discoveries.
 Each entry says what it takes to trigger, what it costs, and what the fix would
 be if the answer ever changes.
 
-**Current through migration 045. Last updated 2026-08-20.**
+**Current through migration 047. Last updated 2026-08-22.**
 
 This is the single source of truth for open work. `CONTEXT.md` holds decisions
 and invariants and deliberately does not duplicate anything below.
@@ -331,32 +331,38 @@ direction. It will not show up in a first-run smoke test.
 same note belongs on `getOrCreateProfile`, where the argument is different (the
 losing insert is expected) but the mechanism is the same.
 
-### The party cache is correct only because `staleTime` is 0 (noted 2026-08-17)
+### The party cache goes stale for a minute after a write from a sheet (noted 2026-08-17, corrected 2026-08-22)
 
 `useCharacterSpells` and `useCharacterInventory` invalidate only their own key.
-The Party page reads the same rows through a _second_ cache entry,
-`["party", campaignId]`, built from `getPartyCharacters`' embeds. `TeachForm` and
-`GiveForm` hand-invalidate the party key because they know this; nothing on the
-character's own sheet does.
+The same rows are read through a _second_ cache entry, `["party", campaignId]`,
+built from `getPartyCharacters`' embeds and consumed by `CharacterRoster` (and by
+`Party.tsx`, whose route is currently commented out). `TeachForm`, `GiveForm` and
+`Character.tsx`'s `GiveItemForm` hand-invalidate the party key because they know
+this; nothing on the character's own sheet does.
 
-So a spell or item added from your own sheet leaves the party cache stale, and
-the Party page is right only because the default `staleTime: 0` refetches it on
-mount.
+**This entry used to say the party cache was "correct only because `staleTime` is
+0". That is no longer true and the conclusion inverted with it** —
+`lib/queryClient.ts` sets `staleTime: 60_000`, with a comment arguing for it (a
+cache that refetches on every mount isn't a cache, and it hides missing
+invalidations). So the predicted breakage has already happened, quietly: a spell
+or item added from your own sheet leaves the roster's tally wrong until the entry
+goes stale or the window is refocused.
 
-**Trigger:** setting a `staleTime`. This has been on the list since NPCs
-(`useNpcs` refetches on every mount and every window focus and does not need to),
-and it looks like a pure tidiness change. It isn't — the moment a staleTime is
-set broadly, this becomes visible wrong data on a page two people are reading at
-the table.
+**Trigger:** add a spell to your own sheet, then have the DM open the roster
+inside the next minute without refocusing the window.
 
-**Cost:** none today. A stale spell list in front of the party the day the
-tidiness change lands.
+**Cost:** small and real rather than hypothetical. `CharacterRoster` shows counts
+only ("3 stacks · 5 spells"), so what's wrong is a number, briefly. It would cost
+more the day anything on that cache entry renders content rather than a tally.
 
-**Fix:** decide it once, everywhere, in one sitting. Either invalidate
-`["party", campaignId]` inside both character hooks — which means those hooks
-need the campaign id they currently and deliberately do without — or leave
-staleTime at 0 and write down that mount-freshness is doing real work. Do not set
-a staleTime on one hook in isolation.
+**Not widened by 046/047.** The overrides ride `["characterSpells", …]` and
+`["characterInventory", …]`, which their own mutations invalidate, and
+`PARTY_SELECT` doesn't carry them — the roster shows no descriptions, so there is
+nothing new to go stale.
+
+**Fix:** invalidate `["party", campaignId]` inside both character hooks, which
+means giving those hooks the campaign id they currently and deliberately do
+without. Decide it once, in one sitting, for both.
 
 ### The Party page mounts two background queries per character, for the DM (noted 2026-08-17)
 
@@ -589,6 +595,78 @@ on a table other than the row's own.
 shape is invisible: nothing about `locationName: string | null` says the null is
 load-bearing, and `Npc`'s own comment describing it ("the home is a location this
 viewer cannot see") was already correct while the preview path quietly wasn't.
+
+### Description rows outlive the gear they describe (noted 2026-08-22)
+
+047 keys `character_item_descriptions` on `(character_id, item_id)` rather than
+on the `character_inventory` row, precisely so a description survives a
+stow-and-take and a decrement to zero. The other half of that choice is that
+nothing ever cleans one up: sell the sword for good and the row you wrote about
+it stays behind, unreachable from any screen, until the day that character owns a
+sword again — at which point your old words reappear on it.
+
+**Trigger:** permanently parting with an item you had written about.
+
+**Cost:** one narrow row per abandoned idea, at a table of five. The reappearance
+is arguably the feature working — it is the same character and the same kind of
+object — but it will surprise someone eventually.
+
+**Fix if it ever matters:** nothing automatic. A trigger on
+`character_inventory` DELETE would defeat the entire point of the key. If the
+rows ever need clearing it wants a deliberate control ("forget this"), or a
+periodic sweep of overrides whose `(character_id, item_id)` matches no stack and
+whose `updated_at` is old. Neither is worth writing yet.
+
+### Lists sort on the catalogue name while the row shows the custom one (noted 2026-08-22)
+
+`spellsByLevel` groups and sorts on `entry.name`, and `CharacterCarried`'s "first
+four" sorts the same way, but both now print `customName ?? name`. So a player
+who renames Fireball to "Grandmother's Hearth" finds it filed under F.
+
+**Why it's like this:** `spellsByLevel` is generic and shared with the grimoire,
+where there is no custom name to sort by, so threading a display-name comparator
+through it would push the feature into a function that has nothing to do with it.
+The row prints the catalogue name beside the custom one, so the ordering is at
+least explicable on sight rather than arbitrary.
+
+**Cost:** mild confusion on a list long enough to scan. A sheet holds a dozen
+spells.
+
+**Fix:** an optional comparator argument on `spellsByLevel`, defaulted to the
+current one. Cheap, just not yet earned.
+
+### The pickers and the grimoire show only catalogue names (noted 2026-08-22)
+
+The "Choose a spell…" and "Choose an item…" selects are fed by `getSpells` /
+`getItems` — the shared catalogue, which has no character and therefore no
+override. So a player who renamed something and wants to add another one has to
+remember what the book calls it.
+
+**Cost:** near zero. Adding a second of something you already carry goes through
+the pack's own `+`-shaped paths, not the picker, and the picker is where you go
+for things you don't have yet.
+
+**Fix:** the pickers would have to merge the character's override map over the
+catalogue list. Doable in the page; not worth the coupling for the case it
+serves.
+
+### The DM cannot write item descriptions, only spell ones (noted 2026-08-22)
+
+046 and 047 both gate writes on `can_edit_character`, so the campaign's DM may
+write either. But the only door to an item's description is the pack's inspect
+card on `Inventory.tsx`, and that page is always "mine" — there is no path onto
+another character's pack from it. Spells are fine: `CharacterDetail` renders the
+same `CharacterSheet` for a DM, spell card included.
+
+**Trigger:** a DM wanting to hand out a magic item that arrives already carrying
+its story.
+
+**Cost:** the DM types it in chat instead. `GiveItemForm` on the character sheet
+can already put the item in the pack; only the words are missing.
+
+**Fix:** an inspect card on `CharacterCarried`, which is today deliberately a
+summary strip and a link. That is a real design change to that band, not a
+plumbing job — the RLS half already permits it.
 
 ### `035_npc_desc_fix.sql` has no header comment (noted 2026-08-17)
 

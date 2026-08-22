@@ -5,7 +5,7 @@ Campaign management app for a Curse of Strahd game. Solo developer.
 Primary goal is learning full-stack development; the working app is secondary.
 Not production software — no SLA, no uptime concerns, no team to onboard.
 
-**Current through migration 045. Last updated 2026-08-20.**
+**Current through migration 047. Last updated 2026-08-22.**
 
 ## What lives where — read this before editing this file
 
@@ -470,6 +470,70 @@ answerable. A missing *grant* reads as 401/42501 instead.
   directions. `adjust_character_currency` and `adjust_party_currency` are
   `security invoker`, so RLS — not the function — is still what decides who
   may call this on which row.
+
+### Player-authored descriptions (046–047)
+
+- **The override is keyed to the character's idea of the thing, not to the row
+  that says they have it.** `character_spell_descriptions` and
+  `character_item_descriptions` key on `(character_id, spell_id)` /
+  `(character_id, item_id)`, not on the `character_spells` /
+  `character_inventory` row. A column on the join row would have been one
+  cheaper request, and it is the wrong answer, because those rows are
+  disposable: 032's decrement DELETEs the stack at the last one (`quantity > 0`
+  makes 0 unstorable) and 038's transfers delete the source row on every Stow.
+  Flavour living there would evaporate on a stow-and-take, which is the most
+  ordinary thing anyone does on the Inventory page. 047's BLOCK 4 destroys the
+  stack three ways and shows the text still standing, rather than asserting it.
+
+  The cost is accepted and written down in `KNOWN_ISSUES.md`: give an item away
+  for good and the row lingers, invisible, until you own that item again.
+
+- **Four policies here, where 037 insists on three, and that is not drift.**
+  037 has no UPDATE policy because `character_spells` has nothing an update
+  could change. These tables are nothing *but* a mutable column, and the client
+  saves through an upsert whose second save is an UPDATE — so three policies
+  here is the bug, in exact mirror image. Both migrations say so in their
+  headers, and both BLOCK 0s assert four. Note the matching inversion in the
+  client: `ignoreDuplicates` is load-bearing by its *presence* on
+  `addSpellToCharacter` and by its *absence* on `saveCharacterSpellDescription`.
+
+- **They also ship a DELETE policy, which `npc_dm_notes` and
+  `location_dm_notes` deliberately refuse.** Those tables clear with
+  `notes = ''` because a blank note and a missing note render identically. Here
+  they do not: an absent row resolves to the catalogue text, so a blank one
+  would have to resolve the same way, and `''` becomes a second spelling of
+  absent — 042's argument against a defaulted row. A CHECK makes a row that
+  overrides nothing unrepresentable, and the service turns a blank draft into a
+  delete at the boundary so the constraint is never what a player sees.
+
+- **The pin trigger is the one 028 declined to write.** 028 left
+  `character_inventory.character_id` unpinned on the grounds that "moving an
+  entry between two characters you can edit is harmless" — true of a stack of
+  arrows, false of somebody's prose, and a DM's `can_edit_character` passes on
+  every sheet in the campaign. Both tables pin both key columns and stamp
+  `updated_at`, `stamp_session_recap`'s shape.
+
+- **Two reads, because PostgREST cannot embed across an FK that isn't there** —
+  the same fact as the first bullet, seen from the client. `getCharacterSpells`
+  and `getCharacterInventory` fire both in `Promise.all` and denormalise the
+  result onto the entry, the way `addedBy` already becomes `addedByName`. A
+  failure in either sinks both on purpose: the one case where they diverge is
+  the table missing from the schema cache, which must not be swallowed into
+  "this character has written nothing".
+
+- **The catalogue name is never hidden, only demoted.** Lists, pickers, sorting
+  and `spellsByLevel` all still work off it, and the row prints it beside the
+  custom one; `useSearchBar` matches on either. Hiding it would order the sheet
+  by something invisible and take the rules' own word away from the DM reading
+  over a player's shoulder.
+
+- **047 also un-anchored `ItemDetailCard` from its position in the tree.** That
+  card was styled by `.shop > div:nth-of-type(2) > div`, so it had no frame
+  anywhere but the Shop — the hoard rail had been rendering it bare since
+  Inventory stopped borrowing `shop.css`, with the absolutely-positioned × in
+  the corner of the viewport. Its rules are class-keyed on `--sh-*` tokens now,
+  the way `.spell-detail-card` always was, which is what let the pack have a
+  card at all.
 
 ---
 

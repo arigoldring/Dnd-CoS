@@ -5,6 +5,12 @@ import { Item } from "../services/items";
 // on each caller to have imported that sheet first. Same file the pages import;
 // the bundler dedupes it.
 import "../pages/campaign/shop.css";
+// .detail-alias — the catalogue name under a custom one — lives with the rest
+// of the 046/047 classes rather than being copied into both card sheets.
+// Imported here for the same reason as the line above: the card carries its own
+// styling wherever it is used rather than depending on a sibling component
+// having been rendered first.
+import "./customDescription.css";
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -60,24 +66,42 @@ function itemStats(item: Item): { label: string; value: string }[] {
 }
 
 /**
- * The item inspect card, shared by Shop and PartyInventory so an item reads the
- * same on both. `footer` is the page-specific slot: Shop drops an "Add to party
- * inventory" button into it, PartyInventory leaves it empty.
+ * The item inspect card, shared by Shop, the party's hoard and a character's own
+ * pack, so an item reads the same on all three. `footer` is the page-specific
+ * slot: Shop drops an "Add to party inventory" button into it, the other two
+ * leave it empty.
  *
- * Rendered as the direct child <div> of the overlay backdrop on both pages, and
- * that position is load-bearing: shop.css styles this card by where it sits
- * (.shop > div:nth-of-type(2) > div), not by the item-detail-card class alone.
- * It also stops click propagation so a click inside the card doesn't reach the
- * backdrop that would dismiss it.
+ * Styled entirely from its own classes as of 047. It used to be styled by where
+ * it sat in the tree (.shop > div:nth-of-type(2) > div), which meant it had no
+ * frame anywhere but the Shop — see shop.css for what that cost the hoard rail.
+ *
+ * Stops click propagation so a click inside the card doesn't reach the backdrop
+ * that would dismiss it.
+ *
+ * The two optional props are how a character's copy of an item differs from the
+ * catalogue's, and both default to undefined so Shop and the hoard render
+ * exactly as they did before 047 existed:
+ *
+ *   customName        what this character calls it. Leads the header, with the
+ *                     catalogue name kept underneath — every list, picker and
+ *                     search still works off the catalogue name, so hiding it
+ *                     would make the sheet unreadable to anyone but its owner.
+ *   descriptionSlot   replaces the catalogue description paragraph. The pack
+ *                     passes a CustomDescriptionBlock, which puts the player's
+ *                     words here and the catalogue text behind a disclosure.
  */
 export function ItemDetailCard({
   item,
   onClose,
   footer,
+  customName,
+  descriptionSlot,
 }: {
   item: Item;
   onClose: () => void;
   footer?: ReactNode;
+  customName?: string | null;
+  descriptionSlot?: ReactNode;
 }) {
   const stats = itemStats(item);
   return (
@@ -86,7 +110,10 @@ export function ItemDetailCard({
         ×
       </button>
       <div className="item-detail-header">
-        <span className="item-detail-name">{item.name}</span>
+        <span className="item-detail-name">
+          {customName ?? item.name}
+          {customName && <span className="detail-alias">{item.name}</span>}
+        </span>
         <span className="item-detail-price">{item.price} gold</span>
       </div>
       {stats.length > 0 && (
@@ -99,7 +126,9 @@ export function ItemDetailCard({
           ))}
         </dl>
       )}
-      <p>{item.description}</p>
+      {descriptionSlot ?? (
+        <p className="item-detail-text">{item.description}</p>
+      )}
       {item.tags.length > 0 && (
         <div className="item-detail-tags">
           {item.tags.map((tag) => (

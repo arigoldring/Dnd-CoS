@@ -1,5 +1,9 @@
 import { supabase } from "../lib/supabase";
 import type { Tables } from "../types/database.types";
+import {
+  getCharacterItemDescriptions,
+  type CustomDescription,
+} from "./characterDescriptions";
 import { toItem, type Item } from "./items";
 
 /**
@@ -56,16 +60,29 @@ export type CharacterInventoryEntry = Item & {
   // null when nobody was recorded (an entry predating this column, or an added_by
   // profile since deleted). Not the same as "added by nobody".
   addedByName: string | null;
+  // 047's override — this character's own name and words for the item, null
+  // when they have written nothing. Never "": the service turns a blank draft
+  // into a delete, so absence is the only spelling of "no override".
+  //
+  // Emphatically NOT keyed on entryId. 032 deletes this row at quantity zero
+  // and 038's transfers delete it on every Stow, so an override living on the
+  // entry would not survive using your last torch or handing your sword across
+  // the table. 047's row is keyed (character_id, item_id) and outlives all of it.
+  customName: string | null;
+  customDescription: string | null;
 };
 
 function toCharacterInventoryEntry(
   row: CharacterInventoryRow,
+  custom: CustomDescription | undefined,
 ): CharacterInventoryEntry {
   return {
     ...toItem(row.items),
     entryId: row.id,
     quantity: row.quantity,
     addedByName: row.addedBy?.display_name ?? null,
+    customName: custom?.customName ?? null,
+    customDescription: custom?.customDescription ?? null,
   };
 }
 
@@ -74,20 +91,33 @@ function toCharacterInventoryEntry(
 // campaign. 028's SELECT policy lets any member of that campaign read this, so
 // the same call serves a player looking at their own sheet and (later) a DM
 // looking at someone else's.
+//
+// The overrides are a second request rather than a third embed, and not by
+// choice: PostgREST embeds across foreign keys, and 047's table references
+// characters and items separately rather than referencing character_inventory —
+// which is the whole point of it. The two go out in parallel and are joined
+// here. A failure in either sinks both, deliberately: they share a session and a
+// policy family, and the one case where they'd diverge is the table missing from
+// the schema cache, which must not be swallowed into "nothing written here".
 export async function getCharacterInventory(
   characterId: string,
 ): Promise<CharacterInventoryEntry[]> {
-  const { data, error } = await supabase
-    .from("character_inventory")
-    .select(CHARACTER_INVENTORY_SELECT)
-    .eq("character_id", characterId);
+  const [{ data, error }, descriptions] = await Promise.all([
+    supabase
+      .from("character_inventory")
+      .select(CHARACTER_INVENTORY_SELECT)
+      .eq("character_id", characterId),
+    getCharacterItemDescriptions(characterId),
+  ]);
 
   if (error) {
     console.error(error);
     throw error;
   }
 
-  return data.map(toCharacterInventoryEntry);
+  return data.map((row) =>
+    toCharacterInventoryEntry(row, descriptions.get(row.item_id)),
+  );
 }
 
 // An RPC rather than an insert, because the write is "add one to the stack, or
@@ -99,37 +129,29 @@ export async function getCharacterInventory(
 // Nothing is passed for added_by or quantity. 029's trigger owns the first and
 // ignores the client entirely; 030's `on conflict` owns the second. The only
 // facts this call supplies are which character and which item.
+//
+// Returns void, as addSpellToCharacter does. It used to make a second round trip
+// to turn the RPC's row id into a whole entry, and nothing ever read the result:
+// MyPack's handleAdd and GiveItemForm both just await it, and
+// useCharacterInventory invalidates the list on success and refetches anyway.
+// Once entries started carrying 047's override — which the RPC cannot see and
+// CHARACTER_INVENTORY_SELECT cannot embed — that second trip would have had to
+// either grow a third, or return an entry claiming `customDescription: null`
+// without having looked. Deleting it was the honest answer and one request
+// cheaper.
 export async function addToCharacterInventory(
   characterId: string,
   itemId: string,
-): Promise<CharacterInventoryEntry> {
-  const { data: entryId, error } = await supabase.rpc(
-    "add_character_inventory_item",
-    { target_character: characterId, target_item: itemId },
-  );
+): Promise<void> {
+  const { error } = await supabase.rpc("add_character_inventory_item", {
+    target_character: characterId,
+    target_item: itemId,
+  });
 
   if (error) {
     console.error(error);
     throw error;
   }
-
-  // Second round trip, because the function returns the row id and the callers
-  // of this one expect a whole entry — the RPC cannot carry the embedded item
-  // and adder the way CHARACTER_INVENTORY_SELECT does. Cheap and rarely load
-  // bearing: useCharacterInventory invalidates the list on success and refetches
-  // anyway, so the returned entry is for callers that want it, not the cache.
-  const { data, error: entryError } = await supabase
-    .from("character_inventory")
-    .select(CHARACTER_INVENTORY_SELECT)
-    .eq("id", entryId)
-    .single();
-
-  if (entryError) {
-    console.error(entryError);
-    throw entryError;
-  }
-
-  return toCharacterInventoryEntry(data);
 }
 
 // Decrement one, and DELETE the row when the last one goes — the same
