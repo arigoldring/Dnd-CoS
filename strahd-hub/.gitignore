@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Local audit notes (not for the repo)
+src/pages/campaign/audit/
