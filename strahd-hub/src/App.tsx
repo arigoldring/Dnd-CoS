@@ -1,4 +1,4 @@
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { Home } from "./pages/campaign/Home";
 import { Shop } from "./pages/campaign/Shop";
 import { Maps } from "./pages/campaign/Maps";
@@ -17,6 +17,7 @@ import { AuthProvider, AuthGate } from "./services/AuthContext";
 import { CampaignLayout } from "./components/CampaignLayout";
 import { CampaignPicker } from "./pages/onboarding/CampaignPicker";
 import { Claim } from "./pages/onboarding/Claim";
+import { Demo } from "./pages/onboarding/Demo";
 import { DmInvites } from "./pages/onboarding/DmInvites";
 import { CampaignInvites } from "./pages/campaign/CampaignInvites";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -27,8 +28,26 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <HashRouter>
-          <AuthGate>
-            <Routes>
+          <Routes>
+            {/* Above AuthGate, and the only route that is. Signing in is what
+              this route DOES, so a signed-out stranger following the link from
+              Discord has to be able to reach it -- inside the gate they would
+              get the Google button instead, which is the one thing the demo
+              exists to skip. It signs in and redirects; it renders nothing of
+              the campaign itself, so nothing below the gate is loosened.
+
+              The gate moved from wrapping <Routes> to a pathless layout route
+              rather than the routes moving, so the flat/nested split below is
+              exactly as it was. */}
+            <Route path="/demo" element={<Demo />} />
+
+            <Route
+              element={
+                <AuthGate>
+                  <Outlet />
+                </AuthGate>
+              }
+            >
               {/* Flat on purpose. Everything above the campaign line is something
                 you do before you have one — pick a campaign, claim a code, hand
                 one out — so none of it can sit under :campaignId.
@@ -111,8 +130,8 @@ function App() {
                 friends), which now match nothing and would render a blank page.
                 Send them to the picker, which knows where they should go. */}
               <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AuthGate>
+            </Route>
+          </Routes>
         </HashRouter>
       </QueryClientProvider>
     </AuthProvider>

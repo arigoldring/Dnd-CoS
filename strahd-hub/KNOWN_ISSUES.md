@@ -5,7 +5,7 @@ size, and written down so they stay decisions rather than becoming discoveries.
 Each entry says what it takes to trigger, what it costs, and what the fix would
 be if the answer ever changes.
 
-**Current through migration 047. Last updated 2026-08-22.**
+**Current through migration 047. Last updated 2026-08-31.**
 
 This is the single source of truth for open work. `CONTEXT.md` holds decisions
 and invariants and deliberately does not duplicate anything below.
@@ -13,6 +13,119 @@ and invariants and deliberately does not duplicate anything below.
 ---
 
 ## Open
+
+### 029 was never applied, so `added_by` is client-supplied (noted 2026-08-31)
+
+`db/029_character_inventory_added_by.sql` creates
+`stamp_character_inventory_added_by` and the BEFORE INSERT OR UPDATE trigger that
+runs it. Neither exists in the live database. Checked directly rather than
+inferred: the function is absent from `pg_proc` and the trigger from `pg_trigger`,
+while every other trigger the migrations define is present —
+`pin_character_row`, `stamp_session_recap`, `pin_npc_row`, both 046/047
+description pins, `pin_location_note_row`, `pin_npc_note_row` and
+`seed_locations_on_campaign_create`. `character_inventory` has no triggers at
+all, and `added_by` has no default.
+
+So the column is exactly what 029 was written to stop it being: a value the
+client sends. Both halves of that migration's argument are currently live — a
+player who can edit a sheet can insert a stack stamped with the DM's id, and
+because nothing pins the column, any existing row's byline can be rewritten
+after the fact by anyone `can_edit_character` admits. Since 2026-08-31 that set
+includes the public demo account, on all six sheets in its campaign.
+
+**Trigger:** none needed — it is the current state. It surfaced when
+`demo_campaign_reset.sql` produced 45 stacks with `added_by` null: the
+`request.jwt.claims` technique both fixtures use sets a claim that, with no
+trigger present, nothing reads.
+
+**Cost:** the provenance field is decorative rather than trustworthy. Nothing
+crashes and no sheet renders wrong — the app writes an honest value
+(`useCharacterInventory` reads `user.id` from AuthContext), so what is on screen
+today is correct. What is missing is any guarantee that it stays correct.
+`public.schema_migrations` records nothing either way: 036 started the ledger, so
+029 is one of the eleven files that predate it and the table cannot answer
+whether it ran. This is the first case of `db/` and the database actually
+disagreeing since that ledger was built.
+
+**Fix:** run 029. It appears applicable as written and nothing has been built on
+its absence. It predates the ledger convention, so it carries no
+`schema_migrations` insert; add one in the same transaction if the eleven older
+files are ever backfilled. `db/fixtures/demo_campaign_reset.sql` needs no edit
+afterwards — it names `added_by` **and** sets the GUC, so it produces identical
+rows either way. `test_campaign_seed.sql` does not: it omits the column on
+purpose, so its bylines are null today and would only start landing once 029 is
+applied.
+
+### The demo account can rewrite its own sheet, and the reset is the only undo (noted 2026-08-31)
+
+The public `/demo` login is a shared `'player'` seat, and a player's ordinary
+permissions are the whole of what it has: it can rename its character, add and
+drop its own gear, spend its own purse, edit any recap in the campaign, and
+rename itself through `set_display_name`. It can also delete its character
+outright (`owner deletes own character` is `user_id = auth.uid()`) and make a new
+one under any name — `unique (campaign_id, user_id)` only stops two existing at
+once, so "the demo account has exactly one character" is true at reset time and
+not between resets.
+
+Accepted, not a bug. A `viewer` role and a `campaigns.frozen` column were both
+considered and rejected: either adds a branch to every policy in the app to
+serve one account.
+
+**Trigger:** anyone following the link doing anything at all.
+
+**Cost:** the demo looks like whatever the last visitor left. Bounded to one
+campaign — `read campaigns you can see` (018) is pure membership and this account
+has exactly one row — and bounded away from anything structural, since
+`is_campaign_dm` is false for it: it cannot rename or delete the campaign, touch
+the roster, reveal a location or map, or read a DM note. What it cannot do is the
+part worth knowing: it also cannot remove itself, because `campaign_members` has
+only `dm manages memberships` (ALL, gated `is_campaign_dm`) and `members read own
+memberships` (SELECT). There is no player-facing DELETE, so the link cannot be
+broken from inside. That is what makes an unattended public link survivable.
+
+**Fix if the answer changes:** re-run `db/fixtures/demo_campaign_reset.sql`. It
+is delete-then-insert precisely so a rename and a junk stack go away rather than
+being topped up around.
+
+### The demo reset does not restore the party hoard or purse (noted 2026-08-31)
+
+`demo_campaign_reset.sql` scopes its delete to characters (and, by cascade, their
+inventory, spells, feats and descriptions) plus the recap rows.
+`party_inventory` and `party_currency` are outside it. Both are
+`is_campaign_member` for read **and** write — that is 045's stated design, "the
+DM can add to the party's pool" being no special case because the DM is a member
+— so a demo visitor can add to and spend from both, and nothing puts them back.
+
+**Trigger:** a visitor using the Inventory page's party half, or the party purse.
+
+**Cost:** the one drift in the demo that accumulates. Small in practice, because
+the hoard starts at a single row and there is nothing to buy, but it is the one
+place where "re-running the seed is the recovery path" is not currently true.
+
+**Fix if the answer changes:** two more deletes scoped to the same
+`campaign_id`, and a seeded hoard and purse in the fixture's cast section. About
+eight lines, and the file's header names the gap so it is findable from there.
+
+### An invite posted beside the demo link would let it out of its campaign (noted 2026-08-31)
+
+The demo account's containment is entirely its single `campaign_members` row.
+`claim_player_invite` is security-definer and its whole job is to add one — it
+works for a caller who cannot read the invite row, by design, because an invitee
+is by definition not yet a member of anything. So a demo visitor holding any
+valid player-invite code can join whatever campaign it belongs to, with a real
+seat.
+
+**Trigger:** posting a player invite in the same place as the demo link. Not
+hypothetical if that Discord is also where players get recruited.
+
+**Cost:** potentially a real campaign, with a stranger in it who can edit recaps
+and read every revealed location. Nothing else in the app makes this reachable —
+`dm_invites` is unreadable to a non-DM, `generate_player_invite` needs
+`is_campaign_dm`, and codes are bare uuids nobody can guess.
+
+**Fix if the answer changes:** hand player invites out privately rather than in
+the channel carrying the demo link. Nothing in the schema needs changing, and
+narrowing `claim_player_invite` would break the invitee case it exists for.
 
 ### Currency denominations don't auto-convert (noted 2026-08-20)
 
@@ -844,6 +957,16 @@ Small, understood, not worth an entry of their own.
   the orphan-row behaviour in "Description rows outlive the gear they describe"
   work, so it is arguably load-bearing rather than a hole. Recorded because the
   table reads like it is scoped to a pack and is not.
+- **Concurrent demo visitors share one character.** GoTrue is happy to issue
+  many simultaneous sessions for one account, so the link works for any number
+  of people at once — but they all own the same sheet, so two of them editing it
+  overwrite each other, and TanStack's cache means neither sees the other until
+  a refetch. Fine for a demo; worth knowing before it reads as a sync bug.
+- **The demo credentials live in two places.** `.env` covers `npm run dev`; the
+  deployed build reads its own copy from the Cloudflare Pages dashboard, where
+  build config lives. Set in neither, `/demo` renders its named
+  missing-variables screen rather than failing silently — but a build that has
+  only one of the two is the case that looks like a code bug.
 - **`CustomDescriptionBlock`'s `custom` prop is typed `CustomDescription | null`
   and never receives null.** Both callers pass the entry itself (`custom={panel}`),
   which always has the two keys. The null branch in `hasCustom` is dead. Harmless

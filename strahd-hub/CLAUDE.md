@@ -5,7 +5,7 @@ Campaign management app for a Curse of Strahd game. Solo developer.
 Primary goal is learning full-stack development; the working app is secondary.
 Not production software — no SLA, no uptime concerns, no team to onboard.
 
-**Current through migration 047. Last updated 2026-08-22.**
+**Current through migration 047. Last updated 2026-08-31.**
 
 ## What lives where — read this before editing this file
 
@@ -534,6 +534,65 @@ answerable. A missing *grant* reads as 401/42501 instead.
   the corner of the viewport. Its rules are class-keyed on `--sh-*` tokens now,
   the way `.spell-detail-card` always was, which is what let the pack have a
   card at all.
+
+### The public demo link (`/demo`)
+
+- **One shared account, not a multi-use invite code.** Both would let a stranger
+  from Discord into a campaign, and the invite is the more principled-looking
+  answer, which is why it needs saying why it lost. It keeps the signup step:
+  the click still lands on a Google consent screen, and that screen is where
+  Discord click-through dies — the whole value of a link posted in a chat window
+  is that it costs one click to satisfy curiosity. It also bills the database
+  for that curiosity permanently: every clicker who does go through becomes an
+  `auth.users` row, a `profiles` row and a `campaign_members` row that nobody
+  will ever clean up, and a code that can be used more than once has no natural
+  end. A shared account has neither cost, and it is bounded — the exposure is
+  one seat, known in advance, whatever the click-through turns out to be.
+
+- **The password ships in the JS bundle, and that is the feature.** Vite inlines
+  every `VITE_`-prefixed variable, so anyone can read these credentials out of
+  the deployed asset. There is no version of a public demo login where that is
+  not true. The consequence is designed for rather than mitigated: the account
+  behind it is built to be worth nothing to steal. It holds no Google identity
+  (created in the dashboard as an email/password user, so it cannot reach
+  anything else), its `profiles.role` is left at `'player'` so `is_dm()` can
+  never admit it to `create_campaign`, and it has exactly one `campaign_members`
+  row — which, after 018 made `read campaigns you can see` pure membership, is
+  the entire boundary. It is not `.env` secrecy doing the containment; `.env`
+  being gitignored only keeps the credentials out of git, and the deployed build
+  gets its own copy from the Cloudflare Pages dashboard.
+
+- **Write access by that account is accepted, and the reset is the answer to
+  it.** A visitor can rename their character, rewrite their gear, edit a recap
+  and rename themselves, because those are ordinary member permissions and
+  nothing short of a new role could take them away. A `viewer` role and a
+  `campaigns.frozen` column were both considered and rejected: each adds a
+  branch to every policy in the app to serve one account. Recovery is re-running
+  `db/fixtures/demo_campaign_reset.sql` instead, which is why that file is a
+  delete-then-insert and not the `on conflict do nothing` its predecessor uses —
+  a no-op restores a *deleted* character and silently keeps a *renamed* one, and
+  renaming is what actually happens.
+
+- **`/demo` is the only route above `AuthGate`, and it has to be.** The gate
+  renders the Google button in place of its children for anyone signed out,
+  which is exactly the step this link exists to skip — inside it, the demo route
+  could never run. So the gate moved from wrapping `<Routes>` to a pathless
+  layout route (`<Route element={<AuthGate><Outlet /></AuthGate>}>`), which
+  leaves the flat-above/nested-below split untouched and lifts exactly one path
+  out. The route signs in and redirects; it renders nothing of a campaign, so
+  nothing below the gate is loosened. A second route above the line would want
+  the same argument made again from scratch.
+
+- **The fixture keys on the campaign's id, where `test_campaign_seed.sql` keys
+  on a name.** That file needs two assertions to make a name safe (no matches,
+  and duplicates), because nothing stops a DM creating two campaigns with the
+  same name. A public demo cannot afford the shape at all: `campaigns` has an
+  UPDATE policy, so the name is editable from the app, and a name-keyed reset
+  would stop finding its campaign at the exact moment somebody had just renamed
+  it. The id is the primary key and only 020 removes it. The two fixtures are
+  separate files for a related reason — `test_campaign_teardown.sql` guards on
+  that same name, so re-pointing the seed would have left the pair guarding
+  nothing.
 
 ---
 
