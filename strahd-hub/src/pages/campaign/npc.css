@@ -612,6 +612,18 @@
 }
 
 .portrait-lightbox__img {
+  /* A floor for undersized sources, and nothing more. The img carries no
+     width, so it opens at its intrinsic pixels -- a small .webp expands to
+     barely more than its own card thumbnail, which is how Rose and Thorn read
+     before her source was re-exported from 165px to 330. Both portraits now
+     clear this on their own (330 and 376), so it changes nothing today; it is
+     here so the next portrait dropped in undersized degrades to a soft stretch
+     rather than to a thumbnail. Sizing a portrait properly is still the
+     asset's job -- this cannot add detail that was never in the file.
+     min() because min-width beats max-width: without it a viewport under
+     367px would lose the 90vw gutter. Height stays auto and follows the
+     ratio. */
+  min-width: min(330px, 90vw);
   max-width: min(90vw, 720px);
   max-height: 85vh;
   object-fit: contain;
