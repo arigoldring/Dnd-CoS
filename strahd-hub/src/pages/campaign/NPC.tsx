@@ -74,6 +74,7 @@ export function Npcs() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [notesId, setNotesId] = useState<string | null>(null);
   const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
+  const [expandedPortrait, setExpandedPortrait] = useState<{ src: string; alt: string } | null>(null);
 
   // Preview changes which affordances exist, not merely which are visible.
   // Anything opened before the switch — an editor, a notes drawer, the reveal
@@ -83,7 +84,17 @@ export function Npcs() {
     setEditingId(null);
     setNotesId(null);
     setShowVisibilityPanel(false);
+    setExpandedPortrait(null);
   }, [previewing]);
+
+  useEffect(() => {
+    if (!expandedPortrait) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpandedPortrait(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expandedPortrait]);
 
   if (authLoading || npcsLoading) return <p>Loading...</p>;
   if (error) return <p>{error.message}</p>;
@@ -147,12 +158,39 @@ export function Npcs() {
               key={npc.id}
               className={"npc-card" + (!npc.isRevealed ? " is-hidden" : "")}
             >
-              {portrait && (
-                <img
-                  className="npc-card__portrait"
-                  src={portrait}
-                  alt={npc.name}
-                />
+              {/* First child, because the tag is positioned against the card
+                  itself and overhangs its top edge — it is not part of any of
+                  the rows below it. */}
+              {!npc.isRevealed && (
+                <div className="npc-card__hidden-tag">
+                  <span className="npc-card__hidden-tag-text">
+                    Hidden from players
+                  </span>
+                  <span className="npc-card__seal">
+                    {campaign.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+
+              {portrait ? (
+                <button
+                  type="button"
+                  className="npc-card__portrait-frame"
+                  onClick={() => setExpandedPortrait({ src: portrait, alt: npc.name })}
+                  aria-label={`Expand portrait of ${npc.name}`}
+                >
+                  <img className="npc-card__portrait" src={portrait} alt={npc.name} />
+                </button>
+              ) : (
+                // Not nothing: a band the same height as a real portrait, so a
+                // card without one still lines its name up across the grid.
+                <div className="npc-card__portrait-empty">
+                  <span className="npc-card__portrait-empty-label">
+                    portrait
+                    <br />
+                    {npc.name.toLowerCase()}
+                  </span>
+                </div>
               )}
 
               <div className="npc-card__body">
@@ -168,12 +206,7 @@ export function Npcs() {
                   />
                 ) : (
                   <>
-                    <h3 className="npc-card__name">
-                      {npc.name}
-                      {!npc.isRevealed && (
-                        <span className="npc-card__hidden-tag">hidden</span>
-                      )}
-                    </h3>
+                    <h3 className="npc-card__name">{npc.name}</h3>
                     <div className="npc-card__rule"></div>
                     {npc.locationName && (
                       <p className="npc-card__location">{npc.locationName}</p>
@@ -275,6 +308,31 @@ export function Npcs() {
             </p>
           )}
         </aside>
+      )}
+
+      {expandedPortrait && (
+        <div
+          className="portrait-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={expandedPortrait.alt}
+          onClick={() => setExpandedPortrait(null)}
+        >
+          <img
+            className="portrait-lightbox__img"
+            src={expandedPortrait.src}
+            alt={expandedPortrait.alt}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            className="portrait-lightbox__close"
+            aria-label="Close"
+            onClick={() => setExpandedPortrait(null)}
+          >
+            ×
+          </button>
+        </div>
       )}
     </div>
   );

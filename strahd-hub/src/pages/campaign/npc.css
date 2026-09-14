@@ -86,10 +86,13 @@
   margin: 26px 0 0;
 }
 
+/* A column, and padding: 0 — the portrait is full-bleed across the top, so the
+   card's own padding would leave a frame of background around the image. The
+   inset the text needs lives on .npc-card__body instead. */
 .npcs .npc-card {
   display: flex;
-  gap: 16px;
-  padding: 18px 20px;
+  flex-direction: column;
+  padding: 0;
   color: var(--sh-bone);
   background:
     linear-gradient(180deg, rgba(20, 15, 16, 0.97), rgba(12, 9, 11, 0.99)),
@@ -109,25 +112,94 @@
   opacity: 0.86;
 }
 
+/* The frame is also the button that opens the lightbox, rather than a <div>
+   with a button inside it: one element to place, and the whole image is the
+   target. It carries the button reset, because a full-bleed image inside a
+   default-styled button sits inside the browser's own border and padding. */
+.npcs .npc-card__portrait-frame {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  flex: none;
+  overflow: hidden;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(160, 140, 110, 0.22);
+  cursor: zoom-in;
+  line-height: 0;
+}
+
 .npcs .npc-card__portrait {
-  flex: 0 0 auto;
-  width: 84px;
-  height: 84px;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 1px solid rgba(154, 122, 58, 0.45);
+  /* The portraits are tall (rose-and-thorn 165x257, strahd-von-zarovich
+     376x527), so covering a 1.6:1 band keeps only about 40-45% of the image's
+     height — which half that is matters more here than it did in the old
+     square. 22% is the band that holds the faces of both children, and it
+     happens to land Strahd's in the upper third too; top-aligned loses the
+     shorter child. One rule for every portrait, so a new one is a file and a
+     migration and nothing here — check a new portrait against this number
+     before assuming that holds, since a subject framed lower needs its own. */
+  object-position: 50% 22%;
   filter: grayscale(0.35) contrast(1.05);
-  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.9);
+  transition: filter 0.18s ease;
+}
+
+/* The square's gold border used to be the whole "this opens" signal. Full-bleed
+   there is no border to brighten, so the image itself warms on hover. */
+.npcs .npc-card__portrait-frame:hover .npc-card__portrait {
+  filter: grayscale(0.1) contrast(1.08);
+}
+
+/* inset, so the ring lands inside the bled edge instead of over the card's */
+.npcs .npc-card__portrait-frame:focus-visible {
+  outline: 1px solid var(--sh-gold);
+  outline-offset: -2px;
+}
+
+/* fades the image into the card background so the name below reads clean */
+.npcs .npc-card__portrait-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 6, 10, 0) 40%, rgba(7, 6, 10, 0.85));
+}
+
+/* Same height as a real portrait, so a card without one still lines its name up
+   with its neighbours' across the grid. */
+.npcs .npc-card__portrait-empty {
+  width: 100%;
+  height: 240px;
+  flex: none;
+  /* border-box to match the frame, which is a <button> and so gets it from the
+     UA sheet — without this the two bands differ by their 1px bottom border and
+     a card with no portrait sits a pixel off its neighbours. */
+  box-sizing: border-box;
+  background: repeating-linear-gradient(135deg, #1a1518 0 7px, #241d20 7px 14px);
+  border-bottom: 1px solid rgba(160, 140, 110, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.npcs .npc-card__portrait-empty-label {
+  font: 400 9px/1.7 var(--sh-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sh-dim);
+  text-align: center;
 }
 
 .npcs .npc-card__body {
-  flex: 1;
-  min-width: 0;
+  padding: 20px 22px 22px;
 }
 
+/* No longer a flex row: the hidden tag used to sit beside the name and now
+   rides the card's top edge, so this is a heading with a name in it. */
 .npcs .npc-card__name {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
   margin: 0;
   font: 500 21px/1.2 var(--sh-display);
   font-variant: small-caps;
@@ -135,21 +207,42 @@
   color: var(--sh-bone);
 }
 
-/* the tag sits on the card's top edge, where a wax seal would sit on a sealed
+/* The tag sits on the card's top edge, where a wax seal would sit on a sealed
    page — absolute against .npc-card.is-hidden, so it doesn't matter where in
-   the card's markup the span lives */
+   the card's markup the wrapper lives. z-index, because the portrait band
+   below it is a positioned element with a pseudo-element of its own. */
 .npcs .npc-card.is-hidden .npc-card__hidden-tag {
   position: absolute;
   top: -11px;
   right: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.npcs .npc-card.is-hidden .npc-card__hidden-tag-text {
   font: 500 9px/1 var(--sh-display);
-  font-variant: normal;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--sh-blood-ink);
   background: #0f0c10;
   border: 1px solid rgba(138, 13, 13, 0.5);
   padding: 6px 10px 5px;
+}
+
+/* the seal itself — the campaign's initial pressed into red wax */
+.npcs .npc-card.is-hidden .npc-card__seal {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #a01414, #6a0a0a 60%, #3a0606);
+  border: 1px solid rgba(214, 202, 178, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 200, 180, 0.25);
+  display: grid;
+  place-items: center;
+  font: 600 10px/1 var(--sh-display);
+  color: rgba(255, 220, 200, 0.75);
 }
 
 .npcs .npc-card__rule {
@@ -503,4 +596,53 @@
   .npcs .visibility-panel {
     animation: none;
   }
+}
+
+/* ---------- portrait lightbox ---------- */
+
+.portrait-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 3, 5, 0.88);
+  cursor: zoom-out;
+  animation: portraitLightboxIn 0.18s ease both;
+}
+
+.portrait-lightbox__img {
+  max-width: min(90vw, 720px);
+  max-height: 85vh;
+  object-fit: contain;
+  filter: grayscale(0.2) contrast(1.05);
+  border: 1px solid rgba(154, 122, 58, 0.5);
+  box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.95);
+  cursor: default;
+}
+
+.portrait-lightbox__close {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  font: 400 28px/1 var(--sh-body);
+  color: var(--sh-bone);
+  background: none;
+  border: 1px solid rgba(160, 140, 110, 0.4);
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+.portrait-lightbox__close:hover {
+  border-color: rgba(154, 122, 58, 0.75);
+  background: rgba(154, 122, 58, 0.1);
+}
+
+@keyframes portraitLightboxIn {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portrait-lightbox { animation: none; }
 }
