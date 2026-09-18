@@ -19,15 +19,22 @@ import type { Tables } from "../types/database.types";
 // alphabetical order. Combat first because it is the biggest and the one most
 // people are looking for; general last because it is the leftovers.
 //
-// 039 checks the same six values. Adding one here without adding it there gets
-// you a parse error at the boundary rather than a wrong render, which is the
-// trade parseOneOf exists to make.
+// 039, as widened by 052, checks the same seven values. Adding one here without
+// adding it there gets you a parse error at the boundary rather than a wrong
+// render, which is the trade parseOneOf exists to make.
+//
+// "factions" is 052's, and is plural where the other six are singular on
+// purpose: the rest read as adjectives (a "combat" feat), this one names a set,
+// and featCategoryLabel title-cases the raw value — so the stored string is
+// what puts "Factions" on the button. It sits second-to-last because "general"
+// is the leftovers and keeps the end of the row.
 export const featCategories = [
   "combat",
   "defense",
   "magic",
   "skill",
   "social",
+  "factions",
   "general",
 ] as const;
 export type FeatCategory = (typeof featCategories)[number];
