@@ -272,12 +272,20 @@
   color: var(--sh-mute);
 }
 
-/* The same total, converted to one number, in a smaller face under it —
-   informational only, no auto-conversion of the stored coins. */
+/* The pile's whole worth as one number, in a smaller face under the coins —
+   informational only, no auto-conversion of the stored coins. Line-height is
+   1.5 rather than 1 because the goods breakdown can wrap to a second line on a
+   narrow panel, and at 1 the two lines collide. */
 .desk-hoard__value {
   margin: 0 0 14px;
-  font: 400 12px/1 var(--sh-mono);
+  font: 400 12px/1.5 var(--sh-mono);
   color: var(--sh-mute);
+}
+
+/* Dimmer than the total it explains: the figure is the point, the parenthetical
+   is only there so the figure is checkable. */
+.desk-hoard__value-split {
+  color: var(--sh-dim);
 }
 
 /* Coin-metal colours, in the same most-to-least-valuable order purseEntries

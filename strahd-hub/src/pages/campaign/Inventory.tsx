@@ -16,9 +16,12 @@ import type { CharacterInventoryEntry } from "../../services/characterInventory"
 import type { PartyInventoryEntry } from "../../services/partyInventory";
 import {
   EMPTY_PURSE,
+  formatGold,
   formatGoldValue,
   formatPurse,
+  goldValue,
   purseEntries,
+  stacksGoldValue,
   type Purse,
 } from "../../services/currency";
 import { errorMessage } from "../../lib/errors";
@@ -539,6 +542,13 @@ function Hoard({
 
   const panel = entries.find((entry) => entry.entryId === panelId) ?? null;
 
+  // Home.tsx's dashboard states the same two numbers on its hoard panel, and
+  // has to: a rail that stopped at the coin line would disagree with the
+  // dashboard about what this exact pile is worth, and the DM-forged treasure
+  // sitting in `entries` is the whole of the difference.
+  const coinValue = goldValue(currency);
+  const goodsValue = stacksGoldValue(entries);
+
   return (
     <aside className="inv-panel inv-rail">
       <h3 className="inv-rail__head">
@@ -547,6 +557,21 @@ function Hoard({
       </h3>
 
       <PurseWidget purse={currency} onAdjust={adjustCurrency} colored />
+
+      {/* The widget above prices the coins, because that is the purse it
+          spends from. This prices the stacks below it, so the rail's reading
+          matches the dashboard's "Total Gold Value". Hidden while the pile is
+          empty: a "0 gp in goods" line under an empty hoard says nothing the
+          empty state does not already say. */}
+      {goodsValue > 0 && (
+        <p className="inv-rail__worth">
+          Hoard Total: {formatGold(coinValue + goodsValue)}
+          <span className="inv-rail__worth-split">
+            {" "}
+            ({formatGold(goodsValue)} in goods)
+          </span>
+        </p>
+      )}
 
       <input
         className="inv-search"

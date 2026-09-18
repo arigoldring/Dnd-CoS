@@ -82,12 +82,41 @@ export function goldValue(purse: Purse): number {
   return totalCopper / 100;
 }
 
-// A purse's gold value is always a whole number of copper, i.e. a multiple of
-// 0.01 gp, so two decimal places always represent it exactly; trimmed so "12
-// gp" reads as "12 gp" rather than "12.00 gp".
-export function formatGoldValue(purse: Purse): string {
-  const trimmed = goldValue(purse).toFixed(2).replace(/\.?0+$/, "");
+// The worth of a pile of stacks, in gold — the other half of what a hoard is
+// worth, alongside the coins sitting in it. A DM-forged necklace is the same
+// kind of treasure as the coins beside it, and a total that counted only the
+// purse read "0 gp" with three pieces of jewellery listed right underneath it.
+//
+// Structurally typed rather than taking PartyInventoryEntry, so this file goes
+// on knowing nothing about inventory (and partyInventory.ts goes on not
+// importing this one); every entry either caller holds already satisfies it.
+//
+// Summed in copper for goldValue's reason, and rounded back the way items.ts
+// rounded on the way in: `price` is price_cp / 100, so re-multiplying by 100
+// recovers the stored integer exactly instead of carrying a 0.005 into every
+// stack of a long list.
+export function stacksGoldValue(
+  stacks: readonly { price: number; quantity: number }[],
+): number {
+  const totalCopper = stacks.reduce(
+    (sum, { price, quantity }) => sum + Math.round(price * 100) * quantity,
+    0,
+  );
+  return totalCopper / 100;
+}
+
+// The trim, shared so a bare figure (a pile's worth, or a pile plus its coins)
+// reads identically to a purse's own total. Every value passed here is a whole
+// number of copper, i.e. a multiple of 0.01 gp, so two decimal places always
+// represent it exactly; trimmed so "12 gp" reads as "12 gp" rather than
+// "12.00 gp".
+export function formatGold(value: number): string {
+  const trimmed = value.toFixed(2).replace(/\.?0+$/, "");
   return `${trimmed} gp`;
+}
+
+export function formatGoldValue(purse: Purse): string {
+  return formatGold(goldValue(purse));
 }
 
 // campaignId is a parameter and the read is filtered by it for getRecaps'

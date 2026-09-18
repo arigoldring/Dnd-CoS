@@ -9,8 +9,10 @@ import { useParty } from "../../hooks/useParty";
 import { Recap } from "../../services/recaps";
 import {
   EMPTY_PURSE,
-  formatGoldValue,
+  formatGold,
+  goldValue,
   purseEntries,
+  stacksGoldValue,
 } from "../../services/currency";
 import { REGION_MAP } from "../../data/maps";
 import "./home.css";
@@ -95,6 +97,14 @@ export function Home() {
   // reader from "fixing" one of them to match the other.
   const regionPins = locations.filter((loc) => loc.mapKey === REGION_MAP.id);
   const coins = purseEntries(currency);
+  // The hoard is worth its coins AND its goods. Split out rather than summed
+  // inline because the panel shows the parts as well as the total: a DM who
+  // forges a 750 gp necklace should be able to see where the number came from,
+  // and "Total Gold Value" moving without explanation is how a new reader
+  // decides the figure is wrong. `entries` is the whole pile, not the six rows
+  // the list below slices off.
+  const coinValue = goldValue(currency);
+  const goodsValue = stacksGoldValue(entries);
 
   return (
     <div className="desk">
@@ -191,8 +201,19 @@ export function Home() {
                   </span>
                 ))}
           </p>
+          {/* Coins plus goods, because a hoard of three pieces of jewellery
+              and no coin is not worth nothing. The breakdown only appears once
+              there are goods to account for — on a pile that is purely coin
+              this line reads exactly as it always did. */}
           <p className="desk-hoard__value">
-            Total Gold Value: {formatGoldValue(currency)}
+            Total Gold Value: {formatGold(coinValue + goodsValue)}
+            {goodsValue > 0 && (
+              <span className="desk-hoard__value-split">
+                {" "}
+                ({formatGold(coinValue)} in coin · {formatGold(goodsValue)} in
+                goods)
+              </span>
+            )}
           </p>
           <ul className="desk-hoard__list">
             {/* entryId, not id: the same catalog item can appear as several

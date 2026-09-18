@@ -397,6 +397,19 @@
   color: var(--sh-dim);
 }
 
+/* What the stacks are worth, under the purse widget that prices the coins.
+   Same face as .inv-purse__value so the two readings sit as a pair, with the
+   gold token to mark it as the one that covers the whole hoard. */
+.inv-rail__worth {
+  margin: 0 0 10px;
+  font: 400 12px/1.5 var(--sh-mono);
+  color: var(--sh-gold);
+}
+
+.inv-rail__worth-split {
+  color: var(--sh-dim);
+}
+
 .inv-rail input[type="text"] {
   width: 100%;
   box-sizing: border-box;
