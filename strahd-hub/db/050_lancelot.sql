@@ -1,5 +1,17 @@
 -- db/050_lancelot.sql
 --
+-- AS RUN, THIS FILE'S BLOCKS 3 AND 4 DID NOTHING -- see 051, which repairs it.
+-- The campaign is named "Not Curse of Strahd" and this file was written with
+-- "Not Course of Strahd", a misspelling now corrected throughout. The block 2
+-- guard below did not catch it, and the reason is worth reading before writing
+-- another file shaped like this one: the name appears THREE times in executable
+-- SQL and the guard only ever checks the first. Correcting that one occurrence
+-- at the SQL editor satisfied the guard and left blocks 3 and 4 matching zero
+-- rows -- the exact silent no-op the guard exists to prevent, walked around by
+-- the guard itself. A literal that must agree across statements belongs in one
+-- place; 051 resolves it once into a variable and does both inserts from there,
+-- which is the shape to copy.
+--
 -- Lancelot, a dog, joins the roster with a portrait. Third portrait the app has
 -- shipped, so 049's two-step recipe again, unchanged:
 --
@@ -43,7 +55,7 @@
 --
 -- THE CAMPAIGN IS RESOLVED BY NAME, not by the uuid every migration since 033
 -- has hardcoded. That uuid belongs to the campaign those files call "The cool
--- kids"; whether it is also the campaign now called "Not Course of Strahd" is
+-- kids"; whether it is also the campaign now called "Not Curse of Strahd" is
 -- not something this repo records, and guessing wrong would seed a dog into
 -- someone else's game. The name below is the one thing to check before running
 -- this file -- it is `campaigns.name`, matched exactly, case and all. Block 2
@@ -163,14 +175,14 @@ declare
 begin
   select id into strict v_campaign
   from public.campaigns
-  where name = 'Not Course of Strahd';
+  where name = 'Not Curse of Strahd';
 exception
   when no_data_found then
     raise exception
-      'No campaign is named "Not Course of Strahd". Run: select id, name from campaigns order by name; then correct the three occurrences of the name in this file.';
+      'No campaign is named "Not Curse of Strahd". Run: select id, name from campaigns order by name; then correct the three occurrences of the name in this file.';
   when too_many_rows then
     raise exception
-      'More than one campaign is named "Not Course of Strahd". Name is not unique -- switch blocks 3 and 4 to the campaign''s uuid instead.';
+      'More than one campaign is named "Not Curse of Strahd". Name is not unique -- switch blocks 3 and 4 to the campaign''s uuid instead.';
 end
 $$;
 
@@ -192,7 +204,7 @@ select 'Death House',
        c.id,
        'village-of-barovia'
 from public.campaigns c
-where c.name = 'Not Course of Strahd'
+where c.name = 'Not Curse of Strahd'
   and not exists (
     select 1 from public.locations l
     where l.campaign_id = c.id
@@ -222,7 +234,7 @@ select c.id,
        false,
        'lancelot'
 from public.campaigns c
-where c.name = 'Not Course of Strahd'
+where c.name = 'Not Curse of Strahd'
   and not exists (
     select 1 from public.npcs n
     where n.campaign_id = c.id and n.name = 'Lancelot'
@@ -258,7 +270,7 @@ begin;
 rollback;
 
 -- BLOCK 2 -- the backfill landed on the right campaign, and only there.
--- Expect exactly one row: campaign 'Not Course of Strahd', home 'Death House',
+-- Expect exactly one row: campaign 'Not Curse of Strahd', home 'Death House',
 -- portrait_key 'lancelot', is_revealed false. Zero rows means the name in this
 -- file does not match the database's -- but block 2 of the migration would have
 -- raised, so that cannot be why. A null home means block 3 did not run or the
